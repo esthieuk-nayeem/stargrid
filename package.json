@@ -1,0 +1,40 @@
+{
+  "name": "techguru",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build --turbopack",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@fancyapps/ui": "^6.0.32",
+    "@fontsource/muli": "^4.1.0",
+    "@fontsource/mulish": "^5.2.8",
+    "@react-google-maps/api": "^2.20.7",
+    "animate.css": "^4.1.1",
+    "gsap": "^3.13.0",
+    "isotope-layout": "^3.0.6",
+    "lucide-react": "^0.544.0",
+    "next": "^15.5.6",
+    "react": "^19.2.0",
+    "react-countup": "^6.5.3",
+    "react-dom": "^19.2.0",
+    "react-icons": "^5.5.0",
+    "react-multi-carousel": "^2.8.6",
+    "react-range": "^1.10.0",
+    "swiper": "^12.0.2",
+    "yet-another-react-lightbox": "^3.25.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@types/isotope-layout": "^3.0.15",
+    "@types/node": "^20",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.0",
+    "typescript": "5.9.3"
+  }
+}
