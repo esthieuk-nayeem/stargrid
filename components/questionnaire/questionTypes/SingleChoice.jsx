@@ -2,19 +2,35 @@
 
 export default function SingleChoice({ question, answer, onAnswer, showOtherInput, setShowOtherInput }) {
   const handleSelect = (option) => {
-    const value = typeof option === 'string' ? option : option.value || option.label;
+    // Handle both string and object options
+    const optionValue = typeof option === 'object' ? option.value || option.label : option;
     
     if (typeof option === 'object' && option.hasInput) {
       setShowOtherInput(true);
-      onAnswer(question.id, value);
+      onAnswer(question.id, { value: optionValue, label: option.label });
     } else {
       setShowOtherInput(false);
-      onAnswer(question.id, value);
+      // Store the complete option object if it has scoring data
+      if (typeof option === 'object') {
+        onAnswer(question.id, option);
+      } else {
+        onAnswer(question.id, optionValue);
+      }
     }
   };
 
   const handleOtherInput = (e) => {
-    onAnswer(question.id, `Other: ${e.target.value}`);
+    const inputText = e.target.value;
+    const otherOption = question.options.find(opt => 
+      typeof opt === 'object' && opt.hasInput
+    );
+    
+    onAnswer(question.id, {
+      value: 'other',
+      label: 'Other',
+      customText: inputText,
+      score: otherOption?.score || {}
+    });
   };
 
   const getOptionValue = (option) => {
@@ -34,12 +50,33 @@ export default function SingleChoice({ question, answer, onAnswer, showOtherInpu
     return null;
   };
 
+  const isOptionSelected = (option) => {
+    if (!answer) return false;
+    
+    const optionValue = getOptionValue(option);
+    
+    // Handle different answer formats
+    if (typeof answer === 'string') {
+      return answer === optionValue;
+    }
+    
+    if (typeof answer === 'object') {
+      // Check if it's an "other" option with custom text
+      if (answer.value === 'other' && optionValue === 'other') {
+        return true;
+      }
+      // Check by value or label
+      return answer.value === optionValue || answer.label === optionValue;
+    }
+    
+    return false;
+  };
+
   return (
     <div className="single-choice">
       <div className="single-choice__options">
         {question.options.map((option, index) => {
-          const optionValue = getOptionValue(option);
-          const isSelected = answer === optionValue || (answer && answer.startsWith('Other:') && optionValue === 'other');
+          const isSelected = isOptionSelected(option);
           const hasDescription = getOptionDescription(option);
           
           return (
@@ -68,12 +105,12 @@ export default function SingleChoice({ question, answer, onAnswer, showOtherInpu
         })}
       </div>
 
-      {showOtherInput && answer && answer.startsWith('Other:') && (
+      {showOtherInput && answer && (typeof answer === 'object' && answer.value === 'other') && (
         <div className="single-choice__other-input">
           <input
             type="text"
             placeholder="Please specify..."
-            value={answer.replace('Other: ', '')}
+            value={answer.customText || ''}
             onChange={handleOtherInput}
             autoFocus
           />

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { loadAnswers, loadScoringData, saveContactInfo, saveSubmissionId } from "@/lib/answerStorage";
+import { saveQuestionnaireResponse } from "@/lib/supabase";
 
 export default function ContactFormPage() {
   const router = useRouter();
@@ -68,12 +70,33 @@ export default function ContactFormPage() {
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Form submitted:', formData);
+    try {
+      // Get saved answers and scoring data
+      const answers = loadAnswers();
+      const scoring = loadScoringData();
+
+      // Save contact info locally
+      saveContactInfo(formData);
+
+      // Submit to Supabase
+      const response = await saveQuestionnaireResponse(answers, formData, scoring);
+      
+      // Save submission ID
+      if (response && response.id) {
+        saveSubmissionId(response.id);
+      }
+
       // Navigate to results page
       router.push('/questionnaire/results');
-    }, 1500);
+      
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      setErrors({ 
+        submit: 'There was an error submitting your information. Please try again.' 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -94,6 +117,12 @@ export default function ContactFormPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="contact-form">
+            {errors.submit && (
+              <div className="contact-form__error-banner">
+                {errors.submit}
+              </div>
+            )}
+
             <div className="contact-form__grid">
               <div className="contact-form__field">
                 <label htmlFor="companyName">
@@ -301,6 +330,16 @@ export default function ContactFormPage() {
           border-radius: 24px;
           padding: 50px;
           backdrop-filter: blur(10px);
+        }
+
+        .contact-form__error-banner {
+          padding: 16px 20px;
+          background: rgba(250, 86, 116, 0.1);
+          border: 1px solid #FA5674;
+          border-radius: 12px;
+          color: #FA5674;
+          margin-bottom: 30px;
+          font-size: 15px;
         }
 
         .contact-form__grid {

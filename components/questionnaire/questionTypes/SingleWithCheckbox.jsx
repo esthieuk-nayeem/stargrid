@@ -3,20 +3,28 @@
 import { useState, useEffect } from "react";
 
 export default function SingleWithCheckbox({ question, answer, onAnswer }) {
-  const [selectedOption, setSelectedOption] = useState('');
+  const [selectedOption, setSelectedOption] = useState(null);
   const [isHighTheftRisk, setIsHighTheftRisk] = useState(false);
 
   useEffect(() => {
     if (answer) {
-      setSelectedOption(answer.option || '');
-      setIsHighTheftRisk(answer.highTheftRisk || false);
+      if (typeof answer === 'object') {
+        setSelectedOption(answer.option || null);
+        setIsHighTheftRisk(answer.highTheftRisk || false);
+      } else {
+        setSelectedOption(answer);
+        setIsHighTheftRisk(false);
+      }
     }
   }, [answer]);
 
   const handleSelectOption = (option) => {
-    setSelectedOption(option);
+    // Handle both string and object options
+    const optionData = typeof option === 'object' ? option : { value: option, label: option };
+    
+    setSelectedOption(optionData);
     onAnswer(question.id, {
-      option: option,
+      option: optionData,
       highTheftRisk: isHighTheftRisk
     });
   };
@@ -30,11 +38,37 @@ export default function SingleWithCheckbox({ question, answer, onAnswer }) {
     });
   };
 
+  const getOptionValue = (option) => {
+    if (typeof option === 'string') return option;
+    return option.value || option.label;
+  };
+
+  const getOptionLabel = (option) => {
+    if (typeof option === 'string') return option;
+    return option.label;
+  };
+
+  const isOptionSelected = (option) => {
+    if (!selectedOption) return false;
+    
+    const optionValue = getOptionValue(option);
+    
+    if (typeof selectedOption === 'string') {
+      return selectedOption === optionValue;
+    }
+    
+    if (typeof selectedOption === 'object') {
+      return selectedOption.value === optionValue || selectedOption.label === optionValue;
+    }
+    
+    return false;
+  };
+
   return (
     <div className="single-with-checkbox">
       <div className="single-with-checkbox__options">
         {question.options.map((option, index) => {
-          const isSelected = selectedOption === option;
+          const isSelected = isOptionSelected(option);
           
           return (
             <div
@@ -48,7 +82,7 @@ export default function SingleWithCheckbox({ question, answer, onAnswer }) {
                 </div>
               </div>
               <div className="single-with-checkbox__option-content">
-                <span>{option}</span>
+                <span>{getOptionLabel(option)}</span>
               </div>
             </div>
           );
@@ -63,7 +97,7 @@ export default function SingleWithCheckbox({ question, answer, onAnswer }) {
           >
             <div className="single-with-checkbox__checkbox-box">
               <div className="single-with-checkbox__checkbox-inner">
-                <span className="icon-check"></span>
+                <span className="icon-check">✓</span>
               </div>
             </div>
             <div className="single-with-checkbox__checkbox-label">
@@ -191,9 +225,6 @@ export default function SingleWithCheckbox({ question, answer, onAnswer }) {
         .single-with-checkbox__checkbox-box {
           position: relative;
           flex-shrink: 0;
-        }
-
-        .single-with-checkbox__checkbox-box {
           width: 24px;
           height: 24px;
           border: 2px solid rgba(250, 86, 116, 0.4);

@@ -3,34 +3,72 @@
 import { useState, useEffect } from "react";
 
 export default function MultipleChoice({ question, answer, onAnswer, showOtherInput, setShowOtherInput }) {
-  const [selectedOptions, setSelectedOptions] = useState(answer || []);
+  const [selectedOptions, setSelectedOptions] = useState([]);
   const [otherText, setOtherText] = useState('');
 
   useEffect(() => {
     if (answer && Array.isArray(answer)) {
       setSelectedOptions(answer);
-      const otherOption = answer.find(a => a.startsWith('Other:'));
-      if (otherOption) {
+      
+      // Check for "other" option
+      const otherItem = answer.find(a => 
+        (typeof a === 'object' && a.value === 'other') ||
+        (typeof a === 'string' && a.toLowerCase().includes('other:'))
+      );
+      
+      if (otherItem) {
         setShowOtherInput(true);
-        setOtherText(otherOption.replace('Other: ', ''));
+        if (typeof otherItem === 'object' && otherItem.customText) {
+          setOtherText(otherItem.customText);
+        } else if (typeof otherItem === 'string') {
+          setOtherText(otherItem.replace(/^Other:\s*/i, ''));
+        }
       }
     }
-  }, [answer]);
+  }, [answer, setShowOtherInput]);
 
   const handleToggle = (option) => {
-    const value = typeof option === 'string' ? option : option.value || option.label;
-    let newSelected;
+    const optionValue = typeof option === 'object' ? (option.value || option.label) : option;
+    
+    // Check if already selected
+    const isAlreadySelected = selectedOptions.some(item => {
+      if (typeof item === 'string') {
+        return item === optionValue;
+      }
+      if (typeof item === 'object') {
+        return item.value === optionValue || item.label === optionValue;
+      }
+      return false;
+    });
 
-    if (selectedOptions.includes(value)) {
-      newSelected = selectedOptions.filter(item => item !== value && !item.startsWith('Other:'));
-      if (value === 'other') {
+    let newSelected;
+    
+    if (isAlreadySelected) {
+      // Remove from selection
+      newSelected = selectedOptions.filter(item => {
+        if (typeof item === 'string') {
+          return item !== optionValue;
+        }
+        if (typeof item === 'object') {
+          return item.value !== optionValue && item.label !== optionValue;
+        }
+        return true;
+      });
+      
+      // If removing "other", hide input
+      if (optionValue === 'other' || (typeof option === 'object' && option.hasInput)) {
         setShowOtherInput(false);
         setOtherText('');
       }
     } else {
-      newSelected = [...selectedOptions, value];
-      if (typeof option === 'object' && option.hasInput) {
-        setShowOtherInput(true);
+      // Add to selection
+      if (typeof option === 'object') {
+        newSelected = [...selectedOptions, option];
+        if (option.hasInput) {
+          setShowOtherInput(true);
+        }
+      } else {
+        newSelected = [...selectedOptions, optionValue];
       }
     }
 
@@ -42,11 +80,33 @@ export default function MultipleChoice({ question, answer, onAnswer, showOtherIn
     const text = e.target.value;
     setOtherText(text);
     
-    const newSelected = selectedOptions.filter(item => !item.startsWith('Other:'));
-    if (text.trim()) {
-      newSelected.push(`Other: ${text}`);
-    } else {
-      newSelected.push('other');
+    // Find the "other" option in the original question
+    const otherOption = question.options.find(opt => 
+      typeof opt === 'object' && opt.hasInput
+    );
+    
+    // Update selected options with new text
+    const newSelected = selectedOptions.map(item => {
+      if (typeof item === 'object' && item.value === 'other') {
+        return {
+          ...item,
+          customText: text
+        };
+      }
+      return item;
+    });
+    
+    // If "other" not in selection yet, add it
+    if (!selectedOptions.some(item => 
+      (typeof item === 'object' && item.value === 'other') ||
+      (typeof item === 'string' && item === 'other')
+    ) && text.trim()) {
+      newSelected.push({
+        value: 'other',
+        label: 'Other',
+        customText: text,
+        score: otherOption?.score || {}
+      });
     }
     
     setSelectedOptions(newSelected);
@@ -64,9 +124,17 @@ export default function MultipleChoice({ question, answer, onAnswer, showOtherIn
   };
 
   const isSelected = (option) => {
-    const value = getOptionValue(option);
-    return selectedOptions.includes(value) || 
-           (value === 'other' && selectedOptions.some(item => item.startsWith('Other:')));
+    const optionValue = getOptionValue(option);
+    
+    return selectedOptions.some(item => {
+      if (typeof item === 'string') {
+        return item === optionValue;
+      }
+      if (typeof item === 'object') {
+        return item.value === optionValue || item.label === optionValue;
+      }
+      return false;
+    });
   };
 
   return (
@@ -84,7 +152,7 @@ export default function MultipleChoice({ question, answer, onAnswer, showOtherIn
               <div className="multiple-choice__option-checkbox">
                 <div className="multiple-choice__option-checkbox-outer">
                   <div className="multiple-choice__option-checkbox-inner">
-                    <span className="icon-check"></span>
+                    <span className="icon-check">✓</span>
                   </div>
                 </div>
               </div>
@@ -98,7 +166,10 @@ export default function MultipleChoice({ question, answer, onAnswer, showOtherIn
         })}
       </div>
 
-      {showOtherInput && selectedOptions.some(item => item === 'other' || item.startsWith('Other:')) && (
+      {showOtherInput && selectedOptions.some(item => 
+        (typeof item === 'object' && item.value === 'other') ||
+        (typeof item === 'string' && item === 'other')
+      ) && (
         <div className="multiple-choice__other-input">
           <input
             type="text"

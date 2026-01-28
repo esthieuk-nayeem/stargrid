@@ -4,23 +4,57 @@ import { useState, useEffect } from "react";
 
 export default function DualSingleChoice({ question, answer, onAnswer }) {
   const [selections, setSelections] = useState({
-    downlink: '',
-    uplink: ''
+    downlink: null,
+    uplink: null
   });
 
   useEffect(() => {
     if (answer) {
-      setSelections(answer);
+      setSelections({
+        downlink: answer.downlink || null,
+        uplink: answer.uplink || null
+      });
     }
   }, [answer]);
 
   const handleSelect = (type, option) => {
+    // Handle both string and object options
+    const optionValue = typeof option === 'object' ? (option.value || option.label) : option;
+    
     const newSelections = {
       ...selections,
-      [type]: option
+      [type]: typeof option === 'object' ? option : { value: optionValue, label: optionValue }
     };
+    
     setSelections(newSelections);
     onAnswer(question.id, newSelections);
+  };
+
+  const getOptionValue = (option) => {
+    if (typeof option === 'string') return option;
+    return option.value || option.label;
+  };
+
+  const getOptionLabel = (option) => {
+    if (typeof option === 'string') return option;
+    return option.label;
+  };
+
+  const isSelected = (type, option) => {
+    const currentSelection = selections[type];
+    if (!currentSelection) return false;
+    
+    const optionValue = getOptionValue(option);
+    
+    if (typeof currentSelection === 'string') {
+      return currentSelection === optionValue;
+    }
+    
+    if (typeof currentSelection === 'object') {
+      return currentSelection.value === optionValue || currentSelection.label === optionValue;
+    }
+    
+    return false;
   };
 
   return (
@@ -39,12 +73,12 @@ export default function DualSingleChoice({ question, answer, onAnswer }) {
             
             <div className="dual-single-choice__options">
               {subQuestion.options.map((option, optIndex) => {
-                const isSelected = selections[type] === option;
+                const selected = isSelected(type, option);
                 
                 return (
                   <div
                     key={optIndex}
-                    className={`dual-single-choice__option ${isSelected ? 'selected' : ''}`}
+                    className={`dual-single-choice__option ${selected ? 'selected' : ''}`}
                     onClick={() => handleSelect(type, option)}
                   >
                     <div className="dual-single-choice__option-radio">
@@ -53,7 +87,7 @@ export default function DualSingleChoice({ question, answer, onAnswer }) {
                       </div>
                     </div>
                     <div className="dual-single-choice__option-content">
-                      <span>{option}</span>
+                      <span>{getOptionLabel(option)}</span>
                     </div>
                   </div>
                 );

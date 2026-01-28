@@ -13,6 +13,7 @@
     "@fontsource/muli": "^4.1.0",
     "@fontsource/mulish": "^5.2.8",
     "@react-google-maps/api": "^2.20.7",
+    "@supabase/supabase-js": "^2.93.2",
     "animate.css": "^4.1.1",
     "gsap": "^3.13.0",
     "isotope-layout": "^3.0.6",

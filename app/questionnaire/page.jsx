@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import QuestionCard from "@/components/questionnaire/QuestionCard";
 import ProgressBar from "@/components/questionnaire/ProgressBar";
 import NavigationButtons from "@/components/questionnaire/NavigationButtons";
-import { questionnaireData } from "@/data/questionnaireData";
+import { questionnaireData, extractScoringData } from "@/data/questionnaireData";
+import { saveAnswers, loadAnswers, saveScoringData } from "@/lib/answerStorage";
 
 export default function QuestionnairePage() {
   const router = useRouter();
@@ -13,9 +14,32 @@ export default function QuestionnairePage() {
   const [answers, setAnswers] = useState({});
   const [direction, setDirection] = useState("forward");
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const totalQuestions = questionnaireData.length;
   const progress = ((currentQuestion + 1) / totalQuestions) * 100;
+
+  // Load saved answers on mount
+  useEffect(() => {
+    const savedAnswers = loadAnswers();
+    if (savedAnswers && Object.keys(savedAnswers).length > 0) {
+      setAnswers(savedAnswers);
+    }
+  }, []);
+
+  // Save answers whenever they change
+  useEffect(() => {
+    if (Object.keys(answers).length > 0) {
+      setIsSaving(true);
+      saveAnswers(answers);
+      
+      // Also update scoring data
+      const scoring = extractScoringData(answers);
+      saveScoringData(scoring);
+      
+      setTimeout(() => setIsSaving(false), 500);
+    }
+  }, [answers]);
 
   // Check if current question should be shown based on conditional logic
   const shouldShowQuestion = (question) => {
@@ -43,9 +67,6 @@ export default function QuestionnairePage() {
       ...prev,
       [questionId]: answer
     }));
-
-    console.log(questionId);
-    console.log(answer);
   };
 
   const handleNext = () => {
@@ -57,7 +78,7 @@ export default function QuestionnairePage() {
         setIsAnimating(false);
       }, 300);
     } else {
-      // Navigate to site summary or contact form
+      // All questions completed - go to contact form
       router.push("/questionnaire/contact");
     }
   };
@@ -95,6 +116,12 @@ export default function QuestionnairePage() {
             </div>
             <div className="questionnaire-page__progress-info">
               <span>Question {currentQuestion + 1} of {totalQuestions}</span>
+              {isSaving && (
+                <span className="questionnaire-page__saving">
+                  <span className="questionnaire-page__saving-icon">✓</span>
+                  Saved
+                </span>
+              )}
             </div>
           </div>
 
@@ -182,9 +209,38 @@ export default function QuestionnairePage() {
         }
 
         .questionnaire-page__progress-info {
+          display: flex;
+          align-items: center;
+          gap: 16px;
           font-size: 16px;
           font-weight: 500;
           color: rgba(255, 255, 255, 0.7);
+        }
+
+        .questionnaire-page__saving {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 14px;
+          color: #5CB0E9;
+          animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        .questionnaire-page__saving-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #3D72FC 0%, #5CB0E9 100%);
+          font-size: 11px;
+          color: white;
         }
 
         .questionnaire-page__content {
