@@ -17,19 +17,19 @@ import Testimonial from "@/components/sections/home1/Testimonial";
 export default function Home_One() {
 
     return (
-        <Layout headerStyle={1} footerStyle={1}>
+        <Layout headerStyle={2} footerStyle={1}>
             <Banner/>
             <About/>
             {/* <Counter/> */}
             {/* <Services/> */}
-            <Choose/>
-            <SlideingText/>
-            <Process/>
+            {/* <Choose/> */}
+            {/* <SlideingText/> */}
+            {/* <Process/> */}
             {/* <Portfolio/> */}
             {/* <Pricing/> */}
             <Contact/>
             {/* <Event/> */}
-            <Testimonial/>
+            {/* <Testimonial/> */}
             <Blog/>
             <Newsletter/>
         </Layout>

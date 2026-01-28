@@ -19,7 +19,7 @@ import Testimonial from "@/components/sections/home1/Testimonial";
 export default function Home_OnePage() {
 
     return (
-        <Layout headerStyle={4} footerStyle={2}>
+        <Layout headerStyle={4}>
             <Banner/>
             <About/>
             <Counter/>

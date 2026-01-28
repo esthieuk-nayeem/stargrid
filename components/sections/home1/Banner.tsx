@@ -61,7 +61,7 @@ export default function Banner() {
                 <SwiperSlide>
                     <div className="swiper-slide">
                         <div className="main-slider-two__bg"
-                            style={{ backgroundImage: "url(/assets/images/backgrounds/slider-2-1.jpg)" }}></div>
+                            style={{ backgroundImage: "url(/assets/images/resources/bg.jpg)" }}></div>
                         <ul className="list-unstyled main-slider-two__menu">
                             <li><Link href="/about">Help</Link></li>
                             <li><Link href="/contact">Support</Link></li>
@@ -77,15 +77,15 @@ export default function Banner() {
                             </div>
                         </div>
 
-                        <SliderBrand/>
+                        {/* <SliderBrand/> */}
                         
-                        <div className="main-slider-two__shape-1"></div>
+                        {/* <div className="main-slider-two__shape-1"></div>
                         <div className="main-slider-two__shape-2 float-bob-x">
                             <Image src="/assets/images/shapes/main-slider-two-shape-2.png" alt="shape" width={588} height={519} priority />
                         </div>
                         <div className="main-slider-two__shape-3 float-bob-y">
                             <Image src="/assets/images/shapes/main-slider-two-shape-3.png" alt="shape" width={381} height={582} priority />
-                        </div>
+                        </div> */}
                         <div className="container">
                             <div className="row">
                                 <div className="col-xl-12">
@@ -105,13 +105,13 @@ export default function Banner() {
                                             StarGrid provides a fully integrated cellular and satellite solution, <br /> ensuring seamless, reliable, and global coverage for your operations—anywhere, anytime.</p>
                                         <div className="main-slider-two__btns-box">
                                             <div className="main-slider-two__btn-box-1">
-                                                <Link href="/contact" className="thm-btn">Get Started<span
+                                                <Link href="/questionnaire" className="thm-btn">Get Started<span
                                                         className="icon-right-arrow"></span></Link>
                                             </div>
-                                            <div className="main-slider-two__btn-box-2">
+                                            {/* <div className="main-slider-two__btn-box-2">
                                                 <Link href="/about" className="thm-btn">Read More<span
                                                         className="icon-right-arrow"></span></Link>
-                                            </div>
+                                            </div> */}
                                         </div>
                                         <div className="main-slider-two__shield-check-icon">
                                             <Image src="/assets/images/icon/main-slider-shield-check-icon.png" alt="shape" width={28} height={32} priority />

@@ -90,7 +90,7 @@ export default function Banner() {
                                             implementation, we deliver tailored solutions <br /> that drive efficiency</p>
                                         <div className="main-slider__btn-and-trustpilot-box">
                                             <div className="main-slider__btn-box">
-                                                <Link href="/contact" className="thm-btn">Get Started<span
+                                                <Link href="/questionnaire" className="thm-btn">Get Started<span
                                                         className="icon-right-arrow"></span></Link>
                                             </div>
                                             <div className="main-slider__trustpilot-box">

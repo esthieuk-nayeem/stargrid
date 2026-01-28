@@ -55,11 +55,12 @@ export default function OnepageMenu_One() {
         </a>
         <ul>
           <li>
+{/* 
             <section className="home-showcase">
               <div className="container">
                 <div className="home-showcase__inner">
                   <div className="row">
-                    {/* Home 01 */}
+                  
                     <div className="col-lg-4">
                       <div className="home-showcase__item">
                         <div className="home-showcase__image">
@@ -88,7 +89,7 @@ export default function OnepageMenu_One() {
                       </div>
                     </div>
 
-                    {/* Home 02 */}
+                 
                     <div className="col-lg-4">
                       <div className="home-showcase__item">
                         <div className="home-showcase__image">
@@ -117,7 +118,7 @@ export default function OnepageMenu_One() {
                       </div>
                     </div>
 
-                    {/* Home 03 */}
+                   
                     <div className="col-lg-4">
                       <div className="home-showcase__item">
                         <div className="home-showcase__image">
@@ -148,7 +149,8 @@ export default function OnepageMenu_One() {
                   </div>
                 </div>
               </div>
-            </section>
+            </section> */}
+
           </li>
         </ul>
       </li>

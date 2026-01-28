@@ -30,7 +30,7 @@ export default function Layout({
       <main>{children}</main>
 
       {/* Footer (server component) */}
-      <Footer style={footerStyle} />
+      {/* <Footer style={footerStyle} /> */}
     </div>
   );
 }

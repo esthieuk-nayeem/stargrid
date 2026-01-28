@@ -16,7 +16,7 @@ export default function Header2({ scroll, handleMobileMenu, handlePopup, handleS
     <>
       {/* main header */}
       <header className={`main-header-two ${scroll ? "fixed-header" : ""}`}>
-        <div className="main-menu-two__top">
+        {/* <div className="main-menu-two__top">
             <div className="main-menu-two__top-inner">
                 <p className="main-menu-two__top-text">techguru That Ensures Your IT Runs Seamlessly, Anytime and Every
                     Time</p>
@@ -48,13 +48,13 @@ export default function Header2({ scroll, handleMobileMenu, handlePopup, handleS
                     </li>
                 </ul>
             </div>
-        </div>
+        </div> */}
         <nav className="main-menu main-menu-two">
             <div className="main-menu-two__wrapper">
                 <div className="main-menu-two__wrapper-inner">
                     <div className="main-menu-two__left">
                         <div className="main-menu-two__logo">
-                            <Link href="/"><Image src="/assets/images/resources/cellsat.png" alt="Image" width={186} height={36} priority /></Link>
+                            <Link href="/"><Image src="/assets/images/resources/stargrid.png" alt="Image" width={186} height={36} priority /></Link>
                         </div>
                     </div>
                     <div className="main-menu-two__main-menu-box">
@@ -89,7 +89,7 @@ export default function Header2({ scroll, handleMobileMenu, handlePopup, handleS
                 <div className="main-menu-two__wrapper-inner">
                     <div className="main-menu-two__left">
                         <div className="main-menu-two__logo">
-                            <Link href="/"><Image src="/assets/images/resources/logo-1.png" alt="Image" width={186} height={36} priority /></Link>
+                            <Link href="/"><Image src="/assets/images/resources/stargrid.png" alt="Image" width={186} height={36} priority /></Link>
                         </div>
                     </div>
                     <div className="main-menu-two__main-menu-box">
