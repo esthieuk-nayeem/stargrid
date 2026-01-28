@@ -14,7 +14,7 @@ export default function CounterUp({ end, duration = 2 }: CounterUpProps) {
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
+        if (!entry?.isIntersecting) {
           setInViewport(true);
           observer.disconnect(); // run only once
         }
