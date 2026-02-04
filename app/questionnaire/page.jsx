@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { 
   getAllSites, 
+  clearAllQuestionnaireData,
   getCurrentSiteId, 
   setCurrentSiteId, 
   createSite,
@@ -28,6 +29,7 @@ export default function MultiSiteQuestionnairePage() {
   const [answerForAllSites, setAnswerForAllSites] = useState(false);
 
   useEffect(() => {
+    clearAllQuestionnaireData();
     loadInitialData();
   }, []);
 

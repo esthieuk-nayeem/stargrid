@@ -343,11 +343,11 @@ export const questionnaireData = [
       { label: "24 hours", value: "24", score: { autonomy: 80 } },
       { label: "7 days", value: "168", score: { autonomy: 100 } }
     ],
-    conditional: true,
-    showWhen: (answers) => {
-      const q16 = answers[16];
-      return q16 && (q16.value === "grid_unreliable" || q16.value === "generator" || q16.value === "solar_wind" || q16.value === "none");
-    },
+    // conditional: true,
+    // showWhen: (answers) => {
+    //   const q16 = answers[16];
+    //   return q16 && (q16.value === "grid_unreliable" || q16.value === "generator" || q16.value === "solar_wind" || q16.value === "none");
+    // },
     perSiteAnswer: true
   },
   {
@@ -409,7 +409,36 @@ export const questionnaireData = [
     scaleRange: [1, 2, 3, 4, 5],
     scoreMultiplier: 20,
     perSiteAnswer: false  // Global question
-  }
+  },
+  {
+  id: 22,
+  section: "Site Characteristics",
+  question: "Is your site a fixed site or a moving site/vehicle?",
+  type: "single",
+  options: [
+    { 
+      value: "fixed", 
+      label: "Fixed Site (stationary location)",
+      score: { mobility: 0, routerType: "standard" }
+    },
+    { 
+      value: "moving_vehicle", 
+      label: "Moving Site/Vehicle (boat, truck, RV, etc.)",
+      score: { mobility: 100, routerType: "maritime_mobile" }
+    },
+    { 
+      value: "semi_mobile", 
+      label: "Semi-Mobile (occasional relocation)",
+      score: { mobility: 50, routerType: "rugged" }
+    }
+  ],
+  required: true,
+  perSiteAnswer: true,
+  important: true,
+  tooltip: "This helps us determine the best router and satellite solution for your mobility needs. Moving sites require maritime/mobile equipment.",
+  mappingField: "Site_Type",
+  scoringKey: "siteType"
+}
 ];
 
 export const getSectionQuestions = (section) => {

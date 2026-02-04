@@ -11,6 +11,7 @@ import "swiper/css/pagination";
 import "swiper/css/autoplay";
 import 'swiper/css/effect-fade'
 import CustomCursor from "@/components/elements/CustomCursor";
+import Script from "next/script";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -29,6 +30,12 @@ export const metadata: Metadata = {
   description: "",
 };
 
+// CHANGE: Load Google Maps with async parameter
+<Script
+  src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`}
+  strategy="beforeInteractive"
+/>
+
 export default function RootLayout({
   children,
 }: {
@@ -41,6 +48,7 @@ export default function RootLayout({
         <div className={marcellus.className}></div>
         {children}
       </body>
+      
     </html>
   );
 }

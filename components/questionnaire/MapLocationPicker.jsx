@@ -37,6 +37,16 @@ export default function MapLocationPicker({ onLocationSelect, initialLocation })
     }
   }, []);
 
+
+  useEffect(() => {
+  // Check if location already exists (editing mode)
+  if (initialLocation && initialLocation.lat && initialLocation.lng) {
+    setSelectedLocation(initialLocation);
+    setSiteName(initialLocation.siteName || '');
+    // Map will center on existing location
+  }
+}, [initialLocation]);
+
   // Create map instance
   useEffect(() => {
     if (mapLoaded && !map) {
