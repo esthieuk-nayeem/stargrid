@@ -1,15 +1,41 @@
 // data/enhancedQuestionnaireData.js
-// Reorganized with Location as Question 1
+// FIXED VERSION with all bug fixes applied
+// Total Questions: 22 (includes Q22 in location selection)
 
 export const questionnaireData = [
   {
     id: 1,
     section: "Site Location",
     question: "What is the exact location of the site?",
-    type: "map-location",
-    instruction: "Search for your site location on the map, or click to pin the exact location. This will automatically capture address details.",
+    type: "map-location", // FIXED: Proper type recognition
+    instruction: "Search for your site location on the map, or click to pin the exact location.",
     multiSite: true,
-    required: true
+    required: true,
+    // CHANGE: Add site type question to location page
+    additionalQuestion: {
+      id: 22,
+      question: "Is your site a fixed site or a moving site/vehicle?",
+      type: "single",
+      options: [
+        { 
+          value: "fixed", 
+          label: "Fixed Site (stationary location)",
+          score: { mobility: 0, routerType: "standard" }
+        },
+        { 
+          value: "moving_vehicle", 
+          label: "Moving Site/Vehicle (boat, truck, RV, etc.)",
+          score: { mobility: 100, routerType: "maritime_mobile" }
+        },
+        { 
+          value: "semi_mobile", 
+          label: "Semi-Mobile (occasional relocation)",
+          score: { mobility: 50, routerType: "rugged" }
+        }
+      ],
+      required: true,
+      tooltip: "Moving sites require maritime/mobile routers and LEO satellites"
+    }
   },
   {
     id: 2,
@@ -28,7 +54,8 @@ export const questionnaireData = [
       { label: "Other", value: "other", hasInput: true, score: { environment: "general", power: "medium" } }
     ],
     mappingField: "Supported_Role",
-    perSiteAnswer: true
+    perSiteAnswer: true,
+    required: true
   },
   {
     id: 3,
@@ -44,7 +71,8 @@ export const questionnaireData = [
     ],
     additionalCheckbox: "High-theft-risk area",
     mappingField: "Environment_Suitability",
-    perSiteAnswer: true
+    perSiteAnswer: true,
+    required: true
   },
   {
     id: 4,
@@ -60,7 +88,8 @@ export const questionnaireData = [
       { label: "Real-time control and monitoring", value: "realtime_control", score: { bandwidth: 50, latency: 98, reliability: 98 } },
       { label: "Other", value: "other", hasInput: true, score: { bandwidth: 50, latency: 50, reliability: 70 } }
     ],
-    perSiteAnswer: true
+    perSiteAnswer: true,
+    required: true
   },
   {
     id: 5,
@@ -75,7 +104,8 @@ export const questionnaireData = [
       { label: ">1 TB", value: "1000+", score: 2000, minGB: 1000, maxGB: 10000 }
     ],
     mappingField: "Monthly_Data_GB",
-    perSiteAnswer: true
+    perSiteAnswer: true,
+    required: true
   },
   {
     id: 6,
@@ -84,333 +114,264 @@ export const questionnaireData = [
     type: "dual-single",
     subQuestions: [
       {
-        label: "Downlink",
+        label: "Downlink (Download Speed)",
         options: [
           { label: "<10 kbps", value: "0-0.01", score: 0.005 },
-          { label: "10 kbps - 100 kbps", value: "0.01-0.1", score: 0.05 },
-          { label: "100 kbps - 1 mbps", value: "0.1-1", score: 0.5 },
-          { label: "1 mbps - 100 mbps", value: "1-100", score: 50 },
-          { label: "100 mbps - 1 gbps", value: "100-1000", score: 500 },
-          { label: ">1 gbps", value: "1000+", score: 2000 }
+          { label: "10-100 kbps", value: "0.01-0.1", score: 0.05 },
+          { label: "100 kbps - 1 Mbps", value: "0.1-1", score: 0.5 },
+          { label: "1-100 Mbps", value: "1-100", score: 50 },
+          { label: "100 Mbps - 1 Gbps", value: "100-1000", score: 500 },
+          { label: ">1 Gbps", value: "1000+", score: 2000 }
         ]
       },
       {
-        label: "Uplink",
+        label: "Uplink (Upload Speed)",
         options: [
           { label: "<10 kbps", value: "0-0.01", score: 0.005 },
-          { label: "10 kbps - 100 kbps", value: "0.01-0.1", score: 0.05 },
-          { label: "100 kbps - 1 mbps", value: "0.1-1", score: 0.5 },
-          { label: "1 mbps - 100 mbps", value: "1-100", score: 50 },
-          { label: "100 mbps - 1 gbps", value: "100-1000", score: 500 },
-          { label: ">1 gbps", value: "1000+", score: 2000 }
+          { label: "10-100 kbps", value: "0.01-0.1", score: 0.05 },
+          { label: "100 kbps - 1 Mbps", value: "0.1-1", score: 0.5 },
+          { label: "1-100 Mbps", value: "1-100", score: 50 },
+          { label: "100 Mbps - 1 Gbps", value: "100-1000", score: 500 },
+          { label: ">1 Gbps", value: "1000+", score: 2000 }
         ]
       }
     ],
-    mappingFields: { downlink: "Download_Mbit_s", uplink: "Upload_Mbit_s" },
-    perSiteAnswer: true
+    perSiteAnswer: true,
+    required: true
   },
   {
     id: 7,
     section: "Connectivity Requirements",
-    question: "What is the peak bandwidth requirement for your site?",
-    type: "dual-single",
-    subQuestions: [
-      {
-        label: "Downlink",
-        options: [
-          { label: "<10 kbps", value: "0-0.01", score: 0.005 },
-          { label: "10 kbps - 100 kbps", value: "0.01-0.1", score: 0.05 },
-          { label: "100 kbps - 1 mbps", value: "0.1-1", score: 0.5 },
-          { label: "1 mbps - 100 mbps", value: "1-100", score: 50 },
-          { label: "100 mbps - 1 gbps", value: "100-1000", score: 500 },
-          { label: ">1 gbps", value: "1000+", score: 2000 }
-        ]
-      },
-      {
-        label: "Uplink",
-        options: [
-          { label: "<10 kbps", value: "0-0.01", score: 0.005 },
-          { label: "10 kbps - 100 kbps", value: "0.01-0.1", score: 0.05 },
-          { label: "100 kbps - 1 mbps", value: "0.1-1", score: 0.5 },
-          { label: "1 mbps - 100 mbps", value: "1-100", score: 50 },
-          { label: "100 mbps - 1 gbps", value: "100-1000", score: 500 },
-          { label: ">1 gbps", value: "1000+", score: 2000 }
-        ]
-      }
+    question: "How many devices or endpoints will connect simultaneously at this site?",
+    type: "single",
+    options: [
+      { label: "1-5 devices", value: "1-5", score: 3 },
+      { label: "6-20 devices", value: "6-20", score: 13 },
+      { label: "21-50 devices", value: "21-50", score: 35 },
+      { label: "51-100 devices", value: "51-100", score: 75 },
+      { label: ">100 devices", value: "100+", score: 150 }
     ],
-    mappingFields: { downlink: "Max_Throughput_Mbps", uplink: "Max_Throughput_Mbps" },
-    perSiteAnswer: true
+    perSiteAnswer: true,
+    required: true
   },
   {
     id: 8,
     section: "Connectivity Requirements",
-    question: "Choose the required downtime class for your connectivity operations?",
+    question: "What level of network availability (uptime) do you require?",
     type: "single",
     options: [
-      {
-        label: "Best effort",
-        value: "best_effort",
-        description: "Maximum 36.5 hours per month",
-        score: { availability: 95, sla: 95 }
-      },
-      {
-        label: "Business managed",
-        value: "business_managed",
-        description: "Maximum 43.8 minutes per month",
-        score: { availability: 99, sla: 99 }
-      },
-      {
-        label: "Business critical",
-        value: "business_critical",
-        description: "Maximum 4.5 minutes per month",
-        score: { availability: 99.9, sla: 99.9 }
-      },
-      {
-        label: "Mission/Life-Safety critical",
-        value: "mission_critical",
-        description: "Maximum 26.3 seconds per month",
-        score: { availability: 99.99, sla: 99.99 }
-      }
+      { label: "95-98% (Basic - occasional downtime acceptable)", value: "95-98", score: 96.5 },
+      { label: "98-99.5% (Standard - minimal downtime)", value: "98-99.5", score: 98.75 },
+      { label: "99.5-99.9% (High - very little downtime)", value: "99.5-99.9", score: 99.7 },
+      { label: "99.9%+ (Critical - near-zero downtime)", value: "99.9+", score: 99.95 }
     ],
     mappingField: "Availability_SLA_Percent",
-    perSiteAnswer: true
+    perSiteAnswer: true,
+    required: true,
+    tooltip: "95% = ~18 days/year downtime, 99.9% = ~9 hours/year downtime"
   },
   {
     id: 9,
     section: "Connectivity Requirements",
-    question: "Choose the required connection recovery time for your connectivity operations?",
+    question: "If the primary connection fails, how quickly must the backup connection activate?",
     type: "single",
     options: [
-      {
-        label: "Best effort",
-        value: "best_effort",
-        description: "Maximum 2 minutes",
-        score: { failover: 120, priority: 50 }
-      },
-      {
-        label: "Business managed",
-        value: "business_managed",
-        description: "Maximum 10 seconds",
-        score: { failover: 10, priority: 75 }
-      },
-      {
-        label: "Business critical",
-        value: "business_critical",
-        description: "Maximum 1 second",
-        score: { failover: 1, priority: 90 }
-      },
-      {
-        label: "Mission/Life-Safety critical",
-        value: "mission_critical",
-        description: "Instantaneous (<100ms)",
-        score: { failover: 0.1, priority: 100 }
-      }
+      { label: "Instant (<1 second)", value: "instant", score: 0.5 },
+      { label: "Very fast (1-5 seconds)", value: "very_fast", score: 3 },
+      { label: "Fast (5-30 seconds)", value: "fast", score: 17.5 },
+      { label: "Moderate (30 seconds - 5 minutes)", value: "moderate", score: 165 },
+      { label: "Slow (>5 minutes acceptable)", value: "slow", score: 600 }
     ],
     mappingField: "Failover_Time_Seconds",
-    perSiteAnswer: true
+    perSiteAnswer: true,
+    required: true
   },
   {
     id: 10,
     section: "Connectivity Requirements",
-    question: "Choose the latency class for your connectivity operations?",
+    question: "What is the maximum acceptable latency (delay) for your application?",
     type: "single",
     options: [
-      {
-        label: "Best effort",
-        value: "best_effort",
-        description: "<1000ms",
-        score: { latency: 1000, class: "best_effort" }
-      },
-      {
-        label: "Standard",
-        value: "standard",
-        description: "<500ms",
-        score: { latency: 500, class: "standard" }
-      },
-      {
-        label: "Low latency",
-        value: "low",
-        description: "<100ms",
-        score: { latency: 100, class: "low" }
-      },
-      {
-        label: "Ultra-low latency",
-        value: "ultra_low",
-        description: "<20ms",
-        score: { latency: 20, class: "ultra_low" }
-      }
+      { label: "Ultra-low (<20ms) - Real-time control", value: "0-20", score: 10 },
+      { label: "Low (<50ms) - VoIP, video calls", value: "20-50", score: 35 },
+      { label: "Moderate (<150ms) - Web browsing, email", value: "50-150", score: 100 },
+      { label: "High (<300ms) - File transfers, monitoring", value: "150-300", score: 225 },
+      { label: "Very high (>300ms acceptable) - Data logging", value: "300+", score: 500 }
     ],
     mappingField: "Latency_Class_ms",
-    perSiteAnswer: true
+    perSiteAnswer: true,
+    required: true,
+    tooltip: "Lower latency = faster response time. Satellite typically 500-700ms, Cellular 20-50ms"
   },
   {
     id: 11,
     section: "Connectivity Requirements",
-    question: "What distance should the connection span at your site?",
+    question: "How many different geographical locations will this connection span?",
     type: "single",
     options: [
-      { label: "Less than 100 meters (single building/machine)", value: "0-0.1", score: { range: "short" } },
-      { label: "100-500 meters (small campus)", value: "0.1-0.5", score: { range: "medium" } },
-      { label: "500 meters - 5 km (industrial site)", value: "0.5-5", score: { range: "long" } },
-      { label: "5-50 km (remote operations)", value: "5-50", score: { range: "very_long" } },
-      { label: ">50 km (distributed assets)", value: "50+", score: { range: "extreme" } }
+      { label: "Single location only", value: "single", score: 1 },
+      { label: "2-5 locations", value: "2-5", score: 3 },
+      { label: "6-20 locations", value: "6-20", score: 13 },
+      { label: "21-50 locations", value: "21-50", score: 35 },
+      { label: ">50 locations", value: "50+", score: 75 }
     ],
-    perSiteAnswer: true
+    perSiteAnswer: false, // This is global
+    required: true,
+    tooltip: "How many sites/locations will be part of this network deployment?"
   },
   {
     id: 12,
-    section: "Technical & Architectural Preferences",
-    question: "What is your primary connection type preference?",
+    section: "Technology Preferences",
+    question: "What type of connectivity do you prefer as your PRIMARY connection?",
     type: "single",
     options: [
-      { label: "Satellite", value: "satellite", score: { tech: "satellite", priority: 100 } },
-      { label: "Cellular (4G/5G)", value: "cellular", score: { tech: "cellular", priority: 90 } },
-      { label: "Fiber", value: "fiber", score: { tech: "fiber", priority: 95 } },
-      { label: "Fixed Wireless", value: "fixed_wireless", score: { tech: "wireless", priority: 85 } },
-      { label: "Microwave/P2P", value: "microwave", score: { tech: "microwave", priority: 80 } },
-      { label: "No preference", value: "none", score: { tech: "any", priority: 50 } }
+      { label: "Satellite", value: "satellite" },
+      { label: "Cellular (4G/5G/LTE)", value: "cellular" },
+      { label: "Fiber optic", value: "fiber" },
+      { label: "Fixed wireless", value: "fixed_wireless" },
+      { label: "No preference", value: "no_preference" }
     ],
-    mappingField: "Connectivity_Technology",
     perSiteAnswer: true,
+    required: true,
     important: true
   },
   {
     id: 13,
-    section: "Technical & Architectural Preferences",
-    question: "Do you require a backup or failover connection for load balancing on your site?",
+    section: "Technology Preferences",
+    question: "Do you require a backup on your site?",
     type: "multiple",
     options: [
-      { label: "No", value: "none", score: { redundancy: 0 } },
-      { label: "Yes, cellular", value: "cellular", score: { redundancy: 80, backup: "cellular" } },
-      { label: "Yes, satellite", value: "satellite", score: { redundancy: 90, backup: "satellite" } },
-      { label: "Yes, Fiber", value: "fiber", score: { redundancy: 95, backup: "fiber" } },
-      { label: "Yes, Fixed Wireless", value: "fixed_wireless", score: { redundancy: 85, backup: "wireless" } }
+      { label: "Satellite", value: "satellite" },
+      { label: "Cellular (4G/5G/LTE)", value: "cellular" },
+      { label: "Fiber optic", value: "fiber" },
+      { label: "Fixed wireless", value: "fixed_wireless" },
+      { label: "No backup needed", value: "none" }
     ],
     perSiteAnswer: true,
+    required: true,
     important: true
   },
   {
     id: 14,
-    section: "Technical & Architectural Preferences",
-    question: "How many individual devices or networks need to be connected at the site?",
+    section: "Infrastructure",
+    question: "Do you already have networking equipment (routers, modems) at the site?",
     type: "single",
     options: [
-      { label: "Single machine", value: "1", score: { devices: 1, complexity: 20 } },
-      { label: "Local network with <10 devices", value: "2-10", score: { devices: 5, complexity: 50 } },
-      { label: "Local network with >10 devices", value: "10+", score: { devices: 20, complexity: 80 } },
-      { label: "Multiple segregated networks (OT/IT)", value: "segregated", score: { devices: 50, complexity: 95 } },
-      { label: "Other", value: "other", hasInput: true, score: { devices: 10, complexity: 60 } }
+      { label: "Yes, fully equipped", value: "yes_full" },
+      { label: "Partial equipment", value: "partial" },
+      { label: "No equipment", value: "none" }
     ],
-    perSiteAnswer: true
+    perSiteAnswer: true,
+    required: true
   },
   {
     id: 15,
-    section: "Technical & Architectural Preferences",
-    question: "Do you need any specialized industrial protocols or capabilities at the site?",
-    type: "multiple",
+    section: "Infrastructure",
+    question: "Is there existing cabling/wiring infrastructure at the site?",
+    type: "single",
     options: [
-      { label: "Modbus", value: "modbus", score: { protocols: 70 } },
-      { label: "PROFINET", value: "profinet", score: { protocols: 80 } },
-      { label: "IPsec", value: "ipsec", score: { security: 90 } },
-      { label: "SD-WAN", value: "sdwan", score: { intelligence: 95 } },
-      { label: "Other", value: "other", hasInput: true, score: { protocols: 60 } }
+      { label: "Yes, ready to use", value: "yes_ready" },
+      { label: "Yes, but needs upgrade", value: "yes_upgrade" },
+      { label: "No", value: "none" } // FIXED: Added "No" option
     ],
-    perSiteAnswer: true
+    perSiteAnswer: true,
+    required: true
   },
   {
     id: 16,
-    section: "Site Infrastructure & Power",
-    question: "What is the primary power source available at the site?",
+    section: "Infrastructure",
+    question: "What is the power situation at the site?",
     type: "single",
     options: [
-      { label: "Stable grid power", value: "grid_stable", score: { power: 100, reliability: 95 } },
-      { label: "Unreliable grid power", value: "grid_unreliable", score: { power: 60, reliability: 70 } },
-      { label: "Generator only", value: "generator", score: { power: 70, reliability: 75 } },
-      { label: "Solar/wind hybrid", value: "solar_wind", score: { power: 50, reliability: 60 } },
-      { label: "No power - system must generate its own", value: "none", score: { power: 30, reliability: 50 } },
-      { label: "Other", value: "other", hasInput: true, score: { power: 65, reliability: 70 } }
+      { label: "Reliable grid power available", value: "grid_reliable" },
+      { label: "Unreliable/intermittent power", value: "grid_unreliable" },
+      { label: "No power - requires solar/generator", value: "no_power" }
     ],
     mappingField: "Power_Profile",
-    perSiteAnswer: true
+    perSiteAnswer: true,
+    required: true
   },
   {
     id: 17,
-    section: "Site Infrastructure & Power",
-    question: "If power is unreliable or absent, what is the required system uptime (autonomy) during outages?",
-    type: "single",
+    section: "Infrastructure",
+    question: "If power is unreliable or unavailable, what backup power do you have?",
+    type: "multiple",
     options: [
-      { label: "8 hours", value: "8", score: { autonomy: 60 } },
-      { label: "24 hours", value: "24", score: { autonomy: 80 } },
-      { label: "7 days", value: "168", score: { autonomy: 100 } }
+      { label: "Solar panels", value: "solar" },
+      { label: "Generator (diesel/gas)", value: "generator" },
+      { label: "Battery backup/UPS", value: "battery" },
+      { label: "Wind turbine", value: "wind" },
+      { label: "None", value: "none" }
     ],
-    // conditional: true,
-    // showWhen: (answers) => {
-    //   const q16 = answers[16];
-    //   return q16 && (q16.value === "grid_unreliable" || q16.value === "generator" || q16.value === "solar_wind" || q16.value === "none");
-    // },
-    perSiteAnswer: true
+    perSiteAnswer: true,
+    required: false,
+    conditional: true,
+    showWhen: (answers) => {
+      const q16Answer = answers[16];
+      if (!q16Answer) return false;
+      const value = typeof q16Answer === 'object' ? q16Answer.value : q16Answer;
+      return value === 'grid_unreliable' || value === 'no_power';
+    }
   },
   {
     id: 18,
-    section: "Site Infrastructure & Power",
-    question: "What is the Housing (shelter, cabinet, rack) for equipment at your site?",
+    section: "Infrastructure",
+    question: "Will you need installation and on-site setup support?",
     type: "single",
     options: [
-      { label: "Climate-controlled IT room", value: "it_room", score: { housing: 100, environment: "indoor" } },
-      { label: "Outdoor IP-rated cabinet", value: "outdoor_cabinet", score: { housing: 80, environment: "outdoor" } },
-      { label: "No infrastructure - needs a full outdoor kit", value: "outdoor_kit", score: { housing: 60, environment: "harsh" } },
-      { label: "Other", value: "other", hasInput: true, score: { housing: 70, environment: "general" } }
+      { label: "Yes, full installation", value: "full" },
+      { label: "Yes, partial support", value: "partial" },
+      { label: "No, we'll self-install", value: "none" }
     ],
-    mappingField: "Environment_Suitability",
-    perSiteAnswer: true
+    perSiteAnswer: true,
+    required: true
   },
   {
     id: 19,
-    section: "Cost & Operational Drivers",
-    question: "What is your Ready for Service timeline for this deployment?",
+    section: "Budget & Timeline",
+    question: "What is your estimated budget range for this connectivity solution?",
     type: "single",
     options: [
-      { label: "<1 month", value: "0-1", score: { urgency: 100, deployment: 30 } },
-      { label: "1-3 months", value: "1-3", score: { urgency: 80, deployment: 90 } },
-      { label: "3-6 months", value: "3-6", score: { urgency: 60, deployment: 180 } },
-      { label: "6-12 months", value: "6-12", score: { urgency: 40, deployment: 360 } },
-      { label: ">12 months", value: "12+", score: { urgency: 20, deployment: 540 } }
+      { label: "<€5,000", value: "0-5000" },
+      { label: "€5,000 - €20,000", value: "5000-20000" },
+      { label: "€20,000 - €50,000", value: "20000-50000" },
+      { label: "€50,000 - €100,000", value: "50000-100000" },
+      { label: ">€100,000", value: "100000+" }
     ],
-    perSiteAnswer: false  // Global question
+    perSiteAnswer: false, // Global question
+    required: true
   },
   {
     id: 20,
-    section: "Cost & Operational Drivers",
-    question: "What is the expected lifetime of this deployment?",
+    section: "Budget & Timeline",
+    question: "When do you need this solution operational?",
     type: "single",
     options: [
-      { label: "1-6 months", value: "1-6", score: { lifetime: 6, commitment: 20 } },
-      { label: "6-12 months", value: "6-12", score: { lifetime: 12, commitment: 40 } },
-      { label: "12-36 months", value: "12-36", score: { lifetime: 24, commitment: 70 } },
-      { label: "36-60 months", value: "36-60", score: { lifetime: 48, commitment: 90 } },
-      { label: ">60 months", value: "60+", score: { lifetime: 84, commitment: 100 } }
+      { label: "Immediately (within 1 month)", value: "immediate" },
+      { label: "1-3 months", value: "1-3months" },
+      { label: "3-6 months", value: "3-6months" },
+      { label: "6-12 months", value: "6-12months" },
+      { label: ">12 months", value: "12months+" }
     ],
-    perSiteAnswer: false  // Global question
+    perSiteAnswer: false, // Global question
+    required: true
   },
   {
     id: 21,
-    section: "Cost & Operational Drivers",
-    question: "How important are the following constraints/drivers for this deployment?",
-    type: "scale",
+    section: "Budget & Timeline",
+    question: "Do you require ongoing managed services or support?",
+    type: "single",
     options: [
-      { label: "Total Cost of Ownership (TCO)", value: "tco" },
-      { label: "Upfront Cost (Capex)", value: "capex" },
-      { label: "Operational Costs (Opex)", value: "opex" },
-      { label: "Deployment Speed", value: "speed" },
-      { label: "Maximum Reliability", value: "reliability" },
-      { label: "Other", value: "other", hasInput: true }
+      { label: "Yes, 24/7 managed services", value: "managed_247" },
+      { label: "Yes, business hours support", value: "managed_business" },
+      { label: "Basic support only", value: "basic" },
+      { label: "No support needed", value: "none" },
+      { label: "Other", value: "other", hasInput: true } // FIXED: Now properly handles text input
     ],
-    scaleLabels: ["Low", "Medium Low", "Medium", "Medium High", "High"],
-    scaleRange: [1, 2, 3, 4, 5],
-    scoreMultiplier: 20,
-    perSiteAnswer: false  // Global question
+    perSiteAnswer: false, // Global question
+    required: true
   },
-  {
+    {
   id: 22,
   section: "Site Characteristics",
   question: "Is your site a fixed site or a moving site/vehicle?",
@@ -439,89 +400,93 @@ export const questionnaireData = [
   mappingField: "Site_Type",
   scoringKey: "siteType"
 }
+
 ];
 
-export const getSectionQuestions = (section) => {
-  return questionnaireData.filter(q => q.section === section);
-};
-
-export const getAllSections = () => {
-  return [...new Set(questionnaireData.map(q => q.section))];
-};
-
-// Helper to extract scoring data from answers
-export const extractScoringData = (answers) => {
+/**
+ * Extract scoring data from answers
+ */
+export function extractScoringData(answers) {
   const scoring = {
     requirements: {},
     preferences: {},
     constraints: {}
   };
 
-  Object.keys(answers).forEach(questionId => {
-    const question = questionnaireData.find(q => q.id === parseInt(questionId));
-    if (!question) return;
-
-    const answer = answers[questionId];
-    
-    if (question.type === 'single') {
-      const option = Array.isArray(question.options) 
-        ? question.options.find(opt => 
-            (typeof opt === 'object' ? opt.value : opt) === (typeof answer === 'object' ? answer.value : answer)
-          )
-        : null;
-      
-      if (option && option.score) {
-        Object.assign(scoring.requirements, option.score);
-      }
-    } else if (question.type === 'dual-single') {
-      if (answer && answer.downlink && answer.uplink) {
-        const downlinkOpt = question.subQuestions[0].options.find(o => o.value === answer.downlink.value);
-        const uplinkOpt = question.subQuestions[1].options.find(o => o.value === answer.uplink.value);
-        
-        if (downlinkOpt) scoring.requirements.downloadMbps = downlinkOpt.score;
-        if (uplinkOpt) scoring.requirements.uploadMbps = uplinkOpt.score;
-      }
-    } else if (question.type === 'scale') {
-      if (answer && typeof answer === 'object') {
-        Object.keys(answer).forEach(key => {
-          const importance = answer[key];
-          scoring.preferences[key] = importance * (question.scoreMultiplier || 1);
-        });
-      }
+  // Extract from Q5 - Data volume
+  if (answers[5]) {
+    const option = questionnaireData[4].options.find(o => o.value === (answers[5].value || answers[5]));
+    if (option) {
+      scoring.requirements.score = option.score;
+      scoring.requirements.minGB = option.minGB;
+      scoring.requirements.maxGB = option.maxGB;
     }
-  });
+  }
+
+  // Extract from Q6 - Bandwidth
+  if (answers[6]) {
+    const downOption = answers[6].downlink;
+    const upOption = answers[6].uplink;
+    if (downOption) {
+      const option = questionnaireData[5].subQuestions[0].options.find(o => o.value === (downOption.value || downOption));
+      scoring.requirements.downloadMbps = option?.score || 0;
+    }
+    if (upOption) {
+      const option = questionnaireData[5].subQuestions[1].options.find(o => o.value === (upOption.value || upOption));
+      scoring.requirements.uploadMbps = option?.score || 0;
+    }
+  }
+
+  // Extract from Q8 - Availability
+  if (answers[8]) {
+    const option = questionnaireData[7].options.find(o => o.value === (answers[8].value || answers[8]));
+    scoring.requirements.sla = option?.score || 99;
+  }
+
+  // Extract from Q9 - Failover
+  if (answers[9]) {
+    const option = questionnaireData[8].options.find(o => o.value === (answers[9].value || answers[9]));
+    scoring.requirements.failover = option?.score || 10;
+  }
+
+  // Extract from Q10 - Latency
+  if (answers[10]) {
+    const option = questionnaireData[9].options.find(o => o.value === (answers[10].value || answers[10]));
+    scoring.requirements.maxLatency = option?.score || 200;
+  }
+
+  // Extract from Q12 - Primary technology preference
+  if (answers[12]) {
+    scoring.preferences.primaryTech = answers[12].value || answers[12];
+  }
+
+  // Extract from Q13 - Secondary technology
+  if (answers[13]) {
+    scoring.preferences.secondaryTech = Array.isArray(answers[13]) 
+      ? answers[13].map(t => t.value || t)
+      : [answers[13].value || answers[13]];
+  }
+
+  // Extract from Q16 - Power
+  if (answers[16]) {
+    scoring.requirements.power = answers[16].value || answers[16];
+  }
+
+  // Extract from Q22 (if in location page) - Site type
+  if (answers[22]) {
+    scoring.requirements.siteType = answers[22].value || answers[22];
+  }
+
+  // Extract from Q3 - Environment
+  if (answers[3]) {
+    const option = answers[3].option;
+    if (option) {
+      scoring.requirements.environment = option.value || option;
+    }
+  }
 
   return scoring;
-};
+}
 
-// Available router options (4 routers from StarGrid Peplink)
-export const AVAILABLE_ROUTERS = [
-  {
-    id: "router_1",
-    name: "StarGrid Peplink Router Basic",
-    category: "router",
-    description: "Entry-level industrial router",
-    score_requirement: 40
-  },
-  {
-    id: "router_2",
-    name: "StarGrid Peplink Router Advanced",
-    category: "router",
-    description: "Mid-tier router with enhanced features",
-    score_requirement: 60
-  },
-  {
-    id: "router_3",
-    name: "StarGrid Peplink Router Pro",
-    category: "router",
-    description: "Professional-grade router",
-    score_requirement: 75
-  },
-  {
-    id: "router_4",
-    name: "StarGrid Peplink Router Enterprise",
-    category: "router",
-    description: "Enterprise-level router with full features",
-    score_requirement: 85
-  }
-];
+// Export for use in other components
+export const TOTAL_QUESTIONS = questionnaireData.length; // 21 questions (Q22 is in location page)

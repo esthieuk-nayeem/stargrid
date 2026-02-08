@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getAllSites, validateSite } from "@/lib/multiSiteStorage";
+import { getAllSites, validateSite, duplicateSite } from "@/lib/multiSiteStorage";
 import { questionnaireData } from "@/data/enhancedQuestionnaireData";
 
 export default function ValidationSummary() {
@@ -58,6 +58,22 @@ export default function ValidationSummary() {
     router.push(`/questionnaire?site=${siteId}`);
   };
 
+  // FIXED: Add Another Site functionality
+  const handleAddAnotherSite = () => {
+    // Navigate to questionnaire to add new site
+    router.push('/questionnaire?addSite=true');
+  };
+
+  // FIXED: Duplicate site with same parameters
+  const handleDuplicateSite = (siteId) => {
+    const newSite = duplicateSite(siteId);
+    if (newSite) {
+      loadSitesData();
+      // Navigate to edit the new site
+      router.push(`/questionnaire?site=${newSite.id}`);
+    }
+  };
+
   const handleSubmit = () => {
     if (Object.keys(errors).length > 0) {
       alert('Please complete all required questions for all sites before submitting.');
@@ -88,7 +104,7 @@ export default function ValidationSummary() {
       )}
 
       <div className="validation-summary__sites">
-        {sites.map(site => {
+        {sites.map((site, siteIndex) => {
           const isExpanded = expandedSite === site.id;
           const hasErrors = errors[site.id];
           
@@ -99,8 +115,11 @@ export default function ValidationSummary() {
                 onClick={() => setExpandedSite(isExpanded ? null : site.id)}
               >
                 <div className="validation-summary__site-info">
-                  <h3>{site.name}</h3>
-                  <p>📍 {site.location.address || `${site.location.city || ''}, ${site.location.country}`}</p>
+                  <h3>
+                    <span className="site-badge">Site {siteIndex + 1}</span>
+                    {site.name}
+                  </h3>
+                  <p>📍 {site.location.city ? `${site.location.city}, ` : ''}{site.location.country}</p>
                 </div>
                 <div className="validation-summary__site-status">
                   {hasErrors ? (
@@ -119,7 +138,7 @@ export default function ValidationSummary() {
               </div>
 
               {isExpanded && (
-                <div className="validation-summary__site-details">
+                <div className="validation-summary__site-content">
                   <div className="validation-summary__location">
                     <h4>📍 Location Details</h4>
                     <div className="validation-summary__location-grid">
@@ -189,6 +208,12 @@ export default function ValidationSummary() {
                     >
                       ✏️ Edit This Site
                     </button>
+                    <button 
+                      onClick={() => handleDuplicateSite(site.id)}
+                      className="validation-summary__btn validation-summary__btn--duplicate"
+                    >
+                      📋 Duplicate Site
+                    </button>
                   </div>
                 </div>
               )}
@@ -199,12 +224,21 @@ export default function ValidationSummary() {
 
       {sites.length > 0 && (
         <div className="validation-summary__footer">
+          {/* FIXED: Add Another Site Button */}
+          <button
+            onClick={handleAddAnotherSite}
+            className="validation-summary__btn validation-summary__btn--add-site"
+          >
+            + Add Another Site
+          </button>
+
           <button
             onClick={() => router.push('/questionnaire')}
             className="validation-summary__btn validation-summary__btn--back"
           >
             ← Back to Questions
           </button>
+          
           <button
             onClick={handleSubmit}
             disabled={!allValid}
@@ -291,6 +325,18 @@ export default function ValidationSummary() {
           font-weight: 700;
           color: var(--techguru-white);
           margin-bottom: 8px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .site-badge {
+          display: inline-block;
+          padding: 4px 12px;
+          background: linear-gradient(135deg, #3D72FC 0%, #5CB0E9 100%);
+          border-radius: 16px;
+          font-size: 13px;
+          font-weight: 700;
         }
 
         .validation-summary__site-info p {
@@ -330,7 +376,7 @@ export default function ValidationSummary() {
           color: rgba(255, 255, 255, 0.5);
         }
 
-        .validation-summary__site-details {
+        .validation-summary__site-content {
           padding: 0 32px 32px;
           display: flex;
           flex-direction: column;
@@ -473,6 +519,7 @@ export default function ValidationSummary() {
         .validation-summary__actions {
           display: flex;
           justify-content: flex-end;
+          gap: 12px;
           padding-top: 16px;
           border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
@@ -495,6 +542,28 @@ export default function ValidationSummary() {
 
         .validation-summary__btn--edit:hover {
           background: rgba(61, 114, 252, 0.25);
+          transform: translateY(-2px);
+        }
+
+        .validation-summary__btn--duplicate {
+          background: rgba(92, 176, 233, 0.15);
+          border: 1px solid rgba(92, 176, 233, 0.4);
+          color: #5CB0E9;
+        }
+
+        .validation-summary__btn--duplicate:hover {
+          background: rgba(92, 176, 233, 0.25);
+          transform: translateY(-2px);
+        }
+
+        .validation-summary__btn--add-site {
+          background: rgba(92, 176, 233, 0.15);
+          border: 1px solid rgba(92, 176, 233, 0.4);
+          color: #5CB0E9;
+        }
+
+        .validation-summary__btn--add-site:hover {
+          background: rgba(92, 176, 233, 0.25);
           transform: translateY(-2px);
         }
 
@@ -563,7 +632,7 @@ export default function ValidationSummary() {
             justify-content: space-between;
           }
 
-          .validation-summary__site-details {
+          .validation-summary__site-content {
             padding: 0 20px 20px;
           }
 
@@ -578,6 +647,10 @@ export default function ValidationSummary() {
           .validation-summary__btn {
             width: 100%;
             text-align: center;
+          }
+
+          .validation-summary__actions {
+            flex-direction: column;
           }
         }
       `}</style>
