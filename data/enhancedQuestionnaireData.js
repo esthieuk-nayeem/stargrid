@@ -338,13 +338,6 @@ export const questionnaireData = [
       { label: "24 hours", value: "24", score: { autonomy: 80 } },
       { label: "7 days", value: "168", score: { autonomy: 100 } }
     ],
-    conditional: true,
-    showWhen: (answers) => {
-      const q15 = answers[15];
-      if (!q15) return false;
-      const value = typeof q15 === 'object' ? q15.value : q15;
-      return value === "grid_unreliable" || value === "generator" || value === "solar_wind" || value === "none";
-    },
     perSiteAnswer: true,
     required: false
   },
