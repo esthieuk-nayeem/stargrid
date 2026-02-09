@@ -110,7 +110,7 @@ export const questionnaireData = [
     id: 6,
     section: "Connectivity Requirements",
     question: "What is the peak bandwidth requirement for your site?",
-    type: "dual-single",
+    type: "dual-single2",
     subQuestions: [
       {
         label: "Downlink",
@@ -397,7 +397,7 @@ export const questionnaireData = [
       { label: "Operational Costs (Opex)", value: "opex" },
       { label: "Deployment Speed", value: "speed" },
       { label: "Maximum Reliability", value: "reliability" },
-      { label: "Other", value: "other", hasInput: true }
+      // { label: "Other", value: "other", hasInput: true }
     ],
     scaleLabels: ["Low", "Medium Low", "Medium", "Medium High", "High"],
     scaleRange: [1, 2, 3, 4, 5],

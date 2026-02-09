@@ -366,6 +366,15 @@ export default function MultiSiteQuestionnairePage() {
           >
             📋 Review All Sites
           </button>
+
+           <button
+            onClick={() => router.push('/questionnaire/results')}
+            className="questionnaire-page__link"
+          >
+            📊 Show Results
+          </button>
+
+
           <button
             onClick={() => {
               if (confirm('Are you sure you want to save progress and exit?')) {

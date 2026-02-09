@@ -5,6 +5,7 @@ import SingleChoice from "./questionTypes/SingleChoice";
 import MultipleChoice from "./questionTypes/MultipleChoice";
 import LocationInput from "./questionTypes/LocationInput";
 import DualSingleChoice from "./questionTypes/DualSingleChoice";
+import DualSingleChoice2 from "./questionTypes/DualSingleChoice2";
 import BooleanChoice from "./questionTypes/BooleanChoice";
 import ScaleRating from "./questionTypes/ScaleRating";
 import SingleWithCheckbox from "./questionTypes/SingleWithCheckbox";
@@ -48,6 +49,15 @@ export default function QuestionCard({ question, answer, onAnswer }) {
       case "dual-single":
         return (
           <DualSingleChoice
+            question={question}
+            answer={answer}
+            onAnswer={onAnswer}
+          />
+        );
+
+          case "dual-single2":
+        return (
+          <DualSingleChoice2
             question={question}
             answer={answer}
             onAnswer={onAnswer}

@@ -1,160 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAllSites, clearAllQuestionnaireData } from "@/lib/multiSiteStorage";
 
-export default function ResultsPage() {
+export default function StaticResultsPage() {
   const router = useRouter();
-  const [sites, setSites] = useState([]);
-  const [expandedSite, setExpandedSite] = useState(null);
-
-  useEffect(() => {
-    const allSites = getAllSites();
-    setSites(allSites);
-    
-    // Auto-expand first site
-    if (allSites.length > 0) {
-      setExpandedSite(allSites[0].id);
-    }
-  }, []);
-
-  // Data generator - returns clean, readable component names
-  const getTemplateDataForSite = (site, index) => {
-    // Determine site type from answers
-    const siteType = site.answers[22]?.value || site.answers[22] || "fixed";
-    const primaryTech = site.answers[12]?.value || site.answers[12] || "satellite";
-    const hasBackup = site.answers[13] && Array.isArray(site.answers[13]) 
-      ? !site.answers[13].some(t => (t.value || t) === 'none')
-      : false;
-
-    return {
-      siteNumber: index + 1,
-      siteName: site.name || `Site ${index + 1}`,
-      siteType: siteType === "fixed" ? "Fixed Site" : siteType === "moving_vehicle" ? "Mobile Site" : "Semi-Mobile",
-      city: site.location?.city || "Location",
-      components: [
-        {
-          name: "Router",
-          hardware: siteType === "fixed" ? "Fixed" : "Mobile",
-          plan: "1.0 Gbps",
-          setupFee: siteType === "fixed" ? 799 : 1299,
-          monthlyFee: 12,
-          managedFee: 128
-        },
-        {
-          name: "Cellular",
-          hardware: "Telefonica Industrial SIM",
-          plan: "50 GB/month",
-          setupFee: 8.90,
-          monthlyFee: 65.60,
-          managedFee: 0
-        },
-        ...(primaryTech === "satellite" || hasBackup ? [{
-          name: "Satellite",
-          hardware: "Starlink Enterprise",
-          plan: "200 GB/month",
-          setupFee: 390,
-          monthlyFee: 120,
-          managedFee: 0
-        }] : [])
-      ]
-    };
-  };
-
-  const calculateSiteTotal = (components) => {
-    return components.reduce((sum, c) => ({
-      setup: sum.setup + c.setupFee,
-      monthly: sum.monthly + c.monthlyFee,
-      managed: sum.managed + c.managedFee
-    }), { setup: 0, monthly: 0, managed: 0 });
-  };
-
-  const calculateDeploymentSummary = () => {
-    const allSitesCount = sites.length;
-
-    // Calculate actual totals from template data
-    let totalSetup = 0;
-    let totalMonthly = 0;
-    let totalManaged = 0;
-
-    sites.forEach((site, index) => {
-      const siteData = getTemplateDataForSite(site, index);
-      const totals = calculateSiteTotal(siteData.components);
-      totalSetup += totals.setup;
-      totalMonthly += totals.monthly;
-      totalManaged += totals.managed;
-    });
-
-    return {
-      sites: allSitesCount,
-      setup: Math.round(totalSetup),
-      monthly: Math.round(totalMonthly),
-      managed: Math.round(totalManaged),
-      contract3y: Math.round((totalMonthly * 36) + totalSetup)
-    };
-  };
-
-  const summary = calculateDeploymentSummary();
+  const [expandedSite, setExpandedSite] = useState(1); // Auto-expand Site 1
 
   const toggleSite = (siteId) => {
     setExpandedSite(expandedSite === siteId ? null : siteId);
   };
-
-  const handleStartNew = () => {
-    // Clear all questionnaire data using the storage utility
-    clearAllQuestionnaireData();
-    
-    // Also clear any old legacy storage keys if they exist
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('sg_sites');
-      localStorage.removeItem('sg_project_answers');
-      localStorage.removeItem('sg_hidden_sites');
-      localStorage.removeItem('sg_current_question');
-      localStorage.removeItem('sg_active_site');
-    }
-    
-    // Navigate to home or questionnaire start
-    router.push('/questionnaire');
-  };
-
-  if (sites.length === 0) {
-    return (
-      <div className="results-page">
-        <div className="results-page__empty">
-          <h2>No sites found</h2>
-          <p>Please complete the questionnaire first.</p>
-          <button onClick={() => router.push('/questionnaire')} className="btn-primary">
-            Start Questionnaire
-          </button>
-        </div>
-        <style jsx>{`
-          .results-page__empty {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 40px;
-            background: #070c14;
-            color: #fff;
-          }
-          .btn-primary {
-            margin-top: 20px;
-            padding: 14px 28px;
-            background: linear-gradient(135deg, #3D72FC 0%, #5CB0E9 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-          }
-        `}</style>
-      </div>
-    );
-  }
 
   return (
     <div className="results-page">
@@ -163,116 +18,264 @@ export default function ResultsPage() {
 
       <div className="results-page__header">
         <h1>Your Connectivity Packages</h1>
-        <p>Tailored recommendations for {sites.length} site{sites.length > 1 ? 's' : ''}</p>
+
       </div>
 
       <div className="results-page__content">
-        {/* Per-Site Breakdown */}
-        {sites.map((site, index) => {
-          const siteData = getTemplateDataForSite(site, index);
-          const siteTotal = calculateSiteTotal(siteData.components);
-          const isExpanded = expandedSite === site.id;
-
-          return (
-            <div key={site.id} className="site-card">
-              <div className="site-card__header" onClick={() => toggleSite(site.id)}>
-                <div className="site-card__title">
-                  <div className="site-badge">Site {siteData.siteNumber}</div>
-                  <h2>{siteData.siteName}</h2>
-                  <div className="site-card__subtitle">
-                    <span>{siteData.siteType} • Incl. Cellular & Satellite Access Services</span>
-                  </div>
-                </div>
-
-                <div className="site-card__totals">
-                  <div className="total-item">
-                    <span className="label">Network Setup Fee</span>
-                    <span className="value">{siteTotal.setup.toFixed(2)} €</span>
-                  </div>
-                  <div className="total-item">
-                    <span className="label">Network Monthly Fee</span>
-                    <span className="value">{siteTotal.monthly.toFixed(0)} €</span>
-                  </div>
-                  <div className="total-item">
-                    <span className="label">Managed Service Monthly Fee</span>
-                    <span className="value">{siteTotal.managed.toFixed(0)} €</span>
-                  </div>
-                </div>
-
-                <button className="expand-button">
-                  {isExpanded ? '▼' : '▶'}
-                </button>
+        {/* Site 1 */}
+        <div className="site-card">
+          <div className="site-card__header" onClick={() => toggleSite(1)}>
+            <div className="site-card__title">
+              <div className="site-badge">Site 1</div>
+              <h2>Site Name</h2>
+              <div className="site-card__subtitle">
+                <span>Site Type • Incl. Cellular & Satellite Access Services</span>
               </div>
-
-              {isExpanded && (
-                <div className="site-card__content">
-                  <table className="components-table">
-                    <thead>
-                      <tr>
-                        <th>Component</th>
-                        <th>Hardware</th>
-                        <th>Plan</th>
-                        <th>Setup Fee</th>
-                        <th>Monthly Fee</th>
-                        <th>Managed Fee</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {siteData.components.map((component, idx) => (
-                        <tr key={idx}>
-                          <td>
-                            <span className="component-badge" style={{background: idx === 0 ? '#3D72FC' : idx === 1 ? '#5CB0E9' : '#6669D8'}}>
-                              {component.name}
-                            </span>
-                          </td>
-                          <td>{component.hardware}</td>
-                          <td>{component.plan}</td>
-                          <td>{component.setupFee.toFixed(2)} €</td>
-                          <td>{component.monthlyFee.toFixed(2)} €</td>
-                          <td>{component.managedFee.toFixed(2)} €</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
             </div>
-          );
-        })}
 
-        {/* Deployment Summary - Single Card for All Sites */}
+            <div className="site-card__totals">
+              <div className="total-item">
+                <span className="label">Network Setup Fee</span>
+                <span className="value">799 €</span>
+                <span className="sublabel">1.198 €</span>
+              </div>
+              <div className="total-item">
+                <span className="label">Network Monthly Fee</span>
+                <span className="value">12 €</span>
+                <span className="sublabel">198 €</span>
+              </div>
+              <div className="total-item">
+                <span className="label">Managed Service Monthly Fee</span>
+                <span className="value">128 €</span>
+                <span className="sublabel">128 €</span>
+              </div>
+            </div>
+
+            <button className="expand-button" onClick={(e) => e.stopPropagation()}>
+              {expandedSite === 1 ? '▼' : '▶'}
+            </button>
+          </div>
+
+          {expandedSite === 1 && (
+            <div className="site-card__content">
+              <table className="components-table">
+                <thead>
+                  <tr>
+                    <th>Component name</th>
+                    <th>Hardware name</th>
+                    <th>Airtime Plan</th>
+                    <th>Network Setup Fee</th>
+                    <th>Network Monthly Fee</th>
+                    <th>Managed Service Monthly Fee</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <span className="component-badge" style={{background: '#3D72FC'}}>
+                        Stargrid Box
+                      </span>
+                    </td>
+                    <td>Fixed</td>
+                    <td>1.0 Gbps</td>
+                    <td>799 €</td>
+                    <td>12 €</td>
+                    <td>128 €</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <span className="component-badge" style={{background: '#5CB0E9'}}>
+                        Cellular
+                      </span>
+                    </td>
+                    <td>Telefonica Industrial SIM</td>
+                    <td>50 GB/month</td>
+                    <td>8.90 €</td>
+                    <td>65.60 €</td>
+                    <td>0.00 €</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <span className="component-badge" style={{background: '#6669D8'}}>
+                        Satellite
+                      </span>
+                    </td>
+                    <td>Starlink Enterprise</td>
+                    <td>200 GB/month</td>
+                    <td>390 €</td>
+                    <td>120 €</td>
+                    <td>0.00 €</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Site 2 */}
+        <div className="site-card">
+          <div className="site-card__header" onClick={() => toggleSite(2)}>
+            <div className="site-card__title">
+              <div className="site-badge">Site 2</div>
+              <h2>Site Name</h2>
+              <div className="site-card__subtitle">
+                <span>Site Type • Incl. Cellular & Satellite Access Services</span>
+              </div>
+            </div>
+
+            <div className="site-card__totals">
+              <div className="total-item">
+                <span className="label">Network Setup Fee</span>
+                <span className="value">799 €</span>
+                <span className="sublabel">1.198 €</span>
+              </div>
+              <div className="total-item">
+                <span className="label">Network Monthly Fee</span>
+                <span className="value">12 €</span>
+                <span className="sublabel">198 €</span>
+              </div>
+              <div className="total-item">
+                <span className="label">Managed Service Monthly Fee</span>
+                <span className="value">128 €</span>
+                <span className="sublabel">128 €</span>
+              </div>
+            </div>
+
+            <button className="expand-button" onClick={(e) => e.stopPropagation()}>
+              {expandedSite === 2 ? '▼' : '▶'}
+            </button>
+          </div>
+
+          {expandedSite === 2 && (
+            <div className="site-card__content">
+              <table className="components-table">
+                <thead>
+                  <tr>
+                    <th>Component name</th>
+                    <th>Hardware name</th>
+                    <th>Airtime Plan</th>
+                    <th>Network Setup Fee</th>
+                    <th>Network Monthly Fee</th>
+                    <th>Managed Service Monthly Fee</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <span className="component-badge" style={{background: '#3D72FC'}}>
+                        Stargrid Box
+                      </span>
+                    </td>
+                    <td>Fixed</td>
+                    <td>1.0 Gbps</td>
+                    <td>799 €</td>
+                    <td>12 €</td>
+                    <td>128 €</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <span className="component-badge" style={{background: '#5CB0E9'}}>
+                        Cellular
+                      </span>
+                    </td>
+                    <td>Telefonica Industrial SIM</td>
+                    <td>50 GB/month</td>
+                    <td>8.90 €</td>
+                    <td>65.60 €</td>
+                    <td>0.00 €</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <span className="component-badge" style={{background: '#6669D8'}}>
+                        Satellite
+                      </span>
+                    </td>
+                    <td>Starlink Enterprise</td>
+                    <td>200 GB/month</td>
+                    <td>390 €</td>
+                    <td>120 €</td>
+                    <td>0.00 €</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Deployment Summary */}
         <div className="deployment-summary">
           <h2 className="deployment-summary__title">Deployment Summary</h2>
           
-          <div className="summary-card">
-            <div className="summary-card__header">
-              <h3>All Sites ({summary.sites})</h3>
-              <p>Complete deployment costs including all connectivity services</p>
+          <div className="summary-cards-grid">
+            {/* PoC Sites (2) */}
+            <div className="summary-card">
+              <div className="summary-card__header">
+                <h3>PoC Sites (2)</h3>
+                <p>Incl. Cellular & Satellite Access Services</p>
+              </div>
+              <div className="summary-card__body">
+                <div className="summary-row">
+                  <span className="label">Network Setup Fee</span>
+                  <span className="value">10.000 €</span>
+                  <span className="sublabel">798 €</span>
+                </div>
+                <div className="summary-row">
+                  <span className="label">Network Monthly Fee</span>
+                  <span className="value">0,00 €</span>
+                  <span className="sublabel">611 €</span>
+                </div>
+                <div className="summary-row">
+                  <span className="label">Managed Service Monthly Fee</span>
+                  <span className="value">0,00 €</span>
+                  <span className="sublabel">0,00 €</span>
+                </div>
+              </div>
+              <div className="summary-card__actions">
+                <button className="btn-export" onClick={() => alert('BOM export coming soon')}>
+                  BOM
+                </button>
+              </div>
             </div>
-            <div className="summary-card__body">
-              <div className="summary-row">
-                <span className="label">Total Network Setup Fee</span>
-                <span className="value">{summary.setup.toLocaleString()} €</span>
+
+            {/* All Sites (12) */}
+            <div className="summary-card summary-card--highlight">
+              <div className="summary-card__header">
+                <h3>All Sites (12)</h3>
+                <p>Incl. Cellular & Satellite Access Services</p>
               </div>
-              <div className="summary-row">
-                <span className="label">Total Network Monthly Fee</span>
-                <span className="value">{summary.monthly.toLocaleString()} €</span>
+              <div className="summary-card__body">
+                <div className="summary-row">
+                  <span className="label">Network Setup Fee</span>
+                  <span className="value">9.588 €</span>
+                  <span className="sublabel">14.376 €</span>
+                </div>
+                <div className="summary-row">
+                  <span className="label">Network Monthly Fee</span>
+                  <span className="value">240 €</span>
+                  <span className="sublabel">2.376 €</span>
+                </div>
+                <div className="summary-row">
+                  <span className="label">Managed Service Monthly Fee</span>
+                  <span className="value">1.536 €</span>
+                  <span className="sublabel">1.536 €</span>
+                </div>
+                <div className="summary-row highlight">
+                  <span className="label">Contract Value 3y</span>
+                  <span className="value">73.524 €</span>
+                  <span className="sublabel">155.208 €</span>
+                </div>
               </div>
-              <div className="summary-row">
-                <span className="label">Total Managed Service Monthly Fee</span>
-                <span className="value">{summary.managed.toLocaleString()} €</span>
-              </div>
-              <div className="summary-row highlight">
-                <span className="label">3-Year Contract Value</span>
-                <span className="value">{summary.contract3y.toLocaleString()} €</span>
+              <div className="summary-card__actions">
+                <button className="btn-export" onClick={() => alert('BOM export coming soon')}>
+                  BOM
+                </button>
               </div>
             </div>
-            <div className="summary-card__actions">
-              <button className="btn-export" onClick={() => alert('BOM export coming soon')}>
-                Export BOM
-              </button>
-              <button className="btn-export btn-export--primary" onClick={() => alert('PDF export coming soon')}>
-                Download PDF
+
+            {/* PDF Button */}
+            <div className="pdf-button-container">
+              <button className="btn-pdf" onClick={() => alert('PDF export coming soon')}>
+                PDF
               </button>
             </div>
           </div>
@@ -280,10 +283,10 @@ export default function ResultsPage() {
 
         {/* Actions */}
         <div className="results-page__actions">
-          <button onClick={() => router.push('/questionnaire/validation')} className="btn-secondary">
-            ← Review Sites
+          <button onClick={() => router.push('/')} className="btn-secondary">
+            ← Back to Home
           </button>
-          <button onClick={handleStartNew} className="btn-primary">
+          <button onClick={() => router.push('/questionnaire')} className="btn-primary">
             Start New Configuration →
           </button>
         </div>
@@ -325,7 +328,7 @@ export default function ResultsPage() {
         .results-page__header {
           position: relative;
           z-index: 1;
-          max-width: 1060px;
+          max-width: 1200px;
           margin: 0 auto 44px;
           text-align: center;
         }
@@ -346,7 +349,7 @@ export default function ResultsPage() {
         .results-page__content {
           position: relative;
           z-index: 1;
-          max-width: 1060px;
+          max-width: 1200px;
           margin: 0 auto;
         }
 
@@ -428,6 +431,12 @@ export default function ResultsPage() {
           font-size: 18px;
           font-weight: 700;
           color: #fff;
+        }
+
+        .total-item .sublabel {
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.4);
+          margin-top: 2px;
         }
 
         .expand-button {
@@ -518,59 +527,79 @@ export default function ResultsPage() {
           margin: 0 0 24px 0;
         }
 
+        .summary-cards-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr auto;
+          gap: 20px;
+          align-items: start;
+        }
+
         .summary-card {
-          background: rgba(61, 114, 252, 0.08);
-          border: 1px solid rgba(61, 114, 252, 0.35);
-          padding: 32px;
+          background: rgba(255, 255, 255, 0.035);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          padding: 28px;
           border-radius: 22px;
         }
 
+        .summary-card--highlight {
+          background: rgba(61, 114, 252, 0.08);
+          border: 1px solid rgba(61, 114, 252, 0.35);
+        }
+
         .summary-card__header h3 {
-          font-size: 24px;
+          font-size: 22px;
           font-weight: 700;
           color: #fff;
           margin: 0 0 6px 0;
         }
 
         .summary-card__header p {
-          font-size: 14px;
+          font-size: 13px;
           color: rgba(255, 255, 255, 0.5);
-          margin: 0 0 28px 0;
+          margin: 0 0 24px 0;
         }
 
         .summary-card__body {
           display: flex;
           flex-direction: column;
-          gap: 16px;
-          margin-bottom: 28px;
+          gap: 12px;
+          margin-bottom: 24px;
         }
 
         .summary-row {
-          display: flex;
-          justify-content: space-between;
+          display: grid;
+          grid-template-columns: 1fr auto auto;
+          gap: 16px;
           align-items: center;
-          padding: 12px 0;
+          padding: 8px 0;
         }
 
         .summary-row.highlight {
-          padding-top: 20px;
+          padding-top: 16px;
           margin-top: 8px;
           border-top: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         .summary-row .label {
-          font-size: 15px;
+          font-size: 14px;
           color: rgba(255, 255, 255, 0.7);
         }
 
         .summary-row .value {
-          font-size: 22px;
+          font-size: 18px;
           font-weight: 700;
           color: #fff;
+          text-align: right;
+        }
+
+        .summary-row .sublabel {
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.4);
+          text-align: right;
         }
 
         .summary-row.highlight .value {
-          font-size: 26px;
+          font-size: 22px;
           color: #5CB0E9;
         }
 
@@ -581,7 +610,7 @@ export default function ResultsPage() {
 
         .btn-export {
           flex: 1;
-          padding: 14px 24px;
+          padding: 12px 24px;
           background: rgba(255, 255, 255, 0.06);
           border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 12px;
@@ -598,14 +627,27 @@ export default function ResultsPage() {
           transform: translateY(-2px);
         }
 
-        .btn-export--primary {
-          background: linear-gradient(135deg, #3D72FC, #5CB0E9);
-          border: none;
-          color: #fff;
+        .pdf-button-container {
+          display: flex;
+          align-items: center;
         }
 
-        .btn-export--primary:hover {
-          box-shadow: 0 8px 20px rgba(61, 114, 252, 0.4);
+        .btn-pdf {
+          padding: 20px 40px;
+          background: linear-gradient(135deg, #FF9800, #F57C00);
+          border: none;
+          border-radius: 12px;
+          color: #fff;
+          font-weight: 700;
+          font-size: 18px;
+          cursor: pointer;
+          transition: all 0.2s;
+          min-width: 120px;
+        }
+
+        .btn-pdf:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(255, 152, 0, 0.4);
         }
 
         /* Actions */
@@ -663,6 +705,14 @@ export default function ResultsPage() {
           .total-item {
             align-items: flex-start;
           }
+
+          .summary-cards-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .pdf-button-container {
+            justify-content: center;
+          }
         }
 
         @media (max-width: 768px) {
@@ -689,10 +739,6 @@ export default function ResultsPage() {
 
           .summary-card {
             padding: 24px 20px;
-          }
-
-          .summary-card__actions {
-            flex-direction: column;
           }
 
           .results-page__actions {
