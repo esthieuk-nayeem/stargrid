@@ -7,7 +7,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import "swiper/css/effect-fade";
-import { clearAllQuestionnaireData } from "@/lib/multiSiteStorage";
 // import SliderBrand from "./SliderBrand";
 
 const swiperOptions = {
@@ -41,14 +40,24 @@ export default function Banner() {
   const router = useRouter();
 
   const handleStartNew = () => {
-    clearAllQuestionnaireData();
-
+    // Clear all questionnaire data - inline implementation to avoid import issues
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('sg_sites');
-      localStorage.removeItem('sg_project_answers');
-      localStorage.removeItem('sg_hidden_sites');
-      localStorage.removeItem('sg_current_question');
-      localStorage.removeItem('sg_active_site');
+      try {
+        // Clear multiSiteStorage keys
+        localStorage.removeItem('stargrid_sites');
+        localStorage.removeItem('stargrid_current_site_id');
+        
+        // Clear legacy storage keys
+        localStorage.removeItem('sg_sites');
+        localStorage.removeItem('sg_project_answers');
+        localStorage.removeItem('sg_hidden_sites');
+        localStorage.removeItem('sg_current_question');
+        localStorage.removeItem('sg_active_site');
+        
+        console.log('✓ Cleared all questionnaire data');
+      } catch (error) {
+        console.error('Error clearing data:', error);
+      }
     }
 
     router.push('/questionnaire');
