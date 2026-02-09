@@ -22,19 +22,17 @@ export default function MultiSiteQuestionnairePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  const [currentStep, setCurrentStep] = useState(1); // Start at Question 1 (Location)
+  const [currentStep, setCurrentStep] = useState(1);
   const [sites, setSites] = useState([]);
   const [currentSiteId, setCurrentSite] = useState(null);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [answerForAllSites, setAnswerForAllSites] = useState(false);
-  const [siteTypeAnswer, setSiteTypeAnswer] = useState(null); // For Q22 in location page
 
   useEffect(() => {
     loadInitialData();
   }, []);
 
   useEffect(() => {
-    // Check if site parameter in URL
     const siteParam = searchParams.get('site');
     if (siteParam) {
       setCurrentSiteId(siteParam);
@@ -42,20 +40,29 @@ export default function MultiSiteQuestionnairePage() {
     }
   }, [searchParams]);
 
-  // FIXED: Initialize answerForAllSites based on question type
+  // FIXED: Multi-site toggle defaults to CHECKED when 2+ sites
   useEffect(() => {
     if (currentQuestion) {
       const isGlobalQuestion = currentQuestion.perSiteAnswer === false;
-      setAnswerForAllSites(isGlobalQuestion);
+      
+      if (isGlobalQuestion) {
+        // Global questions always apply to all sites
+        setAnswerForAllSites(true);
+      } else if (sites.length > 1) {
+        // FIXED: Per-site questions DEFAULT TO CHECKED when multiple sites
+        setAnswerForAllSites(true);
+      } else {
+        // Single site: doesn't matter
+        setAnswerForAllSites(false);
+      }
     }
-  }, [currentStep]);
+  }, [currentStep, sites.length]);
 
   const loadInitialData = () => {
     const allSites = getAllSites();
     setSites(allSites);
     
     if (allSites.length === 0) {
-      // No sites yet - show location picker for first site
       setShowLocationPicker(true);
       setCurrentStep(1);
     } else {
@@ -67,30 +74,21 @@ export default function MultiSiteQuestionnairePage() {
   };
 
   const handleLocationSelected = (location) => {
-    // Create new site with location AND site type (Q22)
-    const newSiteData = {
-      ...location,
-      siteType: siteTypeAnswer // Save Q22 answer
-    };
+    const newSite = createSite(location);
     
-    const newSite = createSite(newSiteData);
-    
-    // Save Q22 answer to site
-    if (siteTypeAnswer) {
-      saveSiteAnswer(newSite.id, 22, siteTypeAnswer);
+    if (location.siteType) {
+      saveSiteAnswer(newSite.id, 22, location.siteType);
     }
     
     setSites(getAllSites());
     setCurrentSite(newSite.id);
     setCurrentSiteId(newSite.id);
     setShowLocationPicker(false);
-    setSiteTypeAnswer(null); // Reset for next site
-    setCurrentStep(2); // Move to Question 2
+    setCurrentStep(1); // Start at first question
   };
 
   const handleAddAnotherSite = () => {
     setShowLocationPicker(true);
-    setCurrentStep(1);
   };
 
   const handleSiteChange = (siteId) => {
@@ -103,7 +101,6 @@ export default function MultiSiteQuestionnairePage() {
     const applyToAllSites = answerForAllSites || (currentQuestion && currentQuestion.perSiteAnswer === false);
     
     if (applyToAllSites) {
-      // FIXED: Save answer for ALL sites with proper logging
       console.log(`📝 Applying answer to all ${sites.length} sites`);
       let successCount = 0;
       
@@ -111,7 +108,6 @@ export default function MultiSiteQuestionnairePage() {
         saveSiteAnswer(site.id, questionId, answer);
         successCount++;
         
-        // Update scoring for each site
         const siteData = getSite(site.id);
         if (siteData) {
           const scoring = extractScoringData(siteData.answers);
@@ -121,11 +117,9 @@ export default function MultiSiteQuestionnairePage() {
       
       console.log(`✅ Successfully saved to ${successCount} sites`);
     } else {
-      // Save answer for current site only
       console.log(`📝 Applying answer to current site only: ${currentSiteId}`);
       saveSiteAnswer(currentSiteId, questionId, answer);
       
-      // Update scoring
       const siteData = getSite(currentSiteId);
       if (siteData) {
         const scoring = extractScoringData(siteData.answers);
@@ -133,7 +127,6 @@ export default function MultiSiteQuestionnairePage() {
       }
     }
     
-    // FIXED: Reload sites to update completion percentages
     setSites(getAllSites());
   };
 
@@ -141,21 +134,17 @@ export default function MultiSiteQuestionnairePage() {
     return getSiteAnswer(currentSiteId, questionId);
   };
 
-  // FIXED: Handle navigation properly including Q1 map type
   const handleNext = () => {
     const nextStep = currentStep + 1;
     
     if (nextStep <= questionnaireData.length) {
       const nextQuestion = questionnaireData.find(q => q.id === nextStep);
       
-      // FIXED: Handle conditional questions properly (Q17 specifically)
       if (nextQuestion && nextQuestion.conditional && nextQuestion.showWhen) {
         const currentSite = getSite(currentSiteId);
         if (!nextQuestion.showWhen(currentSite.answers)) {
-          // Skip this question - it doesn't apply
           console.log(`⏭️ Skipping Q${nextStep} - condition not met`);
           setCurrentStep(nextStep);
-          // Auto-advance to next question
           setTimeout(() => handleNext(), 10);
           return;
         }
@@ -163,37 +152,17 @@ export default function MultiSiteQuestionnairePage() {
       
       setCurrentStep(nextStep);
     } else {
-      // All questions done - go to validation
       router.push('/questionnaire/validation');
     }
   };
 
-  // FIXED: Handle Previous button including Q1 map type
   const handlePrevious = () => {
     if (currentStep === 1) {
-      // Already at first question, can't go back
       return;
     }
     
     const prevStep = currentStep - 1;
-    
-    if (prevStep === 1) {
-      // FIXED: Going back to Q1 (map location)
-      // Don't show location picker if site already exists, just show Q1 in view mode
-      const currentSite = getSite(currentSiteId);
-      if (currentSite && currentSite.location) {
-        // Site has location, just move to step 1 to show it
-        setCurrentStep(1);
-        setShowLocationPicker(false); // Don't re-show picker
-      } else {
-        // No location yet, show picker
-        setShowLocationPicker(true);
-        setCurrentStep(1);
-      }
-    } else {
-      // Normal navigation
-      setCurrentStep(prevStep);
-    }
+    setCurrentStep(prevStep);
   };
 
   const currentQuestion = questionnaireData.find(q => q.id === currentStep);
@@ -202,8 +171,7 @@ export default function MultiSiteQuestionnairePage() {
   const currentAnswer = currentQuestion ? getCurrentAnswer(currentQuestion.id) : null;
   const hasAnswer = currentAnswer !== null && currentAnswer !== undefined;
 
-  // FIXED: Show location picker for Question 1
-  if (showLocationPicker || (currentStep === 1 && (!currentSiteId || !getSite(currentSiteId)?.location))) {
+  if (showLocationPicker) {
     return (
       <div className="questionnaire-page">
         <div className="questionnaire-page__container">
@@ -217,28 +185,6 @@ export default function MultiSiteQuestionnairePage() {
               onLocationSelect={handleLocationSelected}
               initialLocation={currentSiteId ? getSite(currentSiteId)?.location : null}
             />
-            
-            {/* Q22: Site Type - Integrated into location page */}
-            <div className="questionnaire-page__site-type">
-              <h3>Is your site a fixed site or a moving site/vehicle?</h3>
-              <p className="tooltip">Moving sites require maritime/mobile routers and LEO satellites</p>
-              <div className="questionnaire-page__site-type-options">
-                {[
-                  { value: "fixed", label: "Fixed Site (stationary location)", icon: "🏢" },
-                  { value: "moving_vehicle", label: "Moving Site/Vehicle (boat, truck, RV, etc.)", icon: "🚢" },
-                  { value: "semi_mobile", label: "Semi-Mobile (occasional relocation)", icon: "🚚" }
-                ].map(option => (
-                  <button
-                    key={option.value}
-                    onClick={() => setSiteTypeAnswer(option)}
-                    className={`site-type-option ${siteTypeAnswer?.value === option.value ? 'selected' : ''}`}
-                  >
-                    <span className="icon">{option.icon}</span>
-                    <span className="label">{option.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
 
@@ -281,66 +227,6 @@ export default function MultiSiteQuestionnairePage() {
             padding: 40px;
           }
 
-          .questionnaire-page__site-type {
-            margin-top: 40px;
-            padding-top: 40px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-          }
-
-          .questionnaire-page__site-type h3 {
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--techguru-white);
-            margin-bottom: 8px;
-          }
-
-          .questionnaire-page__site-type .tooltip {
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.6);
-            margin-bottom: 24px;
-          }
-
-          .questionnaire-page__site-type-options {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 16px;
-          }
-
-          .site-type-option {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 24px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            cursor: pointer;
-            transition: all 0.3s;
-          }
-
-          .site-type-option:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(61, 114, 252, 0.4);
-          }
-
-          .site-type-option.selected {
-            background: rgba(61, 114, 252, 0.15);
-            border-color: #3D72FC;
-            box-shadow: 0 4px 16px rgba(61, 114, 252, 0.3);
-          }
-
-          .site-type-option .icon {
-            font-size: 48px;
-            margin-bottom: 12px;
-          }
-
-          .site-type-option .label {
-            font-size: 15px;
-            font-weight: 500;
-            color: var(--techguru-white);
-            text-align: center;
-          }
-
           @media (max-width: 768px) {
             .questionnaire-page {
               padding: 40px 16px;
@@ -353,146 +239,6 @@ export default function MultiSiteQuestionnairePage() {
             .questionnaire-page__content {
               padding: 24px 16px;
             }
-
-            .questionnaire-page__site-type-options {
-              grid-template-columns: 1fr;
-            }
-          }
-        `}</style>
-      </div>
-    );
-  }
-
-  // FIXED: Show Q1 in view mode when going back
-  if (currentStep === 1 && currentSiteId && getSite(currentSiteId)?.location) {
-    const currentSite = getSite(currentSiteId);
-    return (
-      <div className="questionnaire-page">
-        <div className="questionnaire-page__container">
-          {sites.length > 0 && <SiteSelector onSiteChange={handleSiteChange} />}
-          
-          <div className="questionnaire-page__location-view">
-            <h2>📍 Site Location</h2>
-            <div className="location-details">
-              <p><strong>Site Name:</strong> {currentSite.name}</p>
-              <p><strong>Address:</strong> {currentSite.location.address}</p>
-              <p><strong>City:</strong> {currentSite.location.city}</p>
-              <p><strong>Country:</strong> {currentSite.location.country}</p>
-              <button 
-                onClick={() => setShowLocationPicker(true)}
-                className="edit-location-btn"
-              >
-                ✏️ Edit Location
-              </button>
-            </div>
-          </div>
-
-          <div className="questionnaire-page__navigation">
-            <button
-              onClick={() => router.push('/')}
-              className="questionnaire-page__btn questionnaire-page__btn--prev"
-            >
-              ← Back to Home
-            </button>
-            <button
-              onClick={handleNext}
-              className="questionnaire-page__btn questionnaire-page__btn--next"
-            >
-              Next →
-            </button>
-          </div>
-        </div>
-
-        <style jsx>{`
-          .questionnaire-page {
-            min-height: 100vh;
-            padding: 60px 20px;
-            background: var(--techguru-black);
-          }
-
-          .questionnaire-page__container {
-            max-width: 1000px;
-            margin: 0 auto;
-          }
-
-          .questionnaire-page__location-view {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px;
-            padding: 40px;
-            margin-bottom: 30px;
-          }
-
-          .questionnaire-page__location-view h2 {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--techguru-white);
-            margin-bottom: 24px;
-          }
-
-          .location-details p {
-            font-size: 16px;
-            color: rgba(255, 255, 255, 0.8);
-            margin: 12px 0;
-          }
-
-          .location-details strong {
-            color: #5CB0E9;
-            margin-right: 8px;
-          }
-
-          .edit-location-btn {
-            margin-top: 20px;
-            padding: 12px 24px;
-            background: rgba(61, 114, 252, 0.15);
-            border: 1px solid rgba(61, 114, 252, 0.4);
-            border-radius: 10px;
-            color: #5CB0E9;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-          }
-
-          .edit-location-btn:hover {
-            background: rgba(61, 114, 252, 0.25);
-            transform: translateY(-2px);
-          }
-
-          .questionnaire-page__navigation {
-            display: flex;
-            justify-content: space-between;
-            gap: 20px;
-          }
-
-          .questionnaire-page__btn {
-            padding: 16px 32px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: none;
-          }
-
-          .questionnaire-page__btn--prev {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: var(--techguru-white);
-          }
-
-          .questionnaire-page__btn--prev:hover {
-            background: rgba(255, 255, 255, 0.1);
-          }
-
-          .questionnaire-page__btn--next {
-            background: linear-gradient(135deg, #3D72FC 0%, #5CB0E9 100%);
-            color: white;
-          }
-
-          .questionnaire-page__btn--next:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(61, 114, 252, 0.4);
           }
         `}</style>
       </div>
@@ -544,12 +290,10 @@ export default function MultiSiteQuestionnairePage() {
   return (
     <div className="questionnaire-page">
       <div className="questionnaire-page__container">
-        {/* Site Selector */}
         {sites.length > 0 && (
           <SiteSelector onSiteChange={handleSiteChange} />
         )}
 
-        {/* Progress Bar */}
         <div className="questionnaire-page__progress">
           <div className="questionnaire-page__progress-info">
             <span>Question {currentStep} of {questionnaireData.length}</span>
@@ -563,7 +307,6 @@ export default function MultiSiteQuestionnairePage() {
           </div>
         </div>
 
-        {/* Question Card */}
         <div className="questionnaire-page__question">
           <QuestionCard
             question={currentQuestion}
@@ -572,7 +315,7 @@ export default function MultiSiteQuestionnairePage() {
           />
         </div>
 
-        {/* Multi-Site Toggle - FIXED */}
+        {/* FIXED: Multi-Site Toggle - Defaults to CHECKED when 2+ sites */}
         {currentQuestion.perSiteAnswer !== false && sites.length > 1 && (
           <div className="questionnaire-page__multi-site-toggle">
             <label>
@@ -583,10 +326,12 @@ export default function MultiSiteQuestionnairePage() {
               />
               <span>✨ Use this answer for all {sites.length} sites</span>
             </label>
+            <p className="multi-site-toggle-hint">
+              By default, your answer will be applied to all sites. Uncheck to provide different answers per site.
+            </p>
           </div>
         )}
 
-        {/* Navigation Buttons - FIXED */}
         <div className="questionnaire-page__navigation">
           <button
             onClick={handlePrevious}
@@ -614,7 +359,6 @@ export default function MultiSiteQuestionnairePage() {
           </div>
         </div>
 
-        {/* Quick Actions */}
         <div className="questionnaire-page__quick-actions">
           <button
             onClick={() => router.push('/questionnaire/validation')}
@@ -716,6 +460,14 @@ export default function MultiSiteQuestionnairePage() {
           font-size: 15px;
           font-weight: 600;
           color: var(--techguru-white);
+        }
+
+        .multi-site-toggle-hint {
+          margin-top: 8px;
+          margin-left: 32px;
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.6);
+          font-style: italic;
         }
 
         .questionnaire-page__navigation {

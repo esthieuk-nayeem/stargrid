@@ -1,4 +1,4 @@
-
+"use client";
 import Layout from "@/components/layout/Layout";
 import About from "@/components/sections/home1/About";
 import Banner from "@/components/sections/home1/Banner";

@@ -2,12 +2,12 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
+import { getAllSites } from "@/lib/multiSiteStorage";
 
 const libraries = ["places"];
 
-// CHANGE: Default to Europe instead of India
 const defaultCenter = {
-  lat: 50.8503, // Brussels, Belgium (center of Europe)
+  lat: 50.8503,
   lng: 4.3517
 };
 
@@ -17,7 +17,7 @@ const mapContainerStyle = {
   borderRadius: "16px"
 };
 
-export default function MapLocationPicker({ onLocationSelect, initialLocation, onSiteNameChange }) {
+export default function MapLocationPicker({ onLocationSelect, initialLocation }) {
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
@@ -30,16 +30,25 @@ export default function MapLocationPicker({ onLocationSelect, initialLocation, o
   const [siteName, setSiteName] = useState(
     initialLocation?.siteName || initialLocation?.name || ''
   );
-  const [autoSiteNumber, setAutoSiteNumber] = useState(1);
-  const [searchBox, setSearchBox] = useState(null);
+  const [siteType, setSiteType] = useState(
+    initialLocation?.siteType || null
+  );
   const mapRef = useRef(null);
   const searchInputRef = useRef(null);
 
-  // Load existing location when editing
+  // FIXED: Calculate next site number from existing sites
+  const getNextSiteNumber = () => {
+    const existingSites = getAllSites();
+    return existingSites.length + 1;
+  };
+
   useEffect(() => {
     if (initialLocation && initialLocation.lat && initialLocation.lng) {
       setSelectedLocation(initialLocation);
       setSiteName(initialLocation.siteName || initialLocation.name || '');
+      if (initialLocation.siteType) {
+        setSiteType(initialLocation.siteType);
+      }
     }
   }, [initialLocation]);
 
@@ -49,7 +58,6 @@ export default function MapLocationPicker({ onLocationSelect, initialLocation, o
     
     setSelectedLocation({ lat, lng });
     
-    // Reverse geocode to get address
     const geocoder = new window.google.maps.Geocoder();
     geocoder.geocode({ location: { lat, lng } }, (results, status) => {
       if (status === 'OK' && results[0]) {
@@ -73,58 +81,33 @@ export default function MapLocationPicker({ onLocationSelect, initialLocation, o
     return component ? component.long_name : '';
   };
 
-  const handleSearchBoxLoad = useCallback((ref) => {
-    setSearchBox(ref);
-  }, []);
-
-  const onPlacesChanged = useCallback(() => {
-    if (searchBox) {
-      const places = searchBox.getPlaces();
-      if (places && places.length > 0) {
-        const place = places[0];
-        const lat = place.geometry.location.lat();
-        const lng = place.geometry.location.lng();
-        
-        const locationData = {
-          lat,
-          lng,
-          address: place.formatted_address,
-          city: getAddressComponent(place.address_components, 'locality'),
-          state: getAddressComponent(place.address_components, 'administrative_area_level_1'),
-          country: getAddressComponent(place.address_components, 'country'),
-          postalCode: getAddressComponent(place.address_components, 'postal_code')
-        };
-        
-        setSelectedLocation(locationData);
-        
-        if (mapRef.current) {
-          mapRef.current.panTo({ lat, lng });
-          mapRef.current.setZoom(15);
-        }
-      }
-    }
-  }, [searchBox]);
-
   const handleConfirmLocation = () => {
-    if (selectedLocation) {
-      const finalLocation = {
-        ...selectedLocation,
-        // CHANGE: Site name is optional, use auto-numbering
-        siteName: siteName.trim() || `Site ${autoSiteNumber}`,
-        name: siteName.trim() || `Site ${autoSiteNumber}`
-      };
-      
-      onLocationSelect(finalLocation);
-      setAutoSiteNumber(prev => prev + 1);
+    if (!selectedLocation) {
+      alert('Please select a location on the map');
+      return;
     }
-  };
+    if (!siteType) {
+      alert('Please select a site type before confirming');
+      return;
+    }
 
-  const handleSiteNameChange = (e) => {
-    const newName = e.target.value;
-    setSiteName(newName);
-    if (onSiteNameChange) {
-      onSiteNameChange(newName);
-    }
+    // FIXED: Use proper site numbering
+    const nextSiteNumber = getNextSiteNumber();
+    const defaultSiteName = `Site ${nextSiteNumber}`;
+
+    const finalLocation = {
+      ...selectedLocation,
+      siteName: siteName.trim() || defaultSiteName,
+      name: siteName.trim() || defaultSiteName,
+      siteType: siteType
+    };
+    
+    onLocationSelect(finalLocation);
+    
+    // Reset form for next site
+    setSelectedLocation(null);
+    setSiteName('');
+    setSiteType(null);
   };
 
   if (loadError) {
@@ -144,30 +127,24 @@ export default function MapLocationPicker({ onLocationSelect, initialLocation, o
     );
   }
 
+  const nextSiteNumber = getNextSiteNumber();
+
   return (
     <div className="map-location-picker">
       <div className="map-location-picker__instructions">
         <h3>📍 Select Site Location</h3>
-        <p>Search for a location or click on the map to pin your site</p>
+        <p>Adding Site {nextSiteNumber} - Search for a location or click on the map</p>
       </div>
 
-      {/* Search Box */}
       <div className="map-location-picker__search">
         <input
           ref={searchInputRef}
           type="text"
           placeholder="Search for a location..."
           className="map-location-picker__search-input"
-          onKeyPress={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              onPlacesChanged();
-            }
-          }}
         />
       </div>
 
-      {/* Google Map */}
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         center={selectedLocation || defaultCenter}
@@ -176,7 +153,6 @@ export default function MapLocationPicker({ onLocationSelect, initialLocation, o
         onLoad={(map) => {
           mapRef.current = map;
           
-          // Initialize search box with Places Autocomplete
           if (searchInputRef.current) {
             const autocomplete = new window.google.maps.places.Autocomplete(
               searchInputRef.current,
@@ -217,15 +193,12 @@ export default function MapLocationPicker({ onLocationSelect, initialLocation, o
             position={{ lat: selectedLocation.lat, lng: selectedLocation.lng }}
             draggable={true}
             onDragEnd={(e) => {
-              const lat = e.latLng.lat();
-              const lng = e.latLng.lng();
               onMapClick({ latLng: e.latLng });
             }}
           />
         )}
       </GoogleMap>
 
-      {/* Location Details */}
       {selectedLocation && (
         <div className="map-location-picker__details">
           <div className="map-location-picker__info">
@@ -236,22 +209,57 @@ export default function MapLocationPicker({ onLocationSelect, initialLocation, o
             <p><strong>Coordinates:</strong> {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}</p>
           </div>
 
-          {/* CHANGE: Site name is optional */}
           <div className="map-location-picker__name">
             <label htmlFor="siteName">Site Name (Optional)</label>
             <input
               id="siteName"
               type="text"
               value={siteName}
-              onChange={handleSiteNameChange}
-              placeholder={`Auto: Site ${autoSiteNumber}`}
+              onChange={(e) => setSiteName(e.target.value)}
+              placeholder={`Auto: Site ${nextSiteNumber}`}
               className="map-location-picker__name-input"
             />
-            <small>Leave empty to auto-number (Site 1, Site 2, etc.)</small>
+            <small>Leave empty to auto-number (Site 1, Site 2, Site 3, etc.)</small>
           </div>
 
+          {/* SITE TYPE QUESTION - ONLY HERE, ABOVE CONFIRM BUTTON */}
+          <div className="map-location-picker__site-type">
+            <h4>Is your site a fixed site or a moving site/vehicle?</h4>
+            <p className="tooltip">This helps determine the best router and satellite solution</p>
+            <div className="site-type-options">
+              <button
+                onClick={() => setSiteType({ value: "fixed", label: "Fixed Site" })}
+                className={`site-type-option ${siteType?.value === "fixed" ? 'selected' : ''}`}
+              >
+                <span className="icon">🏢</span>
+                <span className="label">Fixed Site</span>
+                <span className="description">Stationary location</span>
+              </button>
+              
+              <button
+                onClick={() => setSiteType({ value: "moving_vehicle", label: "Moving Site/Vehicle" })}
+                className={`site-type-option ${siteType?.value === "moving_vehicle" ? 'selected' : ''}`}
+              >
+                <span className="icon">🚢</span>
+                <span className="label">Moving Site/Vehicle</span>
+                <span className="description">Boat, truck, RV, etc.</span>
+              </button>
+              
+              <button
+                onClick={() => setSiteType({ value: "semi_mobile", label: "Semi-Mobile" })}
+                className={`site-type-option ${siteType?.value === "semi_mobile" ? 'selected' : ''}`}
+              >
+                <span className="icon">🚚</span>
+                <span className="label">Semi-Mobile</span>
+                <span className="description">Occasional relocation</span>
+              </button>
+            </div>
+          </div>
+
+          {/* CONFIRM BUTTON - AFTER SITE TYPE */}
           <button
             onClick={handleConfirmLocation}
+            disabled={!siteType}
             className="map-location-picker__confirm"
           >
             ✓ Confirm Location & Continue
@@ -373,9 +381,79 @@ export default function MapLocationPicker({ onLocationSelect, initialLocation, o
           color: rgba(255, 255, 255, 0.6);
         }
 
+        .map-location-picker__site-type {
+          margin-top: 32px;
+          margin-bottom: 24px;
+          padding-top: 24px;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .map-location-picker__site-type h4 {
+          font-size: 18px;
+          font-weight: 600;
+          color: var(--techguru-white);
+          margin-bottom: 8px;
+        }
+
+        .map-location-picker__site-type .tooltip {
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.6);
+          margin-bottom: 20px;
+        }
+
+        .site-type-options {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 16px;
+          margin-bottom: 0;
+        }
+
+        .site-type-option {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 20px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 2px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.3s;
+          text-align: center;
+        }
+
+        .site-type-option:hover {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(61, 114, 252, 0.4);
+          transform: translateY(-2px);
+        }
+
+        .site-type-option.selected {
+          background: rgba(61, 114, 252, 0.15);
+          border-color: #3D72FC;
+          box-shadow: 0 4px 16px rgba(61, 114, 252, 0.3);
+        }
+
+        .site-type-option .icon {
+          font-size: 40px;
+          margin-bottom: 12px;
+        }
+
+        .site-type-option .label {
+          font-size: 15px;
+          font-weight: 600;
+          color: var(--techguru-white);
+          margin-bottom: 6px;
+        }
+
+        .site-type-option .description {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.6);
+        }
+
         .map-location-picker__confirm {
           width: 100%;
           padding: 16px;
+          margin-top: 24px;
           font-size: 16px;
           font-weight: 600;
           color: white;
@@ -386,9 +464,14 @@ export default function MapLocationPicker({ onLocationSelect, initialLocation, o
           transition: all 0.3s;
         }
 
-        .map-location-picker__confirm:hover {
+        .map-location-picker__confirm:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 8px 20px rgba(61, 114, 252, 0.4);
+        }
+
+        .map-location-picker__confirm:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         .map-location-picker__help {
@@ -434,6 +517,12 @@ export default function MapLocationPicker({ onLocationSelect, initialLocation, o
         .map-loading p {
           color: rgba(255, 255, 255, 0.7);
           font-size: 16px;
+        }
+
+        @media (max-width: 768px) {
+          .site-type-options {
+            grid-template-columns: 1fr;
+          }
         }
       `}</style>
     </div>
