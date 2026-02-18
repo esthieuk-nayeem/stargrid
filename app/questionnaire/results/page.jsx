@@ -1,753 +1,250 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { getAllSites } from "@/lib/multiSiteStorage";
+import { buildAllPackages, formatEuro } from "@/data/packages";
+import CommentButton from "@/components/questionnaire/CommentButton";
 
-export default function StaticResultsPage() {
+export default function DynamicResultsPage() {
   const router = useRouter();
-  const [expandedSite, setExpandedSite] = useState(1); // Auto-expand Site 1
+  const [expandedSite, setExpandedSite] = useState(null);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const printRef = useRef(null);
 
-  const toggleSite = (siteId) => {
-    setExpandedSite(expandedSite === siteId ? null : siteId);
+  useEffect(() => {
+    const sites = getAllSites();
+    if (sites.length === 0) { setLoading(false); return; }
+    const d = buildAllPackages(sites);
+    setData(d);
+    if (d.sitePackages.length > 0) setExpandedSite(0);
+    setLoading(false);
+  }, []);
+
+  const toggle = (i) => setExpandedSite(expandedSite === i ? null : i);
+
+  // PDF generation
+  const handlePdf = async () => {
+    setPdfBusy(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF }   = await import("jspdf");
+      const el = printRef.current;
+      if (!el) return;
+      const canvas = await html2canvas(el, { backgroundColor:"#070c14", scale:2, useCORS:true, logging:false });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? "landscape" : "portrait",
+        unit: "px", format: [canvas.width/2, canvas.height/2],
+      });
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width/2, canvas.height/2);
+      pdf.save("stargrid-connectivity-packages.pdf");
+    } catch (err) {
+      console.error("PDF error:", err);
+      alert("PDF export requires html2canvas & jspdf.\nRun: npm install html2canvas jspdf");
+    } finally { setPdfBusy(false); }
   };
 
+  // ── Loading / Empty ──
+  if (loading) return (
+    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"#070c14" }}>
+      <div style={{ width:48, height:48, border:"4px solid rgba(255,255,255,0.1)", borderTopColor:"#3D72FC", borderRadius:"50%", animation:"sp .8s linear infinite" }} />
+      <p style={{ color:"rgba(255,255,255,0.6)", marginTop:16 }}>Building your packages…</p>
+      <style jsx>{`@keyframes sp { to { transform:rotate(360deg); } }`}</style>
+    </div>
+  );
+
+  if (!data || data.sitePackages.length === 0) return (
+    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"#070c14", gap:16 }}>
+      <h2 style={{ color:"#fff", fontSize:28 }}>No Site Data Found</h2>
+      <p style={{ color:"rgba(255,255,255,0.6)" }}>Please complete the questionnaire first.</p>
+      <button onClick={() => router.push("/questionnaire")} className="bp">Start Questionnaire →</button>
+      <style jsx>{`.bp { padding:16px 32px; background:linear-gradient(135deg,#3D72FC,#5CB0E9); color:#fff; border:none; border-radius:12px; font-size:16px; font-weight:600; cursor:pointer; }`}</style>
+    </div>
+  );
+
+  const { sitePackages, pocTotals, allTotals, totalSites } = data;
+
   return (
-    <div className="results-page">
-      <div className="results-page__bg-blob"></div>
-      <div className="results-page__bg-blob-2"></div>
+    <div className="rp">
+      <div className="rp__blob1" /><div className="rp__blob2" />
 
-      <div className="results-page__header">
-        <h1>Your Connectivity Packages</h1>
+      <div ref={printRef} className="rp__inner">
+        {/* Header */}
+        <div className="rp__hdr">
+          <h1>Your Connectivity Packages</h1>
+          <p>{totalSites} site{totalSites !== 1 ? "s" : ""} configured</p>
+        </div>
 
+        {/* ──── Dynamic site cards (1, 2, 4, N…) ──── */}
+        {sitePackages.map((sp, idx) => {
+          const isExp = expandedSite === idx;
+          const { site, siteNumber, package: pkg } = sp;
+          return (
+            <div key={site.id} className="sc">
+              <div className="sc__hdr" onClick={() => toggle(idx)}>
+                <div className="sc__title">
+                  <span className="sb">Site {siteNumber}</span>
+                  <h2>{site.name}</h2>
+                  <span className="sc__sub">{site.answers?.[22]?.label || "Site"} • {pkg.servicesLabel}</span>
+                </div>
+                <div className="sc__tots">
+                  <div className="ti"><span className="tl">Setup Fee</span><span className="tv">{formatEuro(pkg.totals.network_setup_fee)}</span></div>
+                  <div className="ti"><span className="tl">Monthly Fee</span><span className="tv">{formatEuro(pkg.totals.network_monthly_fee)}</span></div>
+                  <div className="ti"><span className="tl">Managed Svc</span><span className="tv">{formatEuro(pkg.totals.managed_service_monthly)}</span></div>
+                </div>
+                <button className="eb">{isExp ? "▼" : "▶"}</button>
+              </div>
+
+              {isExp && (
+                <div className="sc__body">
+                  <table className="ct">
+                    <thead><tr><th>Component</th><th>Hardware</th><th>Airtime Plan</th><th>Setup Fee</th><th>Monthly Fee</th><th>Managed Svc</th></tr></thead>
+                    <tbody>
+                      {pkg.components.map((c, ci) => (
+                        <tr key={ci}>
+                          <td><span className="cb" style={{ background:c.color }}>{c.type}</span></td>
+                          <td>{c.hardware}</td>
+                          <td>{c.airtime}</td>
+                          <td>{formatEuro(c.network_setup_fee)}</td>
+                          <td>{formatEuro(c.network_monthly_fee)}</td>
+                          <td>{formatEuro(c.managed_service_monthly)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* ──── Deployment Summary ──── */}
+        <div className="ds">
+          <h2 className="ds__t">Deployment Summary</h2>
+          <div className="ds__grid">
+            {/* PoC card */}
+            <div className="dc">
+              <div className="dc__h"><h3>PoC Sites ({Math.min(2, totalSites)})</h3><p>Fixed PoC pricing</p></div>
+              <div className="dc__b">
+                <div className="sr"><span className="sl">Network Setup Fee</span><span className="sv">{formatEuro(pocTotals.network_setup_fee)}</span><span className="ss">{formatEuro(pocTotals.list_setup)}</span></div>
+                <div className="sr"><span className="sl">Network Monthly Fee</span><span className="sv">{formatEuro(pocTotals.network_monthly_fee)}</span><span className="ss">{formatEuro(pocTotals.list_monthly)}</span></div>
+                <div className="sr"><span className="sl">Managed Service Monthly</span><span className="sv">{formatEuro(pocTotals.managed_service_monthly)}</span><span className="ss">{formatEuro(pocTotals.list_managed)}</span></div>
+              </div>
+            </div>
+
+            {/* All Sites card */}
+            <div className="dc dc--hl">
+              <div className="dc__h"><h3>All Sites ({totalSites})</h3><p>{allTotals.setup_discount_pct > 0 ? `${(allTotals.setup_discount_pct*100).toFixed(0)}% bulk discount` : "Standard pricing"}</p></div>
+              <div className="dc__b">
+                <div className="sr"><span className="sl">Network Setup Fee</span><span className="sv">{formatEuro(allTotals.discounted_setup)}</span><span className="ss">{formatEuro(allTotals.network_setup_fee)}</span></div>
+                <div className="sr"><span className="sl">Network Monthly Fee</span><span className="sv">{formatEuro(allTotals.network_monthly_fee)}</span></div>
+                <div className="sr"><span className="sl">Managed Service Monthly</span><span className="sv">{formatEuro(allTotals.managed_service_monthly)}</span></div>
+                <div className="sr sr--hl"><span className="sl">Contract Value ({allTotals.contract_months}mo)</span><span className="sv sv--big">{formatEuro(allTotals.contract_value)}</span><span className="ss">{formatEuro(allTotals.list_contract_value)}</span></div>
+              </div>
+            </div>
+
+            {/* PDF button */}
+            <div className="pdf-wrap">
+              <button className="btn-pdf" onClick={handlePdf} disabled={pdfBusy}>{pdfBusy ? "…" : "PDF"}</button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="results-page__content">
-        {/* Site 1 */}
-        <div className="site-card">
-          <div className="site-card__header" onClick={() => toggleSite(1)}>
-            <div className="site-card__title">
-              <div className="site-badge">Site 1</div>
-              <h2>Site Name</h2>
-              <div className="site-card__subtitle">
-                <span>Site Type • Incl. Cellular & Satellite Access Services</span>
-              </div>
-            </div>
-
-            <div className="site-card__totals">
-              <div className="total-item">
-                <span className="label">Network Setup Fee</span>
-                <span className="value">799 €</span>
-                <span className="sublabel">1.198 €</span>
-              </div>
-              <div className="total-item">
-                <span className="label">Network Monthly Fee</span>
-                <span className="value">12 €</span>
-                <span className="sublabel">198 €</span>
-              </div>
-              <div className="total-item">
-                <span className="label">Managed Service Monthly Fee</span>
-                <span className="value">128 €</span>
-                <span className="sublabel">128 €</span>
-              </div>
-            </div>
-
-            <button className="expand-button" onClick={(e) => e.stopPropagation()}>
-              {expandedSite === 1 ? '▼' : '▶'}
-            </button>
-          </div>
-
-          {expandedSite === 1 && (
-            <div className="site-card__content">
-              <table className="components-table">
-                <thead>
-                  <tr>
-                    <th>Component name</th>
-                    <th>Hardware name</th>
-                    <th>Airtime Plan</th>
-                    <th>Network Setup Fee</th>
-                    <th>Network Monthly Fee</th>
-                    <th>Managed Service Monthly Fee</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>
-                      <span className="component-badge" style={{background: '#3D72FC'}}>
-                        Stargrid Box
-                      </span>
-                    </td>
-                    <td>Fixed</td>
-                    <td>1.0 Gbps</td>
-                    <td>799 €</td>
-                    <td>12 €</td>
-                    <td>128 €</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <span className="component-badge" style={{background: '#5CB0E9'}}>
-                        Cellular
-                      </span>
-                    </td>
-                    <td>Telefonica Industrial SIM</td>
-                    <td>50 GB/month</td>
-                    <td>8.90 €</td>
-                    <td>65.60 €</td>
-                    <td>0.00 €</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <span className="component-badge" style={{background: '#6669D8'}}>
-                        Satellite
-                      </span>
-                    </td>
-                    <td>Starlink Enterprise</td>
-                    <td>200 GB/month</td>
-                    <td>390 €</td>
-                    <td>120 €</td>
-                    <td>0.00 €</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Site 2 */}
-        <div className="site-card">
-          <div className="site-card__header" onClick={() => toggleSite(2)}>
-            <div className="site-card__title">
-              <div className="site-badge">Site 2</div>
-              <h2>Site Name</h2>
-              <div className="site-card__subtitle">
-                <span>Site Type • Incl. Cellular & Satellite Access Services</span>
-              </div>
-            </div>
-
-            <div className="site-card__totals">
-              <div className="total-item">
-                <span className="label">Network Setup Fee</span>
-                <span className="value">799 €</span>
-                <span className="sublabel">1.198 €</span>
-              </div>
-              <div className="total-item">
-                <span className="label">Network Monthly Fee</span>
-                <span className="value">12 €</span>
-                <span className="sublabel">198 €</span>
-              </div>
-              <div className="total-item">
-                <span className="label">Managed Service Monthly Fee</span>
-                <span className="value">128 €</span>
-                <span className="sublabel">128 €</span>
-              </div>
-            </div>
-
-            <button className="expand-button" onClick={(e) => e.stopPropagation()}>
-              {expandedSite === 2 ? '▼' : '▶'}
-            </button>
-          </div>
-
-          {expandedSite === 2 && (
-            <div className="site-card__content">
-              <table className="components-table">
-                <thead>
-                  <tr>
-                    <th>Component name</th>
-                    <th>Hardware name</th>
-                    <th>Airtime Plan</th>
-                    <th>Network Setup Fee</th>
-                    <th>Network Monthly Fee</th>
-                    <th>Managed Service Monthly Fee</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>
-                      <span className="component-badge" style={{background: '#3D72FC'}}>
-                        Stargrid Box
-                      </span>
-                    </td>
-                    <td>Fixed</td>
-                    <td>1.0 Gbps</td>
-                    <td>799 €</td>
-                    <td>12 €</td>
-                    <td>128 €</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <span className="component-badge" style={{background: '#5CB0E9'}}>
-                        Cellular
-                      </span>
-                    </td>
-                    <td>Telefonica Industrial SIM</td>
-                    <td>50 GB/month</td>
-                    <td>8.90 €</td>
-                    <td>65.60 €</td>
-                    <td>0.00 €</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <span className="component-badge" style={{background: '#6669D8'}}>
-                        Satellite
-                      </span>
-                    </td>
-                    <td>Starlink Enterprise</td>
-                    <td>200 GB/month</td>
-                    <td>390 €</td>
-                    <td>120 €</td>
-                    <td>0.00 €</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Deployment Summary */}
-        <div className="deployment-summary">
-          <h2 className="deployment-summary__title">Deployment Summary</h2>
-          
-          <div className="summary-cards-grid">
-            {/* PoC Sites (2) */}
-            <div className="summary-card">
-              <div className="summary-card__header">
-                <h3>PoC Sites (2)</h3>
-                <p>Incl. Cellular & Satellite Access Services</p>
-              </div>
-              <div className="summary-card__body">
-                <div className="summary-row">
-                  <span className="label">Network Setup Fee</span>
-                  <span className="value">10.000 €</span>
-                  <span className="sublabel">798 €</span>
-                </div>
-                <div className="summary-row">
-                  <span className="label">Network Monthly Fee</span>
-                  <span className="value">0,00 €</span>
-                  <span className="sublabel">611 €</span>
-                </div>
-                <div className="summary-row">
-                  <span className="label">Managed Service Monthly Fee</span>
-                  <span className="value">0,00 €</span>
-                  <span className="sublabel">0,00 €</span>
-                </div>
-              </div>
-              <div className="summary-card__actions">
-                <button className="btn-export" onClick={() => alert('BOM export coming soon')}>
-                  BOM
-                </button>
-              </div>
-            </div>
-
-            {/* All Sites (12) */}
-            <div className="summary-card summary-card--highlight">
-              <div className="summary-card__header">
-                <h3>All Sites (12)</h3>
-                <p>Incl. Cellular & Satellite Access Services</p>
-              </div>
-              <div className="summary-card__body">
-                <div className="summary-row">
-                  <span className="label">Network Setup Fee</span>
-                  <span className="value">9.588 €</span>
-                  <span className="sublabel">14.376 €</span>
-                </div>
-                <div className="summary-row">
-                  <span className="label">Network Monthly Fee</span>
-                  <span className="value">240 €</span>
-                  <span className="sublabel">2.376 €</span>
-                </div>
-                <div className="summary-row">
-                  <span className="label">Managed Service Monthly Fee</span>
-                  <span className="value">1.536 €</span>
-                  <span className="sublabel">1.536 €</span>
-                </div>
-                <div className="summary-row highlight">
-                  <span className="label">Contract Value 3y</span>
-                  <span className="value">73.524 €</span>
-                  <span className="sublabel">155.208 €</span>
-                </div>
-              </div>
-              <div className="summary-card__actions">
-                <button className="btn-export" onClick={() => alert('BOM export coming soon')}>
-                  BOM
-                </button>
-              </div>
-            </div>
-
-            {/* PDF Button */}
-            <div className="pdf-button-container">
-              <button className="btn-pdf" onClick={() => alert('PDF export coming soon')}>
-                PDF
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="results-page__actions">
-          <button onClick={() => router.push('/')} className="btn-secondary">
-            ← Back to Home
-          </button>
-          <button onClick={() => router.push('/questionnaire')} className="btn-primary">
-            Start New Configuration →
-          </button>
+      {/* Actions bar */}
+      <div className="rp__actions">
+        <button onClick={() => router.push("/")} className="btn-sec">← Back to Home</button>
+        <div className="rp__actions-r">
+          <button onClick={() => window.open("https://calendly.com","_blank")} className="btn-meet">📅 Book a Meeting</button>
+          <button onClick={() => router.push("/questionnaire")} className="btn-pri">Start New Configuration →</button>
         </div>
       </div>
+
+      <CommentButton />
 
       <style jsx>{`
-        .results-page {
-          position: relative;
-          min-height: 100vh;
-          background: #070c14;
-          padding: 52px 18px;
-          overflow: hidden;
-        }
+        .rp { position:relative; min-height:100vh; background:#070c14; padding:52px 18px; overflow:hidden; }
+        .rp__blob1 { position:absolute; width:800px; height:800px; border-radius:50%; right:-250px; top:-120px; background:radial-gradient(circle,rgba(22,14,255,0.11) 0%,transparent 70%); pointer-events:none; z-index:0; }
+        .rp__blob2 { position:absolute; width:500px; height:500px; border-radius:50%; left:-150px; bottom:-140px; background:radial-gradient(circle,rgba(102,105,216,0.14) 0%,transparent 65%); pointer-events:none; z-index:0; }
+        .rp__inner { position:relative; z-index:1; max-width:1200px; margin:0 auto; }
+        .rp__hdr { text-align:center; margin-bottom:44px; }
+        .rp__hdr h1 { font-size:34px; font-weight:700; color:#fff; margin:0 0 10px; }
+        .rp__hdr p { font-size:16px; color:rgba(255,255,255,0.5); margin:0; }
 
-        .results-page__bg-blob {
-          position: absolute;
-          width: 800px;
-          height: 800px;
-          border-radius: 50%;
-          right: -250px;
-          top: -120px;
-          background: radial-gradient(circle, rgba(22, 14, 255, 0.11) 0%, transparent 70%);
-          pointer-events: none;
-          z-index: 0;
-        }
+        /* Site cards */
+        .sc { background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.1); border-radius:22px; margin-bottom:20px; overflow:hidden; transition:all 0.3s; }
+        .sc:hover { border-color:rgba(61,114,252,0.4); }
+        .sc__hdr { display:grid; grid-template-columns:auto 1fr auto; gap:24px; align-items:center; padding:28px 32px; cursor:pointer; transition:background 0.2s; }
+        .sc__hdr:hover { background:rgba(255,255,255,0.02); }
+        .sc__title { display:flex; flex-direction:column; gap:6px; }
+        .sb { display:inline-flex; padding:4px 14px; background:linear-gradient(135deg,#3D72FC,#5CB0E9); border-radius:16px; font-size:13px; font-weight:700; color:#fff; align-self:flex-start; }
+        .sc__title h2 { font-size:22px; font-weight:700; color:#fff; margin:0; }
+        .sc__sub { font-size:14px; color:rgba(255,255,255,0.5); }
+        .sc__tots { display:flex; gap:32px; }
+        .ti { display:flex; flex-direction:column; align-items:flex-end; }
+        .tl { font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:4px; }
+        .tv { font-size:18px; font-weight:700; color:#fff; }
+        .eb { width:40px; height:40px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); border-radius:10px; color:rgba(255,255,255,0.7); font-size:16px; cursor:pointer; }
+        .sc__body { animation:sd 0.3s ease; }
+        @keyframes sd { from{opacity:0} to{opacity:1} }
 
-        .results-page__bg-blob-2 {
-          position: absolute;
-          width: 500px;
-          height: 500px;
-          border-radius: 50%;
-          left: -150px;
-          bottom: -140px;
-          background: radial-gradient(circle, rgba(102, 105, 216, 0.14) 0%, transparent 65%);
-          pointer-events: none;
-          z-index: 0;
-        }
+        /* Table */
+        .ct { width:100%; border-collapse:collapse; background:rgba(255,255,255,0.02); }
+        .ct thead { background:rgba(255,255,255,0.04); }
+        .ct th { padding:14px 20px; text-align:left; font-size:12px; font-weight:600; color:rgba(255,255,255,0.6); text-transform:uppercase; letter-spacing:0.5px; }
+        .ct td { padding:18px 20px; font-size:15px; color:rgba(255,255,255,0.85); border-bottom:1px solid rgba(255,255,255,0.06); }
+        .ct tbody tr:last-child td { border-bottom:none; }
+        .cb { display:inline-flex; padding:4px 12px; border-radius:12px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#fff; }
 
-        .results-page__header {
-          position: relative;
-          z-index: 1;
-          max-width: 1200px;
-          margin: 0 auto 44px;
-          text-align: center;
-        }
-
-        .results-page__header h1 {
-          font-size: 34px;
-          font-weight: 700;
-          color: #fff;
-          margin: 0 0 10px 0;
-        }
-
-        .results-page__header p {
-          font-size: 16px;
-          color: rgba(255, 255, 255, 0.5);
-          margin: 0;
-        }
-
-        .results-page__content {
-          position: relative;
-          z-index: 1;
-          max-width: 1200px;
-          margin: 0 auto;
-        }
-
-        /* Site Cards */
-        .site-card {
-          background: rgba(255, 255, 255, 0.035);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 22px;
-          margin-bottom: 20px;
-          overflow: hidden;
-          transition: all 0.3s;
-        }
-
-        .site-card:hover {
-          border-color: rgba(61, 114, 252, 0.4);
-        }
-
-        .site-card__header {
-          display: grid;
-          grid-template-columns: auto 1fr auto;
-          gap: 24px;
-          align-items: center;
-          padding: 28px 32px;
-          cursor: pointer;
-          transition: background 0.2s;
-        }
-
-        .site-card__header:hover {
-          background: rgba(255, 255, 255, 0.02);
-        }
-
-        .site-card__title {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .site-badge {
-          display: inline-flex;
-          padding: 4px 14px;
-          background: linear-gradient(135deg, #3D72FC, #5CB0E9);
-          border-radius: 16px;
-          font-size: 13px;
-          font-weight: 700;
-          color: #fff;
-          align-self: flex-start;
-        }
-
-        .site-card__title h2 {
-          font-size: 22px;
-          font-weight: 700;
-          color: #fff;
-          margin: 0;
-        }
-
-        .site-card__subtitle span {
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.5);
-        }
-
-        .site-card__totals {
-          display: flex;
-          gap: 32px;
-        }
-
-        .total-item {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-        }
-
-        .total-item .label {
-          font-size: 12px;
-          color: rgba(255, 255, 255, 0.5);
-          margin-bottom: 4px;
-        }
-
-        .total-item .value {
-          font-size: 18px;
-          font-weight: 700;
-          color: #fff;
-        }
-
-        .total-item .sublabel {
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.4);
-          margin-top: 2px;
-        }
-
-        .expand-button {
-          width: 40px;
-          height: 40px;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          border-radius: 10px;
-          color: rgba(255, 255, 255, 0.7);
-          font-size: 16px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .expand-button:hover {
-          background: rgba(255, 255, 255, 0.1);
-          color: #fff;
-        }
-
-        .site-card__content {
-          padding: 0;
-          animation: slideDown 0.3s ease;
-        }
-
-        @keyframes slideDown {
-          from {
-            opacity: 0;
-            max-height: 0;
-          }
-          to {
-            opacity: 1;
-            max-height: 1000px;
-          }
-        }
-
-        /* Components Table */
-        .components-table {
-          width: 100%;
-          border-collapse: collapse;
-          background: rgba(255, 255, 255, 0.02);
-        }
-
-        .components-table thead {
-          background: rgba(255, 255, 255, 0.04);
-        }
-
-        .components-table th {
-          padding: 14px 20px;
-          text-align: left;
-          font-size: 12px;
-          font-weight: 600;
-          color: rgba(255, 255, 255, 0.6);
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .components-table td {
-          padding: 18px 20px;
-          font-size: 15px;
-          color: rgba(255, 255, 255, 0.85);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .components-table tbody tr:last-child td {
-          border-bottom: none;
-        }
-
-        .component-badge {
-          display: inline-flex;
-          padding: 4px 12px;
-          border-radius: 12px;
-          font-size: 11px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          color: #fff;
-        }
-
-        /* Deployment Summary */
-        .deployment-summary {
-          margin-top: 48px;
-        }
-
-        .deployment-summary__title {
-          font-size: 28px;
-          font-weight: 700;
-          color: #fff;
-          margin: 0 0 24px 0;
-        }
-
-        .summary-cards-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr auto;
-          gap: 20px;
-          align-items: start;
-        }
-
-        .summary-card {
-          background: rgba(255, 255, 255, 0.035);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 28px;
-          border-radius: 22px;
-        }
-
-        .summary-card--highlight {
-          background: rgba(61, 114, 252, 0.08);
-          border: 1px solid rgba(61, 114, 252, 0.35);
-        }
-
-        .summary-card__header h3 {
-          font-size: 22px;
-          font-weight: 700;
-          color: #fff;
-          margin: 0 0 6px 0;
-        }
-
-        .summary-card__header p {
-          font-size: 13px;
-          color: rgba(255, 255, 255, 0.5);
-          margin: 0 0 24px 0;
-        }
-
-        .summary-card__body {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          margin-bottom: 24px;
-        }
-
-        .summary-row {
-          display: grid;
-          grid-template-columns: 1fr auto auto;
-          gap: 16px;
-          align-items: center;
-          padding: 8px 0;
-        }
-
-        .summary-row.highlight {
-          padding-top: 16px;
-          margin-top: 8px;
-          border-top: 1px solid rgba(255, 255, 255, 0.15);
-        }
-
-        .summary-row .label {
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.7);
-        }
-
-        .summary-row .value {
-          font-size: 18px;
-          font-weight: 700;
-          color: #fff;
-          text-align: right;
-        }
-
-        .summary-row .sublabel {
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.4);
-          text-align: right;
-        }
-
-        .summary-row.highlight .value {
-          font-size: 22px;
-          color: #5CB0E9;
-        }
-
-        .summary-card__actions {
-          display: flex;
-          gap: 12px;
-        }
-
-        .btn-export {
-          flex: 1;
-          padding: 12px 24px;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          border-radius: 12px;
-          color: rgba(255, 255, 255, 0.8);
-          font-weight: 600;
-          font-size: 15px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .btn-export:hover {
-          background: rgba(255, 255, 255, 0.1);
-          color: #fff;
-          transform: translateY(-2px);
-        }
-
-        .pdf-button-container {
-          display: flex;
-          align-items: center;
-        }
-
-        .btn-pdf {
-          padding: 20px 40px;
-          background: linear-gradient(135deg, #FF9800, #F57C00);
-          border: none;
-          border-radius: 12px;
-          color: #fff;
-          font-weight: 700;
-          font-size: 18px;
-          cursor: pointer;
-          transition: all 0.2s;
-          min-width: 120px;
-        }
-
-        .btn-pdf:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(255, 152, 0, 0.4);
-        }
+        /* Deployment summary */
+        .ds { margin-top:48px; }
+        .ds__t { font-size:28px; font-weight:700; color:#fff; margin:0 0 24px; }
+        .ds__grid { display:grid; grid-template-columns:1fr 1fr auto; gap:20px; align-items:start; }
+        .dc { background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.1); padding:28px; border-radius:22px; }
+        .dc--hl { background:rgba(61,114,252,0.08); border:1px solid rgba(61,114,252,0.35); }
+        .dc__h h3 { font-size:22px; font-weight:700; color:#fff; margin:0 0 6px; }
+        .dc__h p { font-size:13px; color:rgba(255,255,255,0.5); margin:0 0 24px; }
+        .dc__b { display:flex; flex-direction:column; gap:12px; }
+        .sr { display:grid; grid-template-columns:1fr auto auto; gap:16px; align-items:center; padding:8px 0; }
+        .sr--hl { padding-top:16px; margin-top:8px; border-top:1px solid rgba(255,255,255,0.15); }
+        .sl { font-size:14px; color:rgba(255,255,255,0.7); }
+        .sv { font-size:18px; font-weight:700; color:#fff; text-align:right; }
+        .sv--big { font-size:22px; color:#5CB0E9; }
+        .ss { font-size:14px; color:rgba(255,255,255,0.35); text-align:right; text-decoration:line-through; }
+        .pdf-wrap { display:flex; align-items:center; }
+        .btn-pdf { padding:20px 40px; background:linear-gradient(135deg,#FF9800,#F57C00); border:none; border-radius:12px; color:#fff; font-weight:700; font-size:18px; cursor:pointer; transition:all 0.2s; min-width:120px; }
+        .btn-pdf:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 8px 20px rgba(255,152,0,0.4); }
+        .btn-pdf:disabled { opacity:0.6; cursor:wait; }
 
         /* Actions */
-        .results-page__actions {
-          margin-top: 48px;
-          display: flex;
-          justify-content: space-between;
-          gap: 24px;
+        .rp__actions { position:relative; z-index:1; max-width:1200px; margin:48px auto 0; display:flex; justify-content:space-between; gap:24px; }
+        .rp__actions-r { display:flex; gap:12px; }
+        .btn-pri,.btn-sec,.btn-meet { padding:16px 32px; border:none; border-radius:12px; font-size:16px; font-weight:600; cursor:pointer; transition:all 0.3s; }
+        .btn-pri { background:linear-gradient(135deg,#3D72FC,#5CB0E9); color:#fff; }
+        .btn-pri:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(61,114,252,0.4); }
+        .btn-sec { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.8); }
+        .btn-sec:hover { background:rgba(255,255,255,0.1); color:#fff; }
+        .btn-meet { background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.4); color:#22c55e; }
+        .btn-meet:hover { background:rgba(34,197,94,0.25); transform:translateY(-2px); }
+
+        @media(max-width:1200px) {
+          .sc__hdr { grid-template-columns:1fr; gap:20px; }
+          .sc__tots { flex-direction:column; gap:12px; align-items:flex-start; }
+          .ti { align-items:flex-start; }
+          .ds__grid { grid-template-columns:1fr; }
+          .pdf-wrap { justify-content:center; }
         }
-
-        .btn-primary, .btn-secondary {
-          padding: 16px 32px;
-          border: none;
-          border-radius: 12px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s;
-        }
-
-        .btn-primary {
-          background: linear-gradient(135deg, #3D72FC 0%, #5CB0E9 100%);
-          color: white;
-        }
-
-        .btn-primary:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(61, 114, 252, 0.4);
-        }
-
-        .btn-secondary {
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          color: rgba(255, 255, 255, 0.8);
-        }
-
-        .btn-secondary:hover {
-          background: rgba(255, 255, 255, 0.1);
-          color: #fff;
-        }
-
-        /* Responsive */
-        @media (max-width: 1200px) {
-          .site-card__header {
-            grid-template-columns: 1fr;
-            gap: 20px;
-          }
-
-          .site-card__totals {
-            flex-direction: column;
-            gap: 12px;
-            align-items: flex-start;
-          }
-
-          .total-item {
-            align-items: flex-start;
-          }
-
-          .summary-cards-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .pdf-button-container {
-            justify-content: center;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .results-page {
-            padding: 30px 12px;
-          }
-
-          .results-page__header h1 {
-            font-size: 26px;
-          }
-
-          .site-card__header {
-            padding: 20px;
-          }
-
-          .components-table {
-            font-size: 13px;
-          }
-
-          .components-table th,
-          .components-table td {
-            padding: 12px 12px;
-          }
-
-          .summary-card {
-            padding: 24px 20px;
-          }
-
-          .results-page__actions {
-            flex-direction: column;
-          }
-
-          .btn-primary, .btn-secondary {
-            width: 100%;
-          }
+        @media(max-width:768px) {
+          .rp { padding:30px 12px; }
+          .rp__hdr h1 { font-size:26px; }
+          .sc__hdr { padding:20px; }
+          .ct th,.ct td { padding:12px; font-size:13px; }
+          .rp__actions { flex-direction:column; }
+          .rp__actions-r { flex-direction:column; }
+          .btn-pri,.btn-sec,.btn-meet { width:100%; text-align:center; }
         }
       `}</style>
     </div>
