@@ -76,7 +76,7 @@ export const CELL_PLANS = [
 ];
 
 // ═══ POC PRICING (fixed) ═══
-export const POC_PRICING = { network_setup_fee: 10000, network_monthly_fee: 0, managed_service_monthly: 0 };
+export const POC_PRICING = { network_setup_fee: 2000, network_monthly_fee: 0, managed_service_monthly: 0 };
 
 // ─────────────────────────────────────────────
 // MATCHING ALGORITHM

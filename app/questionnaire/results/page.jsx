@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getAllSites } from "@/lib/multiSiteStorage";
 import { buildAllPackages, formatEuro } from "@/data/packages";
@@ -11,8 +11,6 @@ export default function DynamicResultsPage() {
   const [expandedSite, setExpandedSite] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [pdfBusy, setPdfBusy] = useState(false);
-  const printRef = useRef(null);
 
   useEffect(() => {
     const sites = getAllSites();
@@ -24,28 +22,6 @@ export default function DynamicResultsPage() {
   }, []);
 
   const toggle = (i) => setExpandedSite(expandedSite === i ? null : i);
-
-  // PDF generation
-  const handlePdf = async () => {
-    setPdfBusy(true);
-    try {
-      const html2canvas = (await import("html2canvas")).default;
-      const { jsPDF }   = await import("jspdf");
-      const el = printRef.current;
-      if (!el) return;
-      const canvas = await html2canvas(el, { backgroundColor:"#070c14", scale:2, useCORS:true, logging:false });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? "landscape" : "portrait",
-        unit: "px", format: [canvas.width/2, canvas.height/2],
-      });
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width/2, canvas.height/2);
-      pdf.save("stargrid-connectivity-packages.pdf");
-    } catch (err) {
-      console.error("PDF error:", err);
-      alert("PDF export requires html2canvas & jspdf.\nRun: npm install html2canvas jspdf");
-    } finally { setPdfBusy(false); }
-  };
 
   // ── Loading / Empty ──
   if (loading) return (
@@ -71,14 +47,14 @@ export default function DynamicResultsPage() {
     <div className="rp">
       <div className="rp__blob1" /><div className="rp__blob2" />
 
-      <div ref={printRef} className="rp__inner">
+      <div className="rp__inner">
         {/* Header */}
         <div className="rp__hdr">
           <h1>Your Connectivity Packages</h1>
           <p>{totalSites} site{totalSites !== 1 ? "s" : ""} configured</p>
         </div>
 
-        {/* ──── Dynamic site cards (1, 2, 4, N…) ──── */}
+        {/* ──── Dynamic site cards ──── */}
         {sitePackages.map((sp, idx) => {
           const isExp = expandedSite === idx;
           const { site, siteNumber, package: pkg } = sp;
@@ -146,9 +122,12 @@ export default function DynamicResultsPage() {
               </div>
             </div>
 
-            {/* PDF button */}
+            {/* PDF button — opens dedicated white offer page */}
             <div className="pdf-wrap">
-              <button className="btn-pdf" onClick={handlePdf} disabled={pdfBusy}>{pdfBusy ? "…" : "PDF"}</button>
+              <button className="btn-pdf" onClick={() => router.push("/questionnaire/results/pdf")}>
+                <span className="btn-pdf__icon">📄</span>
+                <span className="btn-pdf__label">View<br/>Offer PDF</span>
+              </button>
             </div>
           </div>
         </div>
@@ -158,8 +137,9 @@ export default function DynamicResultsPage() {
       <div className="rp__actions">
         <button onClick={() => router.push("/")} className="btn-sec">← Back to Home</button>
         <div className="rp__actions-r">
-          <button onClick={() => window.open("https://calendly.com","_blank")} className="btn-meet">📅 Book a Meeting</button>
-          <button onClick={() => router.push("/questionnaire")} className="btn-pri">Start New Configuration →</button>
+          <button onClick={() => router.push("/questionnaire/validation")} className="btn-edit">✏️ Edit Answers</button>
+          <button onClick={() => window.open("https://calendly.com/esthieuk/stargrid","_blank")} className="btn-meet">📅 Book a Meeting</button>
+          <button onClick={() => router.push("/questionnaire")} className="btn-pri">New Configuration →</button>
         </div>
       </div>
 
@@ -174,7 +154,6 @@ export default function DynamicResultsPage() {
         .rp__hdr h1 { font-size:34px; font-weight:700; color:#fff; margin:0 0 10px; }
         .rp__hdr p { font-size:16px; color:rgba(255,255,255,0.5); margin:0; }
 
-        /* Site cards */
         .sc { background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.1); border-radius:22px; margin-bottom:20px; overflow:hidden; transition:all 0.3s; }
         .sc:hover { border-color:rgba(61,114,252,0.4); }
         .sc__hdr { display:grid; grid-template-columns:auto 1fr auto; gap:24px; align-items:center; padding:28px 32px; cursor:pointer; transition:background 0.2s; }
@@ -191,7 +170,6 @@ export default function DynamicResultsPage() {
         .sc__body { animation:sd 0.3s ease; }
         @keyframes sd { from{opacity:0} to{opacity:1} }
 
-        /* Table */
         .ct { width:100%; border-collapse:collapse; background:rgba(255,255,255,0.02); }
         .ct thead { background:rgba(255,255,255,0.04); }
         .ct th { padding:14px 20px; text-align:left; font-size:12px; font-weight:600; color:rgba(255,255,255,0.6); text-transform:uppercase; letter-spacing:0.5px; }
@@ -199,7 +177,6 @@ export default function DynamicResultsPage() {
         .ct tbody tr:last-child td { border-bottom:none; }
         .cb { display:inline-flex; padding:4px 12px; border-radius:12px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#fff; }
 
-        /* Deployment summary */
         .ds { margin-top:48px; }
         .ds__t { font-size:28px; font-weight:700; color:#fff; margin:0 0 24px; }
         .ds__grid { display:grid; grid-template-columns:1fr 1fr auto; gap:20px; align-items:start; }
@@ -214,21 +191,29 @@ export default function DynamicResultsPage() {
         .sv { font-size:18px; font-weight:700; color:#fff; text-align:right; }
         .sv--big { font-size:22px; color:#5CB0E9; }
         .ss { font-size:14px; color:rgba(255,255,255,0.35); text-align:right; text-decoration:line-through; }
-        .pdf-wrap { display:flex; align-items:center; }
-        .btn-pdf { padding:20px 40px; background:linear-gradient(135deg,#FF9800,#F57C00); border:none; border-radius:12px; color:#fff; font-weight:700; font-size:18px; cursor:pointer; transition:all 0.2s; min-width:120px; }
-        .btn-pdf:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 8px 20px rgba(255,152,0,0.4); }
-        .btn-pdf:disabled { opacity:0.6; cursor:wait; }
 
-        /* Actions */
+        .pdf-wrap { display:flex; align-items:center; }
+        .btn-pdf {
+          display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+          padding:24px 36px; min-width:130px;
+          background:linear-gradient(135deg,#FF9800,#F57C00);
+          border:none; border-radius:16px; cursor:pointer; transition:all 0.25s;
+        }
+        .btn-pdf:hover { transform:translateY(-3px); box-shadow:0 10px 28px rgba(255,152,0,0.4); }
+        .btn-pdf__icon { font-size:32px; }
+        .btn-pdf__label { font-size:14px; font-weight:700; color:#fff; line-height:1.3; text-align:center; }
+
         .rp__actions { position:relative; z-index:1; max-width:1200px; margin:48px auto 0; display:flex; justify-content:space-between; gap:24px; }
         .rp__actions-r { display:flex; gap:12px; }
-        .btn-pri,.btn-sec,.btn-meet { padding:16px 32px; border:none; border-radius:12px; font-size:16px; font-weight:600; cursor:pointer; transition:all 0.3s; }
+        .btn-pri,.btn-sec,.btn-meet,.btn-edit { padding:16px 32px; border:none; border-radius:12px; font-size:16px; font-weight:600; cursor:pointer; transition:all 0.3s; }
         .btn-pri { background:linear-gradient(135deg,#3D72FC,#5CB0E9); color:#fff; }
         .btn-pri:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(61,114,252,0.4); }
         .btn-sec { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.8); }
         .btn-sec:hover { background:rgba(255,255,255,0.1); color:#fff; }
         .btn-meet { background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.4); color:#22c55e; }
         .btn-meet:hover { background:rgba(34,197,94,0.25); transform:translateY(-2px); }
+        .btn-edit { background:rgba(255,193,7,0.12); border:1px solid rgba(255,193,7,0.35); color:#FFC107; }
+        .btn-edit:hover { background:rgba(255,193,7,0.2); transform:translateY(-2px); }
 
         @media(max-width:1200px) {
           .sc__hdr { grid-template-columns:1fr; gap:20px; }
@@ -244,7 +229,7 @@ export default function DynamicResultsPage() {
           .ct th,.ct td { padding:12px; font-size:13px; }
           .rp__actions { flex-direction:column; }
           .rp__actions-r { flex-direction:column; }
-          .btn-pri,.btn-sec,.btn-meet { width:100%; text-align:center; }
+          .btn-pri,.btn-sec,.btn-meet,.btn-edit { width:100%; text-align:center; }
         }
       `}</style>
     </div>
