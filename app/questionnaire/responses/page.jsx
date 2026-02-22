@@ -4,6 +4,13 @@ import { useState, useEffect, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { fetchAllResponses, updateResponseStatus } from "@/lib/supabase";
 
+// Format EUR
+const fmtEuro = (v) => {
+  const num = typeof v === "number" ? v : parseFloat(v) || 0;
+  if (num === 0) return "—";
+  return new Intl.NumberFormat("de-DE", { style:"currency", currency:"EUR", minimumFractionDigits:2 }).format(num);
+};
+
 export default function AdminResponsesPage() {
   const router = useRouter();
   const [responses, setResponses] = useState([]);
@@ -55,6 +62,84 @@ export default function AdminResponsesPage() {
     closed:    { bg:"rgba(255,255,255,0.08)", color:"rgba(255,255,255,0.5)", border:"rgba(255,255,255,0.15)" },
   };
 
+  // ── Render recommended package for a response ──
+  const renderRecommendation = (rec) => {
+    if (!rec || !rec.sitePackages || rec.sitePackages.length === 0) {
+      return <p style={{ color:"rgba(255,255,255,0.4)", fontStyle:"italic" }}>No recommendation generated yet.</p>;
+    }
+
+    return (
+      <div className="rec-wrap">
+        {rec.sitePackages.map((sp, idx) => (
+          <div key={sp.site_id || idx} className="rec-site">
+            <div className="rec-site__hdr">
+              <span className="rec-badge">Site {sp.site_number}</span>
+              <strong>{sp.site_name}</strong>
+              <span className="rec-label">{sp.package?.servicesLabel || "—"}</span>
+            </div>
+
+            <table className="rec-tbl">
+              <thead>
+                <tr>
+                  <th>Component</th>
+                  <th>Product</th>
+                  <th>Airtime</th>
+                  <th className="r">Setup</th>
+                  <th className="r">Monthly</th>
+                  <th className="r">Managed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(sp.package?.components || []).map((c, ci) => (
+                  <tr key={ci}>
+                    <td>
+                      <span className="rec-dot" style={{ background: c.color || "#3D72FC" }} />
+                      {c.type}
+                    </td>
+                    <td>{c.hardware || c.name || "—"}</td>
+                    <td>{c.airtime || "—"}</td>
+                    <td className="r">{fmtEuro(c.network_setup_fee)}</td>
+                    <td className="r">{fmtEuro(c.network_monthly_fee)}</td>
+                    <td className="r">{fmtEuro(c.managed_service_monthly)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="rec-total">
+                  <td colSpan={3}><strong>Site Total</strong></td>
+                  <td className="r"><strong>{fmtEuro(sp.package?.totals?.network_setup_fee)}</strong></td>
+                  <td className="r"><strong>{fmtEuro(sp.package?.totals?.network_monthly_fee)}</strong></td>
+                  <td className="r"><strong>{fmtEuro(sp.package?.totals?.managed_service_monthly)}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        ))}
+
+        {/* Summary totals */}
+        {rec.allTotals && (
+          <div className="rec-summary">
+            <div className="rec-summary__row">
+              <span>All Sites Setup</span>
+              <strong>{fmtEuro(rec.allTotals.discounted_setup)}</strong>
+              {rec.allTotals.setup_discount_pct > 0 && (
+                <span className="rec-discount">({(rec.allTotals.setup_discount_pct * 100).toFixed(0)}% discount)</span>
+              )}
+            </div>
+            <div className="rec-summary__row">
+              <span>Monthly Total</span>
+              <strong>{fmtEuro((rec.allTotals.network_monthly_fee || 0) + (rec.allTotals.managed_service_monthly || 0))}</strong>
+            </div>
+            <div className="rec-summary__row rec-summary__row--hl">
+              <span>Contract Value ({rec.allTotals.contract_months || 36}mo)</span>
+              <strong className="rec-cv">{fmtEuro(rec.allTotals.contract_value)}</strong>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="admin">
       <div className="admin__header">
@@ -84,7 +169,6 @@ export default function AdminResponsesPage() {
               <tr><th>ID</th><th>Date</th><th>Contact</th><th>Sites</th><th>Status</th><th>Actions</th></tr>
             </thead>
             <tbody>
-              {/* FIXED: Use Fragment with key to avoid "unique key" warning */}
               {responses.map(resp => {
                 const isExp = expandedRow === resp.id;
                 const colors = sc[resp.status] || sc.pending;
@@ -170,12 +254,11 @@ export default function AdminResponsesPage() {
                               </div>
                             )}
 
-                            {resp.scoring_data && Object.keys(resp.scoring_data).length > 0 && (
-                              <div className="detail-section">
-                                <h4>📈 Scoring Data</h4>
-                                <pre className="json-block">{JSON.stringify(resp.scoring_data, null, 2)}</pre>
-                              </div>
-                            )}
+                            {/* ═══ RECOMMENDED PACKAGE (replaces Scoring Data) ═══ */}
+                            <div className="detail-section">
+                              <h4>📦 Recommended Package</h4>
+                              {renderRecommendation(resp.recommendation)}
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -249,7 +332,31 @@ export default function AdminResponsesPage() {
         .qa-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
         .qa-q { font-size:12px; color:rgba(255,255,255,0.6); }
         .qa-a { font-size:13px; color:rgba(255,255,255,0.9); font-weight:500; }
-        .json-block { font-size:12px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.3); padding:14px; border-radius:10px; overflow-x:auto; max-height:300px; }
+
+        /* ═══ Recommendation styles ═══ */
+        .rec-wrap { display:flex; flex-direction:column; gap:16px; }
+        .rec-site { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:12px; overflow:hidden; }
+        .rec-site__hdr { display:flex; align-items:center; gap:12px; padding:14px 18px; background:rgba(61,114,252,0.06); border-bottom:1px solid rgba(255,255,255,0.06); flex-wrap:wrap; }
+        .rec-badge { display:inline-flex; padding:3px 12px; background:linear-gradient(135deg,#3D72FC,#5CB0E9); border-radius:12px; font-size:11px; font-weight:700; color:#fff; }
+        .rec-site__hdr strong { color:#fff; font-size:14px; }
+        .rec-label { font-size:12px; color:rgba(255,255,255,0.5); }
+
+        .rec-tbl { width:100%; border-collapse:collapse; }
+        .rec-tbl th { padding:10px 14px; text-align:left; font-size:10px; font-weight:600; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:0.5px; background:rgba(255,255,255,0.03); }
+        .rec-tbl td { padding:10px 14px; font-size:13px; color:rgba(255,255,255,0.8); border-bottom:1px solid rgba(255,255,255,0.04); }
+        .rec-tbl .r { text-align:right; font-variant-numeric:tabular-nums; }
+        .rec-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+        .rec-total { background:rgba(61,114,252,0.08); }
+        .rec-total td { border-top:2px solid rgba(61,114,252,0.4); border-bottom:none; color:#fff; }
+
+        .rec-summary { padding:16px 18px; background:rgba(61,114,252,0.04); border:1px solid rgba(61,114,252,0.2); border-radius:12px; }
+        .rec-summary__row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; }
+        .rec-summary__row span { font-size:13px; color:rgba(255,255,255,0.6); }
+        .rec-summary__row strong { font-size:15px; color:#fff; }
+        .rec-summary__row--hl { border-top:1px solid rgba(255,255,255,0.1); padding-top:12px; margin-top:6px; }
+        .rec-cv { color:#5CB0E9 !important; font-size:18px !important; }
+        .rec-discount { font-size:11px; color:rgba(92,176,233,0.8); margin-left:8px; }
+
         .admin__pagination { display:flex; justify-content:center; align-items:center; gap:16px; margin-top:28px; }
         .page-btn { padding:10px 20px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); border-radius:10px; color:rgba(255,255,255,0.7); font-size:14px; cursor:pointer; transition:all 0.2s; }
         .page-btn:hover:not(:disabled) { background:rgba(255,255,255,0.1); color:#fff; }

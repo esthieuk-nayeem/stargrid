@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAllSites, clearAllQuestionnaireData } from "@/lib/multiSiteStorage";
+import { getAllSites } from "@/lib/multiSiteStorage";
 import { saveQuestionnaireResponse } from "@/lib/supabase";
 
 export default function ContactFormPage() {
@@ -46,9 +46,7 @@ export default function ContactFormPage() {
     setIsSubmitting(true);
 
     try {
-      // ── Pull the FULL sites array from local storage ──────────────────────
-      // This is the array shown in the JSON sample: each site has .id, .name,
-      // .location, .answers (keyed by question ID), .scoring, etc.
+      // ── Get sites from localStorage ──
       const sites = getAllSites();
 
       if (sites.length === 0) {
@@ -57,7 +55,7 @@ export default function ContactFormPage() {
         return;
       }
 
-      // Build a lightweight scoring summary across all sites
+      // ── Build scoring summary ──
       const scoringData = {
         sites: sites.map(s => ({
           site_id:               s.id,
@@ -67,17 +65,20 @@ export default function ContactFormPage() {
         })),
       };
 
-      // ── Submit to Supabase ────────────────────────────────────────────────
-      // supabase.js will format every question answer with question text,
-      // section, type, raw value AND human-readable display value.
+      // ── Submit to Supabase ──
+      // This will:
+      // 1. Save the response to questionnaire_responses
+      // 2. Call Edge Function to generate recommendations
+      // 3. Store recommendations in localStorage for Results page
       const response = await saveQuestionnaireResponse(sites, formData, scoringData);
 
-      // Optionally persist the submission ID locally for the results page
+      // Save response ID and contact info to localStorage
       if (typeof window !== 'undefined' && response?.id) {
         localStorage.setItem('submissionId', String(response.id));
+        localStorage.setItem('questionnaire_contact', JSON.stringify(formData));
       }
 
-      // Navigate to results (keep site data for results page rendering)
+      // Navigate to results
       router.push('/questionnaire/results');
 
     } catch (error) {

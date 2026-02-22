@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getAllSites } from "@/lib/multiSiteStorage";
-import { buildAllPackages, formatEuro } from "@/data/packages";
+import { getRecommendations, formatEuro } from "@/lib/recommendation";
 import CommentButton from "@/components/questionnaire/CommentButton";
 
 export default function DynamicResultsPage() {
@@ -11,27 +11,59 @@ export default function DynamicResultsPage() {
   const [expandedSite, setExpandedSite] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const sites = getAllSites();
-    if (sites.length === 0) { setLoading(false); return; }
-    const d = buildAllPackages(sites);
-    setData(d);
-    if (d.sitePackages.length > 0) setExpandedSite(0);
-    setLoading(false);
+    const fetchRecommendations = async () => {
+      const sites = getAllSites();
+      if (sites.length === 0) { setLoading(false); return; }
+
+      try {
+        const result = await getRecommendations(sites);
+        // Merge site metadata (name, answers, location) back into result for display
+        const enriched = {
+          ...result,
+          sitePackages: result.sitePackages.map((sp, idx) => ({
+            ...sp,
+            site: sites[idx] || {},
+          })),
+        };
+        setData(enriched);
+        if (enriched.sitePackages.length > 0) setExpandedSite(0);
+      } catch (err) {
+        console.error("Recommendation error:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecommendations();
   }, []);
 
   const toggle = (i) => setExpandedSite(expandedSite === i ? null : i);
 
-  // ── Loading / Empty ──
+  // ── Loading ──
   if (loading) return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"#070c14" }}>
       <div style={{ width:48, height:48, border:"4px solid rgba(255,255,255,0.1)", borderTopColor:"#3D72FC", borderRadius:"50%", animation:"sp .8s linear infinite" }} />
-      <p style={{ color:"rgba(255,255,255,0.6)", marginTop:16 }}>Building your packages…</p>
+      <p style={{ color:"rgba(255,255,255,0.6)", marginTop:16 }}>Analyzing your requirements…</p>
       <style jsx>{`@keyframes sp { to { transform:rotate(360deg); } }`}</style>
     </div>
   );
 
+  // ── Error ──
+  if (error) return (
+    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"#070c14", gap:16, padding:20 }}>
+      <h2 style={{ color:"#FA5674", fontSize:24 }}>Recommendation Error</h2>
+      <p style={{ color:"rgba(255,255,255,0.6)", textAlign:"center", maxWidth:500 }}>{error}</p>
+      <button onClick={() => window.location.reload()} style={{ padding:"12px 28px", background:"linear-gradient(135deg,#3D72FC,#5CB0E9)", color:"#fff", border:"none", borderRadius:12, fontSize:16, fontWeight:600, cursor:"pointer" }}>
+        Retry
+      </button>
+    </div>
+  );
+
+  // ── Empty ──
   if (!data || data.sitePackages.length === 0) return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"#070c14", gap:16 }}>
       <h2 style={{ color:"#fff", fontSize:28 }}>No Site Data Found</h2>
@@ -51,20 +83,22 @@ export default function DynamicResultsPage() {
         {/* Header */}
         <div className="rp__hdr">
           <h1>Your Connectivity Packages</h1>
-          <p>{totalSites} site{totalSites !== 1 ? "s" : ""} configured</p>
+          <p>{totalSites} site{totalSites !== 1 ? "s" : ""} configured • AI-recommended from {data.sitePackages[0]?.package?.eligible_count || "—"} products</p>
         </div>
 
         {/* ──── Dynamic site cards ──── */}
         {sitePackages.map((sp, idx) => {
           const isExp = expandedSite === idx;
-          const { site, siteNumber, package: pkg } = sp;
+          const { site, site_name, site_number, package: pkg } = sp;
+          const siteName = site?.name || site_name || `Site ${site_number}`;
+          const siteType = site?.answers?.[22]?.label || "Site";
           return (
-            <div key={site.id} className="sc">
+            <div key={sp.site_id || idx} className="sc">
               <div className="sc__hdr" onClick={() => toggle(idx)}>
                 <div className="sc__title">
-                  <span className="sb">Site {siteNumber}</span>
-                  <h2>{site.name}</h2>
-                  <span className="sc__sub">{site.answers?.[22]?.label || "Site"} • {pkg.servicesLabel}</span>
+                  <span className="sb">Site {site_number}</span>
+                  <h2>{siteName}</h2>
+                  <span className="sc__sub">{siteType} • {pkg.servicesLabel}</span>
                 </div>
                 <div className="sc__tots">
                   <div className="ti"><span className="tl">Setup Fee</span><span className="tv">{formatEuro(pkg.totals.network_setup_fee)}</span></div>
