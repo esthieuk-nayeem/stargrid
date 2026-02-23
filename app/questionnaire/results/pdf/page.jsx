@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getAllSites } from "@/lib/multiSiteStorage";
 import { getRecommendations, formatEuro } from "@/lib/recommendation";
+import Image from "next/image";
 
 export default function PdfOfferPage() {
   const router = useRouter();
@@ -133,7 +134,12 @@ export default function PdfOfferPage() {
           {/* Header */}
           <header className="hdr">
             <div className="hdr__logo">
-              <div className="hdr__icon">⚡</div>
+  <Image
+    src="/assets/images/icon/icon.png"
+    alt="Lightning Icon"
+    width={40}
+    height={40}
+  />
               <div>
                 <div className="hdr__brand">STARGRID</div>
                 <div className="hdr__tagline">Industrial Connectivity Solutions</div>
@@ -148,7 +154,7 @@ export default function PdfOfferPage() {
           <div className="rule rule--gradient" />
 
           <h1 className="title">Connectivity Solution Offer</h1>
-          <p className="subtitle">{totalSites} Site{totalSites !== 1 ? "s" : ""} — Customized Package Recommendation</p>
+          <p className="subtitle">{totalSites} Site{totalSites !== 1 ? "s" : ""} — Customized Plan Recommendation</p>
 
           {/* Site packages */}
           {sitePackages.map((sp, idx) => {
@@ -261,9 +267,9 @@ export default function PdfOfferPage() {
           <div className="rule rule--gradient" />
           <footer className="ftr">
             <div className="ftr__left">
-              <strong>StarGrid GmbH</strong>
-              <span>Industrial Connectivity Solutions</span>
-              <span>info@stargrid.io · www.stargrid.io</span>
+              <strong>StarGrid</strong>
+              <span>100% Connectivity Cellular Satellite Fixed</span>
+              <span>al@cellsat.one · www.stargrid.one</span>
             </div>
             <div className="ftr__right">
               <span>Prepared for you on {today}</span>

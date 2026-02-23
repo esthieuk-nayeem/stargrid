@@ -82,8 +82,8 @@ export default function DynamicResultsPage() {
       <div className="rp__inner">
         {/* Header */}
         <div className="rp__hdr">
-          <h1>Your Connectivity Packages</h1>
-          <p>{totalSites} site{totalSites !== 1 ? "s" : ""} configured • AI-recommended from {data.sitePackages[0]?.package?.eligible_count || "—"} products</p>
+          <h1>Your Connectivity Plans</h1>
+          <p>{totalSites} site{totalSites !== 1 ? "s" : ""} configured</p>
         </div>
 
         {/* ──── Dynamic site cards ──── */}
@@ -171,9 +171,9 @@ export default function DynamicResultsPage() {
       <div className="rp__actions">
         <button onClick={() => router.push("/")} className="btn-sec">← Back to Home</button>
         <div className="rp__actions-r">
-          <button onClick={() => router.push("/questionnaire/validation")} className="btn-edit">✏️ Edit Answers</button>
+
           <button onClick={() => window.open("https://calendly.com/esthieuk/stargrid","_blank")} className="btn-meet">📅 Book a Meeting</button>
-          <button onClick={() => router.push("/questionnaire")} className="btn-pri">New Configuration →</button>
+          <button onClick={() => router.push("/")} className="btn-pri">New Configuration →</button>
         </div>
       </div>
 

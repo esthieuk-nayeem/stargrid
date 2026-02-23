@@ -294,14 +294,14 @@ export default function MultiSiteQuestionnairePage() {
         <div className="questionnaire-page__navigation">
           <button onClick={handlePrevious} disabled={isFirstQuestion} className="questionnaire-page__btn questionnaire-page__btn--prev">← Previous</button>
           <div className="questionnaire-page__nav-actions">
-            <button onClick={handleAddAnotherSite} className="questionnaire-page__btn questionnaire-page__btn--add-site">+ Add Another Site</button>
+            {/* <button onClick={handleAddAnotherSite} className="questionnaire-page__btn questionnaire-page__btn--add-site">+ Add Another Site</button> */}
             <button onClick={handleNext} disabled={!hasAnswer} className="questionnaire-page__btn questionnaire-page__btn--next">{isLastQuestion ? 'Review Answers →' : 'Next →'}</button>
           </div>
         </div>
 
         <div className="questionnaire-page__quick-actions">
           <button onClick={() => router.push('/questionnaire/validation')} className="questionnaire-page__link">📋 Review All Sites</button>
-          <button onClick={() => router.push('/questionnaire/results')} className="questionnaire-page__link">📊 Show Results</button>
+          <button onClick={() => router.push('/questionnaire/results/old')} className="questionnaire-page__link">📊 Show Results</button>
           <button onClick={() => { if (confirm('Save progress and exit?')) router.push('/'); }} className="questionnaire-page__link">💾 Save & Exit</button>
         </div>
       </div>
