@@ -134,12 +134,12 @@ export default function PdfOfferPage() {
           {/* Header */}
           <header className="hdr">
             <div className="hdr__logo">
-  <Image
-    src="/assets/images/icon/icon.png"
-    alt="Lightning Icon"
-    width={40}
-    height={40}
-  />
+              <Image
+                src="/assets/images/icon/icon.png"
+                alt="Lightning Icon"
+                width={40}
+                height={40}
+              />
               <div>
                 <div className="hdr__brand">STARGRID</div>
                 <div className="hdr__tagline">Industrial Connectivity Solutions</div>
@@ -220,9 +220,9 @@ export default function PdfOfferPage() {
               </div>
               <table className="sum-tbl">
                 <tbody>
-                  <tr><td>Network Setup Fee</td><td className="ra mono"><strong>{formatEuro(pocTotals.network_setup_fee)}</strong></td><td className="ra strike">{formatEuro(pocTotals.list_setup)}</td></tr>
-                  <tr><td>Monthly Connectivity</td><td className="ra mono"><strong>{formatEuro(pocTotals.network_monthly_fee)}</strong></td><td className="ra strike">{formatEuro(pocTotals.list_monthly)}</td></tr>
-                  <tr><td>Monthly Managed Service</td><td className="ra mono"><strong>{formatEuro(pocTotals.managed_service_monthly)}</strong></td><td className="ra strike">{formatEuro(pocTotals.list_managed)}</td></tr>
+                  <tr><td>Network Setup Fee</td><td className="ra mono"><strong>{formatEuro(pocTotals.network_setup_fee)}</strong></td></tr>
+                  <tr><td>Monthly Connectivity</td><td className="ra mono"><strong>{formatEuro(pocTotals.network_monthly_fee)}</strong></td></tr>
+                  <tr><td>Monthly Managed Service</td><td className="ra mono"><strong>{formatEuro(pocTotals.managed_service_monthly)}</strong></td></tr>
                 </tbody>
               </table>
             </div>
@@ -237,13 +237,12 @@ export default function PdfOfferPage() {
               </div>
               <table className="sum-tbl">
                 <tbody>
-                  <tr><td>Network Setup Fee</td><td className="ra mono"><strong>{formatEuro(allTotals.discounted_setup)}</strong></td><td className="ra strike">{formatEuro(allTotals.network_setup_fee)}</td></tr>
-                  <tr><td>Monthly Connectivity</td><td className="ra mono"><strong>{formatEuro(allTotals.network_monthly_fee)}</strong></td><td></td></tr>
-                  <tr><td>Monthly Managed Service</td><td className="ra mono"><strong>{formatEuro(allTotals.managed_service_monthly)}</strong></td><td></td></tr>
+                  <tr><td>Network Setup Fee</td><td className="ra mono"><strong>{formatEuro(allTotals.network_setup_fee)}</strong></td></tr>
+                  <tr><td>Monthly Connectivity</td><td className="ra mono"><strong>{formatEuro(allTotals.network_monthly_fee)}</strong></td></tr>
+                  <tr><td>Monthly Managed Service</td><td className="ra mono"><strong>{formatEuro(allTotals.managed_service_monthly)}</strong></td></tr>
                   <tr className="cv-row">
                     <td><strong>Total Contract Value</strong><br/><span className="cv-sub">{allTotals.contract_months} months</span></td>
                     <td className="ra mono cv-val"><strong>{formatEuro(allTotals.contract_value)}</strong></td>
-                    <td className="ra strike">{formatEuro(allTotals.list_contract_value)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -299,7 +298,6 @@ export default function PdfOfferPage() {
 
         .hdr { display:flex; justify-content:space-between; align-items:center; }
         .hdr__logo { display:flex; align-items:center; gap:14px; }
-        .hdr__icon { width:46px; height:46px; border-radius:11px; background:linear-gradient(135deg,#3D72FC,#5CB0E9); display:flex; align-items:center; justify-content:center; font-size:22px; color:#fff; }
         .hdr__brand { font-size:24px; font-weight:800; letter-spacing:1.5px; color:#12132a; }
         .hdr__tagline { font-size:11px; color:#999; letter-spacing:0.4px; margin-top:1px; }
         .hdr__meta { text-align:right; }
@@ -339,7 +337,6 @@ export default function PdfOfferPage() {
         .sum-tbl { width:100%; border-collapse:collapse; }
         .sum-tbl td { padding:8px 0; border-bottom:1px solid #f0f0f0; font-size:13px; color:#444; }
         .sum-tbl tr:last-child td { border-bottom:none; }
-        .strike { color:#ccc; text-decoration:line-through; font-size:12px; }
         .cv-row td { border-top:2px solid #3D72FC !important; border-bottom:none; padding-top:14px; }
         .cv-val { font-size:20px !important; color:#3D72FC; }
         .cv-sub { font-size:11px; color:#aaa; font-weight:normal; }
