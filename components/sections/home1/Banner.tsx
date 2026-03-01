@@ -70,7 +70,7 @@ export default function Banner() {
           <div className="swiper-slide">
             <div
               className="main-slider-two__bg"
-              style={{ backgroundImage: "url(/assets/images/resources/bg.jpg)" }}
+              style={{ backgroundImage: "url(/assets/images/backgrounds/page.jpg)" }}
             ></div>
 
             <ul className="list-unstyled main-slider-two__menu">
@@ -98,8 +98,8 @@ export default function Banner() {
 
                     <h2 className="main-slider-two__title">
                       StarGrid - <br />
-                      Zero-Touch Resilience for a <br />
-                      <span>Connected world</span>
+                      100% Connectivity for <br />
+                      <span>Cellular Satellite Fixed</span>
                     </h2>
 
                     <p className="main-slider-two__text">

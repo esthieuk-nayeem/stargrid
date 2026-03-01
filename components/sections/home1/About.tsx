@@ -18,10 +18,10 @@ export default function About() {
                         <div className="about-two__left">
                             <div className="about-two__img-box">
                                 <div className="about-two__img">
-                                    <Image src="/assets/images/resources/about-two-img-1.jpg" alt="Image" width={495} height={474} priority />
+                                    <Image src="/assets/images/backgrounds/page_1.jpg" alt="Image" width={495} height={474} priority />
                                 </div>
                                 <div className="about-two__img-2">
-                                    <Image src="/assets/images/resources/about-two-img-2.jpg" alt="Image" width={336} height={344} priority />
+                                    <Image src="/assets/images/backgrounds/page_2.jpg" alt="Image" width={336} height={344} priority />
                                 </div>
                                 <div className="about-two__shape-1"></div>
                             </div>
@@ -116,7 +116,7 @@ export default function About() {
                                     </div>
                                 </div>
                                 <div className="about-two__btn-box">
-                                    <Link href="/about" className="thm-btn">Learn More<span
+                                    <Link href="" className="thm-btn">Learn More<span
                                             className="icon-right-arrow"></span></Link>
                                 </div>
                             </div>

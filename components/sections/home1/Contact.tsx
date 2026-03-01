@@ -62,7 +62,7 @@ export default function Contact() {
                 </div>
 
 
-            <div className="contact-two__bg" style={{ backgroundImage: "url(/assets/images/backgrounds/contact-two-bg.jpg)" }}>
+            <div className="contact-two__bg" style={{ backgroundImage: "url(/assets/images/backgrounds/page_3.jpg)" }}>
             </div>
             <div className="contact-two__shape-1 float-bob-y">
                 <Image src="/assets/images/shapes/contact-two-shape-1.png" alt="Image" width={690} height={847} priority />
@@ -93,7 +93,7 @@ export default function Contact() {
                                     </div>
                                     <div className="content">
                                         <span>Email Us</span>
-                                        <p><Link href="mailto:info@domain.com">info@domain.com</Link></p>
+                                        <p><Link href="mailto:al@cellsat.one">al@cellsat.one</Link></p>
                                     </div>
                                 </li>
                                 <li>
@@ -102,7 +102,7 @@ export default function Contact() {
                                     </div>
                                     <div className="content">
                                         <span>Contact US</span>
-                                        <p><Link href="tel:9900567780">+99 (00) 567 780</Link></p>
+                                        <p><Link href="tel:+31642349361">+31642349361</Link></p>
                                     </div>
                                 </li>
                                 <li>
@@ -111,7 +111,7 @@ export default function Contact() {
                                     </div>
                                     <div className="content">
                                         <span>Our Address</span>
-                                        <p>1629 N. Dixie Avenue, Kentucky, 42701</p>
+                                        <p>Zeestraat 70, 2518 AC The Hague, Netherlands</p>
                                     </div>
                                 </li>
                             </ul>

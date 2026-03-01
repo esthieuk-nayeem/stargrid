@@ -30,7 +30,7 @@ export default function Home_One() {
             <Contact/>
             {/* <Event/> */}
             {/* <Testimonial/> */}
-            <Blog/>
+            {/* <Blog/> */}
             <Newsletter/>
         </Layout>
     )

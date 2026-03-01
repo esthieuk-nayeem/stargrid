@@ -68,7 +68,7 @@ export default function Header1({ scroll, handleMobileMenu, handlePopup, handleS
                                 className="main-menu-two__search searcher-toggler-box icon-search-interface-symbol" onClick={handlePopup}></Link>
                         </div>
                         <div className="main-menu-two__btn-box">
-                            <Link href="/contact" className="thm-btn">Get in Touch<span
+                            <Link href="/questionnaire" className="thm-btn">Get Started<span
                                     className="icon-right-arrow"></span></Link>
                         </div>
                         <div className="main-menu-two__nav-sidebar-icon">
@@ -103,7 +103,7 @@ export default function Header1({ scroll, handleMobileMenu, handlePopup, handleS
                                 className="main-menu-two__search searcher-toggler-box icon-search-interface-symbol" onClick={handlePopup}></Link>
                         </div>
                         <div className="main-menu-two__btn-box">
-                            <Link href="/contact" className="thm-btn">Get in Touch<span
+                            <Link href="/questionnaire" className="thm-btn">Get Started<span
                                     className="icon-right-arrow"></span></Link>
                         </div>
                         <div className="main-menu-two__nav-sidebar-icon">

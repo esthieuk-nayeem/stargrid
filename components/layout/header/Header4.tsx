@@ -79,7 +79,7 @@ export default function Header4({ scroll, handleMobileMenu, handlePopup }: Heade
                                     className="main-menu__search searcher-toggler-box icon-search-interface-symbol" onClick={handlePopup}></Link>
                             </div>
                             <div className="main-menu__btn-box">
-                                <Link href="/contact" className="thm-btn">Get in Touch<span
+                                <Link href="/questionnaire" className="thm-btn">Get Started<span
                                         className="icon-right-arrow"></span></Link>
                             </div>
                         </div>
