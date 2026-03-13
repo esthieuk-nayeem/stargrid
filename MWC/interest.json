@@ -1,0 +1,639 @@
+{
+    "866": {
+        "id": 866,
+        "name": "NETWORK INFRASTRUCTURE",
+        "originId": "i:I20",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "838": {
+        "id": 838,
+        "name": "STARTUP INNOVATION",
+        "originId": "i:I29",
+        "modifiedDate": 1738238882000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "842": {
+        "id": 842,
+        "name": "AUTOMOTIVE / TRANSPORT",
+        "originId": "i:I04",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "872": {
+        "id": 872,
+        "name": "EDUCATION",
+        "originId": "i:I11",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "841": {
+        "id": 841,
+        "name": "GAMING",
+        "originId": "i:I13",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "854": {
+        "id": 854,
+        "name": "IT INFRASTRUCTURE",
+        "originId": "i:I12",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "863": {
+        "id": 863,
+        "name": "DIGITAL MARKETING / ADTECH",
+        "originId": "i:I17",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "840": {
+        "id": 840,
+        "name": "CLOUD SERVICES / DATACENTERS",
+        "originId": "i:I06",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "853": {
+        "id": 853,
+        "name": "NETWORK SECURITY",
+        "originId": "i:I19",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "1304": {
+        "id": 1304,
+        "name": "SATELLITE / NON TERRESTRIAL NETWORKS",
+        "originId": "i:I51",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "859": {
+        "id": 859,
+        "name": "TALENT",
+        "originId": "i:I32",
+        "modifiedDate": 1738238882000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "1303": {
+        "id": 1303,
+        "name": "PRIVATE NETWORKS",
+        "originId": "i:I50",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "864": {
+        "id": 864,
+        "name": "GOVERNMENT / PUBLIC POLICY",
+        "originId": "i:I14",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "2623": {
+        "id": 2623,
+        "name": "EDGE COMPUTING",
+        "originId": "i:I58",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "867": {
+        "id": 867,
+        "name": "SYSTEMS INTEGRATION",
+        "originId": "i:I23",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "1294": {
+        "id": 1294,
+        "name": "CLIMATE / ENVIRONMENT / SUSTAINABILITY",
+        "originId": "i:I41",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "865": {
+        "id": 865,
+        "name": "HEALTH / FITNESS / WELLBEING",
+        "originId": "i:I15",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "869": {
+        "id": 869,
+        "name": "BIG DATA / ANALYTICS",
+        "originId": "i:I05",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "860": {
+        "id": 860,
+        "name": "ARTIFICIAL INTELLIGENCE",
+        "originId": "i:I03",
+        "modifiedDate": 1738238882000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "1300": {
+        "id": 1300,
+        "name": "VR / AR",
+        "originId": "i:I47",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "858": {
+        "id": 858,
+        "name": "MOBILE DEVICE SOFTWARE",
+        "originId": "i:I33",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "1305": {
+        "id": 1305,
+        "name": "SMART CITIES",
+        "originId": "i:I52",
+        "modifiedDate": 1738238882000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "1306": {
+        "id": 1306,
+        "name": "SOFTWARE AS A SERVICE (SAAS)",
+        "originId": "i:I53",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "852": {
+        "id": 852,
+        "name": "E-COMMERCE",
+        "originId": "i:I09",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "873": {
+        "id": 873,
+        "name": "MEDIA / CONTENT / ENTERTAINMENT",
+        "originId": "i:I18",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "843": {
+        "id": 843,
+        "name": "5G / 6G",
+        "originId": "i:I01",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "1301": {
+        "id": 1301,
+        "name": "MNO / MVNO",
+        "originId": "i:I48",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "1298": {
+        "id": 1298,
+        "name": "SOCIAL INNOVATION / TECH4GOOD",
+        "originId": "i:I45",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "836": {
+        "id": 836,
+        "name": "DIGITAL IDENTITY / AUTHENTICATION",
+        "originId": "i:I10",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "1295": {
+        "id": 1295,
+        "name": "ENTREPRENEURSHIP",
+        "originId": "i:I42",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "857": {
+        "id": 857,
+        "name": "MOBILE DEVICE HARDWARE",
+        "originId": "i:I08",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "855": {
+        "id": 855,
+        "name": "FINTECH / FINANCE / INSURANCE SERVICES",
+        "originId": "i:I28",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "2622": {
+        "id": 2622,
+        "name": "DEFENCE",
+        "originId": "i:I57",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "3332": {
+        "id": 3332,
+        "name": "BLOCKCHAIN / DECENTRALISATION",
+        "originId": "i:I61",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "835": {
+        "id": 835,
+        "name": "RETAIL / DISTRIBUTION CHANNELS",
+        "originId": "i:I21",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "837": {
+        "id": 837,
+        "name": "IOT",
+        "originId": "i:I16",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "2620": {
+        "id": 2620,
+        "name": "AVIATION / AEROSPACE",
+        "originId": "i:I55",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "1307": {
+        "id": 1307,
+        "name": "SPORTS TECH",
+        "originId": "i:I54",
+        "modifiedDate": 1738238882000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "2621": {
+        "id": 2621,
+        "name": "CORPORATE INNOVATION",
+        "originId": "i:I56",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "1293": {
+        "id": 1293,
+        "name": "AGRITECH AND AGRIFOOD",
+        "originId": "i:I40",
+        "modifiedDate": 1738238882000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "851": {
+        "id": 851,
+        "name": "VENTURE CAPITAL / INVESTMENT / M&A",
+        "originId": "i:I26",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "2624": {
+        "id": 2624,
+        "name": "TECHNOLOGY TRANSFER",
+        "originId": "i:I59",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "1302": {
+        "id": 1302,
+        "name": "OSS / BSS",
+        "originId": "i:I49",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "849": {
+        "id": 849,
+        "name": "CYBERSECURITY",
+        "originId": "i:I07",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "856": {
+        "id": 856,
+        "name": "APP / MOBILE SERVICES",
+        "originId": "i:I02",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "839": {
+        "id": 839,
+        "name": "USER EXPERIENCE",
+        "originId": "i:I25",
+        "modifiedDate": 1738238882000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "862": {
+        "id": 862,
+        "name": "MANUFACTURING AND INDUSTRY 4.0",
+        "originId": "i:I30",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "3333": {
+        "id": 3333,
+        "name": "DIVERSITY",
+        "originId": "i:I60",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    },
+    "844": {
+        "id": 844,
+        "name": "eSIM / SIM",
+        "originId": "i:I38",
+        "modifiedDate": 1761802981000,
+        "taxonomyId": 0,
+        "termId": 0,
+        "maxChild": 0,
+        "isParent": false,
+        "parents": [
+            "#interest-44"
+        ]
+    }
+}
