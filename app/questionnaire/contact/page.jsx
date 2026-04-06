@@ -15,6 +15,7 @@ export default function ContactFormPage() {
     jobTitle: '',
     additionalNotes: '',
   });
+  const [isNetworkOperator, setIsNetworkOperator] = useState(false);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -22,6 +23,8 @@ export default function ContactFormPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
   };
+
+  const countWords = (text) => text.trim().split(/\s+/).filter(Boolean).length;
 
   const validateForm = () => {
     const e = {};
@@ -31,6 +34,8 @@ export default function ContactFormPage() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
       e.email = 'Please enter a valid email';
     if (!formData.phone.trim())       e.phone       = 'Phone number is required';
+    if (!formData.additionalNotes.trim()) e.additionalNotes = 'Please describe your use case';
+    else if (countWords(formData.additionalNotes) > 80) e.additionalNotes = 'Please limit your description to 80 words';
     return e;
   };
 
@@ -72,10 +77,11 @@ export default function ContactFormPage() {
       // 3. Store recommendations in localStorage for Results page
       const response = await saveQuestionnaireResponse(sites, formData, scoringData);
 
-      // Save response ID and contact info to localStorage
+      // Save response ID, contact info and operator flag to localStorage
       if (typeof window !== 'undefined' && response?.id) {
         localStorage.setItem('submissionId', String(response.id));
         localStorage.setItem('questionnaire_contact', JSON.stringify(formData));
+        localStorage.setItem('isNetworkOperator', JSON.stringify(isNetworkOperator));
       }
 
       // Navigate to results
@@ -179,15 +185,29 @@ export default function ContactFormPage() {
               </div>
 
               <div className="contact-form__field contact-form__field--full">
-                <label htmlFor="additionalNotes">Additional Notes (Optional)</label>
+                <label htmlFor="additionalNotes">Describe your Use Case <span className="required">*</span><span className="contact-form__word-count">{countWords(formData.additionalNotes)}/80 words</span></label>
                 <textarea
                   id="additionalNotes"
                   rows="4"
-                  placeholder="Any specific requirements or questions..."
+                  placeholder="Describe how you plan to use our connectivity solutions..."
                   value={formData.additionalNotes}
                   onChange={e => handleChange('additionalNotes', e.target.value)}
+                  className={errors.additionalNotes ? 'error' : ''}
                 />
+                {errors.additionalNotes && <span className="contact-form__error">{errors.additionalNotes}</span>}
               </div>
+            </div>
+
+            <div className="contact-form__operator-check">
+              <label className="operator-label">
+                <input
+                  type="checkbox"
+                  checked={isNetworkOperator}
+                  onChange={e => setIsNetworkOperator(e.target.checked)}
+                />
+                <span className="operator-checkmark">{isNetworkOperator ? '✅' : ''}</span>
+                I am a Network Operator
+              </label>
             </div>
 
             <div className="contact-form__submit">
@@ -270,9 +290,14 @@ export default function ContactFormPage() {
         .contact-form__field { display: flex; flex-direction: column; gap: 8px; }
         .contact-form__field--full { grid-column: 1 / -1; }
         .contact-form__field label {
+          display: flex; align-items: center;
           font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.9);
         }
         .contact-form__field .required { color: #FA5674; }
+        .contact-form__word-count {
+          margin-left: auto; font-size: 12px; font-weight: 400;
+          color: rgba(255,255,255,0.45);
+        }
         .contact-form__field input,
         .contact-form__field textarea {
           width: 100%; padding: 16px 20px;
@@ -292,6 +317,24 @@ export default function ContactFormPage() {
         .contact-form__field textarea.error { border-color: #FA5674; }
         .contact-form__error { font-size: 13px; color: #FA5674; margin-top: -4px; }
         .contact-form__field textarea { resize: vertical; min-height: 100px; }
+        .contact-form__operator-check { margin-top: 28px; }
+        .operator-label {
+          display: inline-flex; align-items: center; gap: 12px;
+          font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.9);
+          cursor: pointer; user-select: none;
+        }
+        .operator-label input[type="checkbox"] { display: none; }
+        .operator-checkmark {
+          width: 22px; height: 22px; border-radius: 6px;
+          border: 2px solid rgba(255,255,255,0.3);
+          background: rgba(255,255,255,0.05);
+          display: inline-flex; align-items: center; justify-content: center;
+          font-size: 14px; transition: all 0.2s;
+          flex-shrink: 0;
+        }
+        .operator-label input[type="checkbox"]:checked + .operator-checkmark {
+          border-color: #3D72FC; background: rgba(61,114,252,0.15);
+        }
         .contact-form__submit { margin-top: 36px; text-align: center; }
         .contact-form__btn {
           display: inline-flex; align-items: center; gap: 12px;

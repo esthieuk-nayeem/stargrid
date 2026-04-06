@@ -4,7 +4,14 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { getRecommendations, formatEuro } from "@/lib/recommendation";
 import { questionnaireData } from "@/data/enhancedQuestionnaireData";
 
-const SEC_ICONS = { "Site Profile":"🏗️", "Connectivity Requirements":"📡", "Reliability & SLA":"🛡️", "Network Architecture":"🌐", "Physical & Deployment":"⚙️", "Budget":"💰" };
+const SEC_ICONS = {
+  "Site Profile": "🏗️",
+  "Connectivity Requirements": "📡",
+  "Reliability & SLA": "🛡️",
+  "Network Architecture": "🌐",
+  "Physical & Deployment": "⚙️",
+  "Budget": "💰",
+};
 
 let _counter = 0;
 function makeId() { return `fts_${Date.now()}_${++_counter}`; }
@@ -16,12 +23,12 @@ export default function FastTesterPage() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
-  const [expandedResultSite, setExpandedResultSite] = useState(0);
+  const [expandedSite, setExpandedSite] = useState(0);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [showMap, setShowMap] = useState(false);
   const [editingName, setEditingName] = useState(null);
   const [nameInput, setNameInput] = useState("");
-  const [leftPct, setLeftPct] = useState(58);
+  const [leftPct, setLeftPct] = useState(38); // results panel gets more space by default
   const isDragging = useRef(false);
   const rootRef = useRef(null);
   const debounceRef = useRef(null);
@@ -32,16 +39,13 @@ export default function FastTesterPage() {
   const activeSite = sites[activeIdx] || sites[0];
   const answers = activeSite?.answers || {};
 
-  // Build sections
   const sections = {};
   questionnaireData.forEach(q => {
     if (!sections[q.section]) sections[q.section] = [];
     sections[q.section].push(q);
   });
 
-  /* ════════════════════════════════════════
-     DRAG RESIZER
-     ════════════════════════════════════════ */
+  /* ── DRAG ── */
   const handleDragStart = (e) => {
     e.preventDefault();
     isDragging.current = true;
@@ -50,33 +54,26 @@ export default function FastTesterPage() {
   };
 
   useEffect(() => {
-    const handleMove = (e) => {
+    const onMove = (e) => {
       if (!isDragging.current || !rootRef.current) return;
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const x = e.touches ? e.touches[0].clientX : e.clientX;
       const rect = rootRef.current.getBoundingClientRect();
-      const pct = Math.min(82, Math.max(22, ((clientX - rect.left) / rect.width) * 100));
-      setLeftPct(pct);
+      setLeftPct(Math.min(70, Math.max(20, ((x - rect.left) / rect.width) * 100)));
     };
-    const handleUp = () => {
-      isDragging.current = false;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseup", handleUp);
-    window.addEventListener("touchmove", handleMove);
-    window.addEventListener("touchend", handleUp);
+    const onUp = () => { isDragging.current = false; document.body.style.cursor = ""; document.body.style.userSelect = ""; };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("touchmove", onMove);
+    window.addEventListener("touchend", onUp);
     return () => {
-      window.removeEventListener("mousemove", handleMove);
-      window.removeEventListener("mouseup", handleUp);
-      window.removeEventListener("touchmove", handleMove);
-      window.removeEventListener("touchend", handleUp);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onUp);
     };
   }, []);
 
-  /* ════════════════════════════════════════
-     RECOMMENDATIONS
-     ════════════════════════════════════════ */
+  /* ── RECOMMENDATIONS ── */
   const fetchRecommendation = useCallback(async (currentSites) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
@@ -91,7 +88,8 @@ export default function FastTesterPage() {
         const data = await getRecommendations(payload);
         setResult(data);
         setLastUpdate(new Date().toLocaleTimeString());
-      } catch (err) { console.error("Rec error:", err); }
+        setExpandedSite(0);
+      } catch (err) { console.error(err); }
       finally { setLoading(false); }
     }, 700);
   }, []);
@@ -105,108 +103,61 @@ export default function FastTesterPage() {
     });
   };
 
-  /* ════════════════════════════════════════
-     SITE MANAGEMENT
-     ════════════════════════════════════════ */
-  const addSite = () => {
-    _counter++;
-    const s = makeSite(`Site ${sites.length + 1}`);
-    setSites(p => [...p, s]);
-    setActiveIdx(sites.length);
-  };
+  /* ── SITE MANAGEMENT ── */
+  const addSite = () => { _counter++; setSites(p => { const s = makeSite(`Site ${p.length + 1}`); setActiveIdx(p.length); return [...p, s]; }); };
 
   const copySite = (idx) => {
     _counter++;
     const src = sites[idx];
-    const copy = {
-      id: makeId(),
-      name: `${src.name} (Copy)`,
-      answers: { ...src.answers },
-      location: src.location ? { ...src.location } : null,
-    };
-    const newSites = [...sites, copy];
-    setSites(newSites);
-    setActiveIdx(newSites.length - 1);
-    fetchRecommendation(newSites);
+    const copy = { id: makeId(), name: `${src.name} (Copy)`, answers: { ...src.answers }, location: src.location ? { ...src.location } : null };
+    setSites(p => { const n = [...p, copy]; fetchRecommendation(n); setActiveIdx(n.length - 1); return n; });
   };
 
   const deleteSite = (idx) => {
     if (sites.length <= 1) return;
-    const newSites = sites.filter((_, i) => i !== idx);
-    setSites(newSites);
-    if (activeIdx >= newSites.length) setActiveIdx(newSites.length - 1);
-    else if (activeIdx === idx) setActiveIdx(0);
-    fetchRecommendation(newSites);
+    setSites(prev => {
+      const n = prev.filter((_, i) => i !== idx);
+      if (activeIdx >= n.length) setActiveIdx(n.length - 1);
+      else if (activeIdx === idx) setActiveIdx(0);
+      fetchRecommendation(n);
+      return n;
+    });
   };
 
   const renameSite = (idx, name) => {
-    setSites(prev => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], name: name.trim() || next[idx].name };
-      return next;
-    });
+    setSites(prev => { const n = [...prev]; n[idx] = { ...n[idx], name: name.trim() || n[idx].name }; return n; });
     setEditingName(null);
   };
 
-  const clearAll = () => {
-    _counter = 1;
-    setSites([makeSite("Site 1")]);
-    setActiveIdx(0);
-    setResult(null);
-    setLastUpdate(null);
-  };
+  const clearAll = () => { _counter = 1; setSites([makeSite("Site 1")]); setActiveIdx(0); setResult(null); setLastUpdate(null); };
 
-  /* ════════════════════════════════════════
-     MAP (Leaflet CDN)
-     ════════════════════════════════════════ */
+  /* ── MAP ── */
   useEffect(() => {
     if (!showMap) return;
-    const timer = setTimeout(() => {
+    const t = setTimeout(() => {
       if (typeof window === "undefined" || !document.getElementById("ftmap")) return;
       if (!document.getElementById("leaflet-css-ft")) {
-        const link = document.createElement("link");
-        link.id = "leaflet-css-ft"; link.rel = "stylesheet";
-        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-        document.head.appendChild(link);
+        const l = document.createElement("link"); l.id = "leaflet-css-ft"; l.rel = "stylesheet";
+        l.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"; document.head.appendChild(l);
       }
-      if (!window.L) {
-        const script = document.createElement("script");
-        script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-        script.onload = () => buildMap();
-        document.body.appendChild(script);
-      } else {
-        buildMap();
-      }
+      if (!window.L) { const s = document.createElement("script"); s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"; s.onload = buildMap; document.body.appendChild(s); }
+      else buildMap();
     }, 150);
-    return () => clearTimeout(timer);
+    return () => clearTimeout(t);
   }, [showMap]);
 
   const buildMap = () => {
     if (!window.L) return;
-    // Remove old map
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.remove();
-      mapInstanceRef.current = null;
-      markerInstanceRef.current = null;
-    }
-    const L = window.L;
-    leafletLoaded.current = true;
+    if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; markerInstanceRef.current = null; }
+    const L = window.L; leafletLoaded.current = true;
     const loc = activeSite?.location;
-    const center = loc?.lat ? [loc.lat, loc.lng] : [50.1, 8.7];
-    const zoom = loc?.lat ? 13 : 5;
-    const map = L.map("ftmap").setView(center, zoom);
+    const map = L.map("ftmap").setView(loc?.lat ? [loc.lat, loc.lng] : [50.1, 8.7], loc?.lat ? 13 : 5);
     mapInstanceRef.current = map;
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map);
-    if (loc?.lat) {
-      markerInstanceRef.current = L.marker([loc.lat, loc.lng], { draggable: true }).addTo(map);
-      markerInstanceRef.current.on("dragend", e => reverseGeocode(e.target.getLatLng().lat, e.target.getLatLng().lng));
-    }
+    if (loc?.lat) { markerInstanceRef.current = L.marker([loc.lat, loc.lng], { draggable: true }).addTo(map); markerInstanceRef.current.on("dragend", e => reverseGeocode(e.target.getLatLng().lat, e.target.getLatLng().lng)); }
     map.on("click", e => {
       if (markerInstanceRef.current) markerInstanceRef.current.setLatLng(e.latlng);
-      else {
-        markerInstanceRef.current = L.marker(e.latlng, { draggable: true }).addTo(map);
-        markerInstanceRef.current.on("dragend", ev => reverseGeocode(ev.target.getLatLng().lat, ev.target.getLatLng().lng));
-      }
+      else { markerInstanceRef.current = L.marker(e.latlng, { draggable: true }).addTo(map); markerInstanceRef.current.on("dragend", ev => reverseGeocode(ev.target.getLatLng().lat, ev.target.getLatLng().lng)); }
       reverseGeocode(e.latlng.lat, e.latlng.lng);
     });
   };
@@ -214,151 +165,73 @@ export default function FastTesterPage() {
   const reverseGeocode = async (lat, lng) => {
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
-      const data = await res.json();
-      const a = data.address || {};
-      const location = {
-        lat, lng,
-        address: data.display_name?.split(",").slice(0, 3).join(",").trim() || "",
-        city: a.city || a.town || a.village || "",
-        state: a.state || "",
-        country: a.country || "",
-        postalCode: a.postcode || "",
-      };
-      setSites(prev => {
-        const next = [...prev];
-        next[activeIdx] = { ...next[activeIdx], location };
-        return next;
-      });
-    } catch (e) { console.error("Geocode err:", e); }
+      const d = await res.json(); const a = d.address || {};
+      const location = { lat, lng, address: d.display_name?.split(",").slice(0, 3).join(",").trim() || "", city: a.city || a.town || a.village || "", state: a.state || "", country: a.country || "", postalCode: a.postcode || "" };
+      setSites(prev => { const n = [...prev]; n[activeIdx] = { ...n[activeIdx], location }; return n; });
+    } catch (e) { console.error(e); }
   };
 
-  // Rebuild map when switching sites
-  useEffect(() => {
-    if (showMap && leafletLoaded.current) {
-      setTimeout(buildMap, 100);
-    }
-  }, [activeIdx]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, []);
+  useEffect(() => { if (showMap && leafletLoaded.current) setTimeout(buildMap, 100); }, [activeIdx]);
+  useEffect(() => () => { mapInstanceRef.current?.remove(); }, []);
 
   const answeredCount = Object.keys(answers).filter(k => answers[k] != null).length;
-  const totalQuestions = questionnaireData.length;
+  const totalQ = questionnaireData.length;
 
-  /* ════════════════════════════════════════
-     QUESTION RENDERER
-     ════════════════════════════════════════ */
-  const renderQuestion = (q) => {
+  /* ── QUESTION RENDERER ── */
+  const renderQ = (q) => {
     const val = answers[q.id];
-
-    if (q.type === "single") {
-      return (
+    if (q.type === "single") return (
+      <div className="option-grid">
+        {(q.options || []).map(opt => {
+          const ov = typeof opt === "string" ? opt : opt.value;
+          const ol = typeof opt === "string" ? opt : opt.label;
+          const sel = val?.value === ov || val === ov || val?.label === ol;
+          return <button key={ov} className={`chip ${sel ? "chip--on" : ""}`} onClick={() => setAnswer(q.id, opt)}>{sel && <span>✓ </span>}{ol}</button>;
+        })}
+      </div>
+    );
+    if (q.type === "boolean") return (
+      <div className="option-grid">
+        {(q.options || ["Yes", "No"]).map(opt => (
+          <button key={opt} className={`chip ${val === opt ? "chip--on" : ""}`} onClick={() => setAnswer(q.id, opt)}>{val === opt && <span>✓ </span>}{opt}</button>
+        ))}
+      </div>
+    );
+    if (q.type === "single-with-checkbox") return (
+      <div>
         <div className="option-grid">
           {(q.options || []).map(opt => {
-            const optVal = typeof opt === "string" ? opt : opt.value;
-            const optLabel = typeof opt === "string" ? opt : opt.label;
-            const isSelected = val?.value === optVal || val === optVal || val?.label === optLabel;
-            return (
-              <button key={optVal}
-                className={`option-chip ${isSelected ? "option-chip--selected" : ""}`}
-                onClick={() => setAnswer(q.id, opt)}>
-                {isSelected && <span className="option-chip__check">✓</span>}
-                {optLabel}
-              </button>
-            );
+            const sel = val?.option?.value === opt.value;
+            return <button key={opt.value} className={`chip ${sel ? "chip--on" : ""}`} onClick={() => setAnswer(q.id, { option: opt, highTheftRisk: val?.highTheftRisk || false })}>{sel && <span>✓ </span>}{opt.label}</button>;
           })}
         </div>
-      );
-    }
-
-    if (q.type === "boolean") {
-      return (
-        <div className="option-grid">
-          {(q.options || ["Yes", "No"]).map(opt => (
-            <button key={opt}
-              className={`option-chip ${val === opt ? "option-chip--selected" : ""}`}
-              onClick={() => setAnswer(q.id, opt)}>
-              {val === opt && <span className="option-chip__check">✓</span>}
-              {opt}
-            </button>
-          ))}
-        </div>
-      );
-    }
-
-    if (q.type === "single-with-checkbox") {
-      return (
-        <div>
-          <div className="option-grid">
-            {(q.options || []).map(opt => {
-              const isSelected = val?.option?.value === opt.value;
-              return (
-                <button key={opt.value}
-                  className={`option-chip ${isSelected ? "option-chip--selected" : ""}`}
-                  onClick={() => setAnswer(q.id, { option: opt, highTheftRisk: val?.highTheftRisk || false })}>
-                  {isSelected && <span className="option-chip__check">✓</span>}
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-          {q.additionalCheckbox && (
-            <label className="checkbox-row">
-              <input type="checkbox" checked={val?.highTheftRisk || false}
-                onChange={e => setAnswer(q.id, { ...val, highTheftRisk: e.target.checked })} />
-              <span>{q.additionalCheckbox}</span>
-            </label>
-          )}
-        </div>
-      );
-    }
-
+        {q.additionalCheckbox && <label className="chk-row"><input type="checkbox" checked={val?.highTheftRisk || false} onChange={e => setAnswer(q.id, { ...val, highTheftRisk: e.target.checked })} /><span>{q.additionalCheckbox}</span></label>}
+      </div>
+    );
     if (q.type === "multiple") {
       const arr = Array.isArray(val) ? val : [];
       return (
         <div className="option-grid">
           {(q.options || []).map(opt => {
-            const isSelected = arr.some(a => a.value === opt.value);
-            return (
-              <button key={opt.value}
-                className={`option-chip ${isSelected ? "option-chip--selected" : ""}`}
-                onClick={() => setAnswer(q.id, isSelected ? arr.filter(a => a.value !== opt.value) : [...arr, opt])}>
-                {isSelected && <span className="option-chip__check">✓</span>}
-                {opt.label}
-              </button>
-            );
+            const sel = arr.some(a => a.value === opt.value);
+            return <button key={opt.value} className={`chip ${sel ? "chip--on" : ""}`} onClick={() => setAnswer(q.id, sel ? arr.filter(a => a.value !== opt.value) : [...arr, opt])}>{sel && <span>✓ </span>}{opt.label}</button>;
           })}
         </div>
       );
     }
-
     if (q.type === "dual-single" || q.type === "dual-single2") {
-      const current = (val && typeof val === "object") ? val : {};
+      const cur = (val && typeof val === "object") ? val : {};
       return (
         <div className="dual-wrap">
           {(q.subQuestions || []).map(sq => {
             const key = sq.label.toLowerCase();
             return (
               <div key={key} className="dual-group">
-                <div className="dual-group__label">{sq.label}</div>
+                <div className="dual-lbl">{sq.label}</div>
                 <div className="option-grid">
                   {(sq.options || []).map(opt => {
-                    const isSelected = current[key]?.value === opt.value;
-                    return (
-                      <button key={opt.value}
-                        className={`option-chip option-chip--small ${isSelected ? "option-chip--selected" : ""}`}
-                        onClick={() => setAnswer(q.id, { ...current, [key]: opt })}>
-                        {isSelected && <span className="option-chip__check">✓</span>}
-                        {opt.label}
-                      </button>
-                    );
+                    const sel = cur[key]?.value === opt.value;
+                    return <button key={opt.value} className={`chip chip--sm ${sel ? "chip--on" : ""}`} onClick={() => setAnswer(q.id, { ...cur, [key]: opt })}>{sel && <span>✓ </span>}{opt.label}</button>;
                   })}
                 </div>
               </div>
@@ -367,21 +240,16 @@ export default function FastTesterPage() {
         </div>
       );
     }
-
     if (q.type === "scale") {
-      const current = (val && typeof val === "object") ? val : {};
+      const cur = (val && typeof val === "object") ? val : {};
       return (
         <div className="scale-wrap">
           {(q.options || []).map(opt => (
             <div key={opt.value} className="scale-row">
-              <span className="scale-row__label">{opt.label}</span>
-              <div className="scale-row__buttons">
-                {(q.scaleRange || [1, 2, 3, 4, 5]).map(n => (
-                  <button key={n}
-                    className={`scale-btn ${current[opt.value] === n ? "option-chip--selected" : ""}`}
-                    onClick={() => setAnswer(q.id, { ...current, [opt.value]: n })}>
-                    {n}
-                  </button>
+              <span className="scale-lbl">{opt.label}</span>
+              <div className="scale-btns">
+                {(q.scaleRange || [1,2,3,4,5]).map(n => (
+                  <button key={n} className={`scale-btn ${cur[opt.value] === n ? "chip--on" : ""}`} onClick={() => setAnswer(q.id, { ...cur, [opt.value]: n })}>{n}</button>
                 ))}
               </div>
             </div>
@@ -389,20 +257,16 @@ export default function FastTesterPage() {
         </div>
       );
     }
-
     return null;
   };
 
-  /* ════════════════════════════════════════
-     RESULTS PANEL RENDERER
-     ════════════════════════════════════════ */
+  /* ── RESULTS RENDERER — matches DynamicResultsPage exactly ── */
   const renderResults = () => {
     if (!result || !result.sitePackages?.length) {
       return (
-        <div className="result-empty">
-          <div className="result-empty__icon">⚡</div>
-          <p>Answer questions to see<br />live recommendations</p>
-          <span>At least 2 answers needed</span>
+        <div className="r-empty">
+          <div style={{ fontSize: 52, opacity: 0.3 }}>⚡</div>
+          <p>Answer at least 2 questions<br />to see live recommendations</p>
         </div>
       );
     }
@@ -410,60 +274,62 @@ export default function FastTesterPage() {
     const { sitePackages, pocTotals, allTotals, totalSites } = result;
 
     return (
-      <div className="result-content">
+      <>
+        {/* ── Site cards ── */}
         {sitePackages.map((sp, idx) => {
+          const isExp = expandedSite === idx;
           const pkg = sp.package;
-          const isExpanded = expandedResultSite === idx;
           if (!pkg) return null;
 
           return (
-            <div key={sp.site_id || idx} className="result-site">
-              {/* Site header — clickable */}
-              <div className="result-site__header" onClick={() => setExpandedResultSite(isExpanded ? null : idx)}>
-                <div className="result-site__left">
-                  <span className="result-site__badge">Site {sp.site_number}</span>
-                  <span className="result-site__name">{sp.site_name}</span>
+            <div key={sp.site_id || idx} className="sc">
+              {/* Header */}
+              <div className="sc__hdr" onClick={() => setExpandedSite(isExp ? null : idx)}>
+                <div className="sc__title">
+                  <span className="sb">Site {sp.site_number}</span>
+                  <h2>{sp.site_name}</h2>
+                  <span className="sc__sub">{pkg.servicesLabel || "—"}</span>
                 </div>
-                <span className="result-site__service">{pkg.servicesLabel || "—"}</span>
-                <span className="result-site__arrow">{isExpanded ? "▼" : "▶"}</span>
+                <div className="sc__tots">
+                  <div className="ti"><span className="tl">Setup Fee</span><span className="tv">{formatEuro(pkg.totals?.network_setup_fee)}</span></div>
+                  <div className="ti"><span className="tl">Monthly Fee</span><span className="tv">{formatEuro(pkg.totals?.network_monthly_fee)}</span></div>
+                  <div className="ti"><span className="tl">Managed Svc</span><span className="tv">{formatEuro(pkg.totals?.managed_service_monthly)}</span></div>
+                </div>
+                <button className="eb">{isExp ? "▼" : "▶"}</button>
               </div>
 
               {/* Expanded body */}
-              {isExpanded && (
-                <div className="result-site__body">
-                  {/* Component table */}
-                  <table className="result-table">
+              {isExp && (
+                <div className="sc__body">
+                  <table className="ct">
                     <thead>
                       <tr>
                         <th>Component</th>
                         <th>Hardware</th>
-                        <th>Airtime</th>
-                        <th className="result-table--right">Setup</th>
-                        <th className="result-table--right">Monthly</th>
-                        <th className="result-table--right">Managed</th>
+                        <th>Airtime Plan</th>
+                        <th className="r">Setup Fee</th>
+                        <th className="r">Monthly Fee</th>
+                        <th className="r">Managed Svc</th>
                       </tr>
                     </thead>
                     <tbody>
                       {(pkg.components || []).map((c, ci) => (
                         <tr key={ci}>
-                          <td>
-                            <span className="result-dot" style={{ background: c.color || "#3D72FC" }} />
-                            {c.type}
-                          </td>
+                          <td><span className="cb" style={{ background: c.color || "#3D72FC" }}>{c.type}</span></td>
                           <td>{c.hardware || "—"}</td>
                           <td>{c.airtime || "—"}</td>
-                          <td className="result-table--right result-table--mono">{formatEuro(c.network_setup_fee)}</td>
-                          <td className="result-table--right result-table--mono">{formatEuro(c.network_monthly_fee)}</td>
-                          <td className="result-table--right result-table--mono">{formatEuro(c.managed_service_monthly)}</td>
+                          <td className="r num">{formatEuro(c.network_setup_fee)}</td>
+                          <td className="r num">{formatEuro(c.network_monthly_fee)}</td>
+                          <td className="r num">{formatEuro(c.managed_service_monthly)}</td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr className="result-table__foot">
+                      <tr className="ct-foot">
                         <td colSpan={3}><strong>Site Total</strong></td>
-                        <td className="result-table--right result-table--mono"><strong>{formatEuro(pkg.totals?.network_setup_fee)}</strong></td>
-                        <td className="result-table--right result-table--mono"><strong>{formatEuro(pkg.totals?.network_monthly_fee)}</strong></td>
-                        <td className="result-table--right result-table--mono"><strong>{formatEuro(pkg.totals?.managed_service_monthly)}</strong></td>
+                        <td className="r num"><strong>{formatEuro(pkg.totals?.network_setup_fee)}</strong></td>
+                        <td className="r num"><strong>{formatEuro(pkg.totals?.network_monthly_fee)}</strong></td>
+                        <td className="r num"><strong>{formatEuro(pkg.totals?.managed_service_monthly)}</strong></td>
                       </tr>
                     </tfoot>
                   </table>
@@ -473,118 +339,112 @@ export default function FastTesterPage() {
           );
         })}
 
-        {/* ═══ Deployment Summary ═══ */}
+        {/* ── Deployment Summary ── */}
         {allTotals && (
-          <div className="deploy-summary">
-            <h3 className="deploy-summary__title">Deployment Summary</h3>
+          <div className="ds">
+            <h2 className="ds__t">Deployment Summary</h2>
+            <div className="ds__grid">
 
-            <div className="deploy-card">
-              <div className="deploy-card__header">PoC · {Math.min(2, totalSites)} site{Math.min(2, totalSites) !== 1 ? "s" : ""}</div>
-              <div className="deploy-card__row"><span>Setup Fee</span><strong>{formatEuro(pocTotals?.network_setup_fee)}</strong></div>
-              <div className="deploy-card__row"><span>Monthly Fee</span><strong>{formatEuro(pocTotals?.network_monthly_fee)}</strong></div>
-              <div className="deploy-card__row"><span>Managed Svc</span><strong>{formatEuro(pocTotals?.managed_service_monthly)}</strong></div>
-            </div>
+              <div className="dc">
+                <div className="dc__h">
+                  <h3>PoC Sites ({Math.min(2, totalSites)})</h3>
+                  <p>Fixed PoC pricing</p>
+                </div>
+                <div className="dc__b">
+                  <div className="sr"><span className="sl">Network Setup Fee</span><span className="sv">{formatEuro(pocTotals?.network_setup_fee)}</span></div>
+                  <div className="sr"><span className="sl">Network Monthly Fee</span><span className="sv">{formatEuro(pocTotals?.network_monthly_fee)}</span></div>
+                  <div className="sr"><span className="sl">Managed Service Monthly</span><span className="sv">{formatEuro(pocTotals?.managed_service_monthly)}</span></div>
+                </div>
+              </div>
 
-            <div className="deploy-card deploy-card--highlight">
-              <div className="deploy-card__header">
-                All {totalSites} Site{totalSites !== 1 ? "s" : ""}
-                {allTotals.setup_discount_pct > 0 && ` · ${(allTotals.setup_discount_pct * 100).toFixed(0)}% discount`}
+              <div className="dc dc--hl">
+                <div className="dc__h">
+                  <h3>All Sites ({totalSites})</h3>
+                  <p>{allTotals.setup_discount_pct > 0 ? `${(allTotals.setup_discount_pct * 100).toFixed(0)}% bulk discount` : "Standard pricing"}</p>
+                </div>
+                <div className="dc__b">
+                  <div className="sr"><span className="sl">Network Setup Fee</span><span className="sv">{formatEuro(allTotals.network_setup_fee)}</span></div>
+                  <div className="sr"><span className="sl">Network Monthly Fee</span><span className="sv">{formatEuro(allTotals.network_monthly_fee)}</span></div>
+                  <div className="sr"><span className="sl">Managed Service Monthly</span><span className="sv">{formatEuro(allTotals.managed_service_monthly)}</span></div>
+                  <div className="sr sr--hl">
+                    <span className="sl">Contract Value ({allTotals.contract_months}mo)</span>
+                    <span className="sv sv--big">{formatEuro(allTotals.contract_value)}</span>
+                  </div>
+                </div>
               </div>
-              <div className="deploy-card__row"><span>Setup Fee</span><strong>{formatEuro(allTotals.network_setup_fee)}</strong></div>
-              <div className="deploy-card__row"><span>Monthly Fee</span><strong>{formatEuro(allTotals.network_monthly_fee)}</strong></div>
-              <div className="deploy-card__row"><span>Managed Svc</span><strong>{formatEuro(allTotals.managed_service_monthly)}</strong></div>
-              <div className="deploy-card__row deploy-card__row--contract">
-                <span>Contract Value ({allTotals.contract_months}mo)</span>
-                <strong>{formatEuro(allTotals.contract_value)}</strong>
-              </div>
+
             </div>
           </div>
         )}
-      </div>
+      </>
     );
   };
 
-  /* ════════════════════════════════════════
-     RENDER
-     ════════════════════════════════════════ */
+  /* ── RENDER ── */
   return (
-    <div className="fast-tester" ref={rootRef}>
-      {/* ═══ LEFT PANEL ═══ */}
-      <div className="fast-tester__left" style={{ width: panelOpen ? `${leftPct}%` : "100%" }}>
-        {/* Header */}
-        <div className="ft-header">
-          <div className="ft-header__row">
-            <h1 className="ft-header__title">⚡ Fast Tester</h1>
-            <button className="ft-header__reset" onClick={clearAll}>✕ Reset</button>
+    <div className="ft" ref={rootRef}>
+
+      {/* LEFT — questions */}
+      <div className="ft__left" style={{ width: panelOpen ? `${leftPct}%` : "100%" }}>
+
+        <div className="fth">
+          <div className="fth__row">
+            <h1 className="fth__title">⚡ Fast Tester</h1>
+            <button className="fth__reset" onClick={clearAll}>✕ Reset</button>
           </div>
-          <p className="ft-header__sub">Quick demo — pick locations, answer questions, see live results</p>
+          <p className="fth__sub">Quick demo — pick locations, answer questions, see live results</p>
         </div>
 
-        {/* Site tabs */}
-        <div className="site-tabs">
+        <div className="stabs">
           {sites.map((s, i) => (
-            <div key={s.id} className={`site-tab ${i === activeIdx ? "site-tab--active" : ""}`} onClick={() => setActiveIdx(i)}>
+            <div key={s.id} className={`stab ${i === activeIdx ? "stab--on" : ""}`} onClick={() => setActiveIdx(i)}>
               {editingName === i ? (
-                <div className="site-tab__edit" onClick={e => e.stopPropagation()}>
-                  <input className="site-tab__input" value={nameInput}
-                    onChange={e => setNameInput(e.target.value)} autoFocus
+                <div className="stab__edit" onClick={e => e.stopPropagation()}>
+                  <input className="stab__inp" value={nameInput} onChange={e => setNameInput(e.target.value)} autoFocus
                     onKeyDown={e => { if (e.key === "Enter") renameSite(i, nameInput); if (e.key === "Escape") setEditingName(null); }} />
-                  <button className="site-tab__save" onClick={() => renameSite(i, nameInput)}>✓</button>
+                  <button className="stab__ok" onClick={() => renameSite(i, nameInput)}>✓</button>
                 </div>
-              ) : (
-                <span className="site-tab__name">{s.name}</span>
-              )}
-              <div className="site-tab__actions" onClick={e => e.stopPropagation()}>
+              ) : <span>{s.name}</span>}
+              <div className="stab__acts" onClick={e => e.stopPropagation()}>
                 <button title="Rename" onClick={() => { setEditingName(i); setNameInput(s.name); }}>✏️</button>
-                <button title="Copy site with all answers" onClick={() => copySite(i)}>📋</button>
-                {sites.length > 1 && <button title="Delete site" onClick={() => deleteSite(i)}>✕</button>}
+                <button title="Copy" onClick={() => copySite(i)}>📋</button>
+                {sites.length > 1 && <button title="Delete" onClick={() => deleteSite(i)}>✕</button>}
               </div>
             </div>
           ))}
-          <button className="site-tab site-tab--add" onClick={addSite}>+ Add Site</button>
+          <button className="stab stab--add" onClick={addSite}>+ Add Site</button>
         </div>
 
-        {/* Location */}
-        <div className="location-box">
-          <div className="location-box__bar">
-            <span className="location-box__icon">📍</span>
-            {activeSite.location ? (
-              <span className="location-box__text">{[activeSite.location.city, activeSite.location.country].filter(Boolean).join(", ") || activeSite.location.address}</span>
-            ) : (
-              <span className="location-box__empty">Click map to set location</span>
-            )}
-            <button className="location-box__toggle" onClick={() => setShowMap(!showMap)}>
-              {showMap ? "Hide Map ▲" : "Show Map ▼"}
-            </button>
+        <div className="loc-box">
+          <div className="loc-box__bar">
+            <span>📍</span>
+            {activeSite.location
+              ? <span className="loc-box__txt">{[activeSite.location.city, activeSite.location.country].filter(Boolean).join(", ") || activeSite.location.address}</span>
+              : <span className="loc-box__empty">Click map to set location</span>}
+            <button className="loc-box__btn" onClick={() => setShowMap(!showMap)}>{showMap ? "Hide Map ▲" : "Show Map ▼"}</button>
           </div>
-          {showMap && (
-            <div id="ftmap" style={{ height: 220, borderRadius: 10, marginTop: 12, border: "1px solid rgba(255,255,255,0.08)" }} />
-          )}
+          {showMap && <div id="ftmap" style={{ height: 220, borderRadius: 10, marginTop: 12, border: "1px solid rgba(255,255,255,0.08)" }} />}
         </div>
 
-        {/* Progress bar */}
-        <div className="progress-bar">
-          <div className="progress-bar__fill" style={{ width: `${Math.round(answeredCount / totalQuestions * 100)}%` }} />
-          <span className="progress-bar__text">{answeredCount}/{totalQuestions}</span>
+        <div className="prog">
+          <div className="prog__fill" style={{ width: `${Math.round(answeredCount / totalQ * 100)}%` }} />
+          <span className="prog__txt">{answeredCount}/{totalQ}</span>
         </div>
 
-        {/* Questions by section */}
-        <div className="questions-list">
-          {Object.entries(sections).map(([sectionName, questions]) => (
-            <div key={sectionName} className="question-section">
-              <h3 className="question-section__title">{SEC_ICONS[sectionName] || "📝"} {sectionName}</h3>
-              {questions.map(q => {
-                const hasAnswer = answers[q.id] != null;
+        <div className="ql">
+          {Object.entries(sections).map(([sec, qs]) => (
+            <div key={sec} className="qs">
+              <h3 className="qs__title">{SEC_ICONS[sec] || "📝"} {sec}</h3>
+              {qs.map(q => {
+                const done = answers[q.id] != null;
                 return (
-                  <div key={q.id} className={`question-card ${hasAnswer ? "question-card--answered" : ""}`}>
-                    <div className="question-card__header">
-                      <span className="question-card__number">Q{q.id}</span>
-                      <span className="question-card__text">{q.question}</span>
-                      {hasAnswer && <span className="question-card__done">✓</span>}
+                  <div key={q.id} className={`qc ${done ? "qc--done" : ""}`}>
+                    <div className="qc__hdr">
+                      <span className="qc__num">Q{q.id}</span>
+                      <span className="qc__txt">{q.question}</span>
+                      {done && <span className="qc__check">✓</span>}
                     </div>
-                    <div className="question-card__body">
-                      {renderQuestion(q)}
-                    </div>
+                    <div className="qc__body">{renderQ(q)}</div>
                   </div>
                 );
               })}
@@ -593,253 +453,209 @@ export default function FastTesterPage() {
         </div>
       </div>
 
-      {/* ═══ DRAG HANDLE ═══ */}
+      {/* DRAG HANDLE */}
       {panelOpen && (
-        <div className="drag-handle" onMouseDown={handleDragStart} onTouchStart={handleDragStart}>
-          <div className="drag-handle__grip" />
+        <div className="dragger" onMouseDown={handleDragStart} onTouchStart={handleDragStart}>
+          <div className="dragger__grip" />
         </div>
       )}
 
-      {/* ═══ RIGHT PANEL ═══ */}
-      <div className={`fast-tester__right ${panelOpen ? "fast-tester__right--open" : "fast-tester__right--closed"}`}
+      {/* RIGHT — results */}
+      <div className={`ft__right ${panelOpen ? "ft__right--open" : "ft__right--closed"}`}
         style={panelOpen ? { width: `${100 - leftPct}%` } : {}}>
-        <button className="panel-toggle" onClick={() => setPanelOpen(!panelOpen)}>
+
+        <button className="ptoggle" onClick={() => setPanelOpen(!panelOpen)}>
           {panelOpen ? "▶" : "◀"}
-          {!panelOpen && <span className="panel-toggle__label">Results</span>}
+          {!panelOpen && <span className="ptoggle__lbl">Results</span>}
         </button>
 
         {panelOpen && (
-          <div className="result-panel">
-            <div className="result-panel__header">
-              <h2>📦 Recommendation</h2>
-              {loading && <span className="result-panel__loading">Updating…</span>}
-              {lastUpdate && !loading && <span className="result-panel__time">{lastUpdate}</span>}
+          <div className="rp">
+            {/* mirroring DynamicResultsPage .rp__hdr */}
+            <div className="rp__hdr">
+              <h1>Your Connectivity Plans</h1>
+              {loading
+                ? <p style={{ color: "#FFC107", margin: 0, fontSize: 13, animation: "lp 1s infinite" }}>Updating…</p>
+                : lastUpdate
+                  ? <p>{result?.totalSites || 0} site{(result?.totalSites || 0) !== 1 ? "s" : ""} configured</p>
+                  : <p>Answer questions to generate results</p>
+              }
             </div>
+
             {renderResults()}
           </div>
         )}
       </div>
 
       <style jsx>{`
-        /* ═══════════════════════════
-           LAYOUT
-           ═══════════════════════════ */
-        .fast-tester { display:flex; min-height:100vh; background:#070c14; position:relative; }
-        .fast-tester__left { overflow-y:auto; max-height:100vh; padding:28px 26px 80px; flex-shrink:0; }
-        .fast-tester__right { position:sticky; top:0; height:100vh; overflow-y:auto; background:rgba(6,8,18,0.98); border-left:1px solid rgba(255,255,255,0.06); z-index:10; flex-shrink:0; }
-        .fast-tester__right--open { min-width:360px; }
-        .fast-tester__right--closed { width:38px !important; min-width:38px; }
-
-        /* ═══ DRAG HANDLE ═══ */
-        .drag-handle { width:10px; cursor:col-resize; display:flex; align-items:center; justify-content:center; flex-shrink:0; z-index:20; transition:background .2s; }
-        .drag-handle:hover, .drag-handle:active { background:rgba(61,114,252,0.08); }
-        .drag-handle__grip { width:4px; height:52px; border-radius:2px; background:rgba(255,255,255,0.1); transition:background .2s; }
-        .drag-handle:hover .drag-handle__grip, .drag-handle:active .drag-handle__grip { background:rgba(61,114,252,0.5); }
-
-        /* ═══ PANEL TOGGLE ═══ */
-        .panel-toggle { position:absolute; left:-1px; top:50%; transform:translateY(-50%); padding:14px 6px; background:rgba(61,114,252,0.1); border:1px solid rgba(61,114,252,0.25); border-right:none; border-radius:8px 0 0 8px; color:#5CB0E9; font-size:12px; cursor:pointer; z-index:11; display:flex; flex-direction:column; align-items:center; gap:4px; }
-        .panel-toggle:hover { background:rgba(61,114,252,0.2); }
-        .panel-toggle__label { writing-mode:vertical-rl; font-size:11px; font-weight:700; letter-spacing:1px; }
-
-        /* ═══ RESULT PANEL CONTAINER ═══ */
-        .result-panel { padding:24px 22px; }
-        .result-panel__header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
-        .result-panel__header h2 { font-size:18px; font-weight:700; color:#fff; margin:0; }
-        .result-panel__loading { font-size:12px; color:#FFC107; font-weight:600; animation:loadpulse 1s infinite; }
-        @keyframes loadpulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-        .result-panel__time { font-size:11px; color:rgba(255,255,255,0.2); }
-
-        /* ═══ HEADER ═══ */
-        .ft-header { margin-bottom:20px; }
-        .ft-header__row { display:flex; align-items:center; justify-content:space-between; }
-        .ft-header__title { font-size:28px; font-weight:800; margin:0; background:linear-gradient(135deg,#FFC107,#FF9800); -webkit-text-fill-color:transparent; background-clip:text; }
-        .ft-header__sub { font-size:13px; color:rgba(255,255,255,0.4); margin:6px 0 0; }
-        .ft-header__reset { padding:7px 16px; background:rgba(250,86,116,0.08); border:1px solid rgba(250,86,116,0.2); border-radius:8px; color:#FA5674; font-size:12px; font-weight:600; cursor:pointer; }
-        .ft-header__reset:hover { background:rgba(250,86,116,0.15); }
-
-        /* ═══ SITE TABS ═══ */
-        .site-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
-        .site-tab { display:flex; align-items:center; gap:8px; padding:8px 14px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:10px; font-size:13px; color:rgba(255,255,255,0.55); cursor:pointer; transition:all .2s; }
-        .site-tab:hover { border-color:rgba(255,255,255,0.14); }
-        .site-tab--active { background:rgba(61,114,252,0.1); border-color:rgba(61,114,252,0.4); color:#5CB0E9; font-weight:600; }
-        .site-tab--add { border-style:dashed; color:rgba(92,176,233,0.6); }
-        .site-tab--add:hover { background:rgba(92,176,233,0.06); border-color:rgba(92,176,233,0.35); }
-        .site-tab__name { cursor:pointer; }
-        .site-tab__actions { display:flex; gap:4px; }
-        .site-tab__actions button { background:none; border:none; cursor:pointer; font-size:12px; padding:2px 5px; border-radius:4px; opacity:.5; transition:opacity .15s; }
-        .site-tab__actions button:hover { opacity:1; background:rgba(255,255,255,0.08); }
-        .site-tab__edit { display:flex; gap:4px; align-items:center; }
-        .site-tab__input { padding:4px 8px; background:rgba(255,255,255,0.07); border:1px solid rgba(61,114,252,0.4); border-radius:6px; color:#fff; font-size:13px; outline:none; width:120px; }
-        .site-tab__save { padding:3px 8px; background:rgba(61,114,252,0.2); border:none; border-radius:4px; color:#5CB0E9; cursor:pointer; font-size:12px; }
-
-        /* ═══ LOCATION ═══ */
-        .location-box { margin-bottom:16px; padding:14px 18px; background:rgba(255,255,255,0.018); border:1px solid rgba(255,255,255,0.05); border-radius:12px; }
-        .location-box__bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-        .location-box__icon { font-size:14px; }
-        .location-box__text { font-size:13px; color:#5CB0E9; flex:1; }
-        .location-box__empty { font-size:12px; color:rgba(255,255,255,0.25); font-style:italic; flex:1; }
-        .location-box__toggle { padding:6px 14px; background:rgba(61,114,252,0.1); border:1px solid rgba(61,114,252,0.25); border-radius:7px; color:#5CB0E9; font-size:11px; font-weight:600; cursor:pointer; }
-        .location-box__toggle:hover { background:rgba(61,114,252,0.18); }
-
-        /* ═══ PROGRESS ═══ */
-        .progress-bar { position:relative; height:5px; background:rgba(255,255,255,0.04); border-radius:3px; margin-bottom:20px; overflow:hidden; }
-        .progress-bar__fill { height:100%; background:linear-gradient(90deg,#3D72FC,#5CB0E9); border-radius:3px; transition:width .4s; }
-        .progress-bar__text { position:absolute; right:0; top:-17px; font-size:11px; color:rgba(255,255,255,0.25); font-weight:600; }
-
-        /* ═══ QUESTION SECTIONS ═══ */
-        .questions-list { display:flex; flex-direction:column; gap:28px; }
-        .question-section__title { font-size:13px; font-weight:700; color:rgba(92,176,233,0.75); text-transform:uppercase; letter-spacing:.8px; margin:0 0 12px; padding-bottom:8px; border-bottom:1px solid rgba(92,176,233,0.08); }
-        .question-card { padding:14px 16px; background:rgba(255,255,255,0.012); border:1px solid rgba(255,255,255,0.04); border-radius:12px; margin-bottom:8px; transition:all .2s; }
-        .question-card:hover { border-color:rgba(255,255,255,0.08); }
-        .question-card--answered { border-left:3px solid rgba(92,176,233,0.5); background:rgba(92,176,233,0.012); }
-        .question-card__header { display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; }
-        .question-card__number { flex-shrink:0; padding:3px 8px; background:rgba(61,114,252,0.1); border-radius:6px; font-size:10px; font-weight:700; color:#5CB0E9; }
-        .question-card__text { font-size:13px; color:rgba(255,255,255,0.75); line-height:1.4; flex:1; }
-        .question-card__done { color:#22c55e; font-weight:700; font-size:14px; flex-shrink:0; }
-        .question-card__body { padding-top:2px; }
-
-        /* ═══ OPTION CHIPS ═══ */
-        .option-grid { display:flex; flex-wrap:wrap; gap:6px; }
-        .option-chip {
-          position:relative; padding:7px 14px;
-          background:rgba(255,255,255,0.025);
-          border:1.5px solid rgba(255,255,255,0.08);
-          border-radius:8px; color:rgba(255,255,255,0.6);
-          font-size:12px; cursor:pointer; transition:all .18s;
-          white-space:nowrap; display:inline-flex; align-items:center; gap:5px;
+        /* ════ LAYOUT ════ */
+        .ft { display:flex; min-height:100vh; background:#070c14; position:relative; }
+        .ft__left { overflow-y:auto; max-height:100vh; padding:28px 22px 80px; flex-shrink:0; }
+        .ft__right {
+          position:sticky; top:0; height:100vh; overflow-y:auto;
+          background:#070c14;
+          border-left:1px solid rgba(255,255,255,0.08);
+          z-index:10; flex-shrink:0;
         }
-        .option-chip:hover { background:rgba(61,114,252,0.08); border-color:rgba(61,114,252,0.3); color:rgba(255,255,255,0.9); }
-        .option-chip--selected {
-          background:rgba(61,114,252,0.2) !important;
-          border-color:#3D72FC !important;
-          color:#fff !important;
-          font-weight:600;
-          box-shadow:0 0 0 1px rgba(61,114,252,0.15), 0 2px 8px rgba(61,114,252,0.12);
-        }
-        .option-chip__check { font-size:11px; color:#5CB0E9; font-weight:700; }
-        .option-chip--small { padding:5px 10px; font-size:11px; }
+        .ft__right--open { min-width:520px; }
+        .ft__right--closed { width:38px !important; min-width:38px; }
 
-        .checkbox-row { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:12px; color:rgba(255,255,255,0.5); cursor:pointer; }
-        .checkbox-row input { width:14px; height:14px; accent-color:#3D72FC; }
+        .dragger { width:10px; cursor:col-resize; display:flex; align-items:center; justify-content:center; flex-shrink:0; z-index:20; }
+        .dragger:hover { background:rgba(61,114,252,0.06); }
+        .dragger__grip { width:4px; height:52px; border-radius:2px; background:rgba(255,255,255,0.09); }
+        .dragger:hover .dragger__grip { background:rgba(61,114,252,0.5); }
 
-        .dual-wrap { display:flex; flex-direction:column; gap:10px; }
-        .dual-group { display:flex; flex-direction:column; gap:6px; }
-        .dual-group__label { font-size:10px; font-weight:700; color:rgba(92,176,233,0.65); text-transform:uppercase; letter-spacing:.5px; }
+        .ptoggle { position:absolute; left:-1px; top:50%; transform:translateY(-50%); padding:14px 6px; background:rgba(61,114,252,0.1); border:1px solid rgba(61,114,252,0.25); border-right:none; border-radius:8px 0 0 8px; color:#5CB0E9; font-size:12px; cursor:pointer; z-index:11; display:flex; flex-direction:column; align-items:center; gap:4px; }
+        .ptoggle:hover { background:rgba(61,114,252,0.2); }
+        .ptoggle__lbl { writing-mode:vertical-rl; font-size:11px; font-weight:700; letter-spacing:1px; }
 
-        .scale-wrap { display:flex; flex-direction:column; gap:8px; }
-        .scale-row { display:flex; align-items:center; gap:10px; }
-        .scale-row__label { font-size:12px; color:rgba(255,255,255,0.55); flex:1; min-width:100px; }
-        .scale-row__buttons { display:flex; gap:4px; }
-        .scale-btn {
-          width:32px; height:32px; border-radius:7px;
-          background:rgba(255,255,255,0.025); border:1.5px solid rgba(255,255,255,0.07);
-          color:rgba(255,255,255,0.5); font-size:12px; cursor:pointer;
-          display:flex; align-items:center; justify-content:center; transition:all .15s;
+        /* ════ RESULT PANEL — matches DynamicResultsPage ════ */
+        .rp { padding:32px 28px 60px; }
+        @keyframes lp { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+        /* .rp__hdr from DynamicResultsPage */
+        .rp__hdr { text-align:left; margin-bottom:28px; }
+        .rp__hdr h1 { font-size:24px; font-weight:700; color:#fff; margin:0 0 6px; }
+        .rp__hdr p { font-size:14px; color:rgba(255,255,255,0.5); margin:0; }
+
+        /* .sc — site card  (mirrors results/page.jsx) */
+        .sc { background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.1); border-radius:22px; margin-bottom:20px; overflow:hidden; transition:all 0.3s; }
+        .sc:hover { border-color:rgba(61,114,252,0.4); }
+
+        .sc__hdr { display:flex; align-items:center; padding:22px 24px; cursor:pointer; transition:background 0.2s; gap:16px; }
+        .sc__hdr:hover { background:rgba(255,255,255,0.02); }
+
+        .sc__title { flex:1; display:flex; flex-direction:column; gap:6px; min-width:0; }
+        .sb { display:inline-flex; padding:4px 14px; background:linear-gradient(135deg,#3D72FC,#5CB0E9); border-radius:16px; font-size:12px; font-weight:700; color:#fff; align-self:flex-start; }
+        .sc__title h2 { font-size:18px; font-weight:700; color:#fff; margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .sc__sub { font-size:13px; color:rgba(255,255,255,0.5); }
+
+        /* totals — 3 items in a row, each label above value */
+        .sc__tots { display:flex; gap:20px; flex-shrink:0; }
+        .ti { display:flex; flex-direction:column; align-items:flex-end; min-width:88px; }
+        .tl { font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:4px; white-space:nowrap; }
+        .tv { font-size:15px; font-weight:700; color:#fff; white-space:nowrap; font-variant-numeric:tabular-nums; }
+
+        .eb { width:36px; height:36px; flex-shrink:0; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); border-radius:10px; color:rgba(255,255,255,0.7); font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+        .eb:hover { background:rgba(61,114,252,0.15); border-color:rgba(61,114,252,0.4); color:#5CB0E9; }
+
+        /* expanded body */
+        .sc__body { animation:sd 0.25s ease; overflow-x:auto; }
+        @keyframes sd { from{opacity:0} to{opacity:1} }
+
+        /* .ct — component table */
+        .ct { width:100%; border-collapse:collapse; background:rgba(255,255,255,0.02); min-width:500px; }
+        .ct thead { background:rgba(255,255,255,0.04); }
+        .ct th { padding:12px 16px; text-align:left; font-size:11px; font-weight:600; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.07); white-space:nowrap; }
+        .ct th.r { text-align:right; }
+        .ct td { padding:14px 16px; font-size:13px; color:rgba(255,255,255,0.85); border-bottom:1px solid rgba(255,255,255,0.06); white-space:nowrap; }
+        .ct td.r { text-align:right; }
+        .ct td.num { font-variant-numeric:tabular-nums; }
+        .ct tbody tr:last-child td { border-bottom:none; }
+        .ct tbody tr:hover { background:rgba(255,255,255,0.02); }
+        .cb { display:inline-flex; padding:4px 10px; border-radius:10px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:#fff; white-space:nowrap; }
+        .ct-foot td { padding:13px 16px; font-size:13px; font-weight:700; color:#fff; background:rgba(61,114,252,0.08); border-top:2px solid rgba(61,114,252,0.25) !important; }
+
+        /* .ds — deployment summary (mirrors results/page.jsx) */
+        .ds { margin-top:12px; padding-top:8px; }
+        .ds__t { font-size:20px; font-weight:700; color:#fff; margin:0 0 20px; }
+        .ds__grid { display:flex; flex-direction:column; gap:16px; }
+
+        /* .dc — deployment card */
+        .dc { background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.1); padding:24px 28px; border-radius:22px; }
+        .dc--hl { background:rgba(61,114,252,0.08); border:1px solid rgba(61,114,252,0.35); }
+
+        .dc__h { margin-bottom:20px; }
+        .dc__h h3 { font-size:18px; font-weight:700; color:#fff; margin:0 0 5px; }
+        .dc__h p { font-size:13px; color:rgba(255,255,255,0.5); margin:0; }
+
+        .dc__b { display:flex; flex-direction:column; gap:4px; }
+
+        .sr { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06); gap:12px; }
+        .sr:last-child { border-bottom:none; }
+        .sr--hl { padding-top:16px; margin-top:8px; border-top:1px solid rgba(255,255,255,0.15) !important; border-bottom:none !important; }
+        .sl { font-size:13px; color:rgba(255,255,255,0.7); white-space:nowrap; }
+        .sv { font-size:17px; font-weight:700; color:#fff; font-variant-numeric:tabular-nums; white-space:nowrap; }
+        .sv--big { font-size:21px; color:#5CB0E9; }
+
+        /* narrow panel: stack header when panel is squeezed */
+        @media(max-width:620px) {
+          .sc__hdr { flex-wrap:wrap; }
+          .sc__tots { flex-wrap:wrap; gap:16px; }
+          .ti { align-items:flex-start; }
         }
 
-        /* ═══════════════════════════
-           RESULTS PANEL STYLES
-           ═══════════════════════════ */
-        .result-empty { text-align:center; padding:80px 20px; }
-        .result-empty__icon { font-size:48px; margin-bottom:16px; }
-        .result-empty p { font-size:15px; color:rgba(255,255,255,0.4); margin:0 0 8px; line-height:1.6; }
-        .result-empty span { font-size:11px; color:rgba(255,255,255,0.18); }
+        /* ════ EMPTY STATE ════ */
+        .r-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:80px 24px; text-align:center; }
+        .r-empty p { font-size:14px; color:rgba(255,255,255,0.35); line-height:1.7; margin:0; }
 
-        .result-content { display:flex; flex-direction:column; gap:18px; }
+        /* ════ LEFT PANEL ════ */
+        .fth { margin-bottom:20px; }
+        .fth__row { display:flex; align-items:center; justify-content:space-between; }
+        .fth__title { font-size:26px; font-weight:800; margin:0; background:linear-gradient(135deg,#FFC107,#FF9800); -webkit-text-fill-color:transparent; background-clip:text; }
+        .fth__sub { font-size:12px; color:rgba(255,255,255,0.4); margin:6px 0 0; }
+        .fth__reset { padding:7px 14px; background:rgba(250,86,116,0.08); border:1px solid rgba(250,86,116,0.2); border-radius:8px; color:#FA5674; font-size:12px; font-weight:600; cursor:pointer; }
+        .fth__reset:hover { background:rgba(250,86,116,0.15); }
 
-        /* ═══ Site result card ═══ */
-        .result-site {
-          background:rgba(255,255,255,0.025);
-          border:1px solid rgba(255,255,255,0.08);
-          border-radius:14px; overflow:hidden;
-        }
-        .result-site:hover { border-color:rgba(61,114,252,0.25); }
+        .stabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+        .stab { display:flex; align-items:center; gap:8px; padding:7px 12px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:10px; font-size:12px; color:rgba(255,255,255,0.55); cursor:pointer; transition:all .2s; }
+        .stab:hover { border-color:rgba(255,255,255,0.14); }
+        .stab--on { background:rgba(61,114,252,0.1); border-color:rgba(61,114,252,0.4); color:#5CB0E9; font-weight:600; }
+        .stab--add { border-style:dashed; color:rgba(92,176,233,0.6); }
+        .stab--add:hover { background:rgba(92,176,233,0.06); }
+        .stab__acts { display:flex; gap:3px; }
+        .stab__acts button { background:none; border:none; cursor:pointer; font-size:11px; padding:2px 4px; border-radius:4px; opacity:.5; transition:opacity .15s; }
+        .stab__acts button:hover { opacity:1; background:rgba(255,255,255,0.08); }
+        .stab__edit { display:flex; gap:4px; align-items:center; }
+        .stab__inp { padding:3px 8px; background:rgba(255,255,255,0.07); border:1px solid rgba(61,114,252,0.4); border-radius:6px; color:#fff; font-size:12px; outline:none; width:110px; }
+        .stab__ok { padding:3px 7px; background:rgba(61,114,252,0.2); border:none; border-radius:4px; color:#5CB0E9; cursor:pointer; font-size:12px; }
 
-        .result-site__header {
-          display:flex; align-items:center; gap:12px;
-          padding:16px 20px; cursor:pointer; transition:background .15s;
-        }
-        .result-site__header:hover { background:rgba(255,255,255,0.015); }
-        .result-site__left { display:flex; align-items:center; gap:10px; flex:1; min-width:0; }
-        .result-site__badge {
-          padding:4px 12px; background:linear-gradient(135deg,#3D72FC,#5CB0E9);
-          border-radius:12px; font-size:11px; font-weight:700; color:#fff; flex-shrink:0;
-        }
-        .result-site__name { font-size:16px; font-weight:700; color:#fff; }
-        .result-site__service { font-size:12px; color:rgba(255,255,255,0.45); white-space:nowrap; flex-shrink:0; }
-        .result-site__arrow { font-size:12px; color:rgba(255,255,255,0.3); flex-shrink:0; }
+        .loc-box { margin-bottom:14px; padding:12px 16px; background:rgba(255,255,255,0.018); border:1px solid rgba(255,255,255,0.05); border-radius:12px; }
+        .loc-box__bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .loc-box__txt { font-size:12px; color:#5CB0E9; flex:1; }
+        .loc-box__empty { font-size:12px; color:rgba(255,255,255,0.25); font-style:italic; flex:1; }
+        .loc-box__btn { padding:5px 12px; background:rgba(61,114,252,0.1); border:1px solid rgba(61,114,252,0.25); border-radius:7px; color:#5CB0E9; font-size:11px; font-weight:600; cursor:pointer; }
 
-        .result-site__body { padding:4px 16px 20px; }
+        .prog { position:relative; height:4px; background:rgba(255,255,255,0.04); border-radius:3px; margin-bottom:18px; overflow:hidden; }
+        .prog__fill { height:100%; background:linear-gradient(90deg,#3D72FC,#5CB0E9); border-radius:3px; transition:width .4s; }
+        .prog__txt { position:absolute; right:0; top:-16px; font-size:10px; color:rgba(255,255,255,0.25); font-weight:600; }
 
-        /* ═══ Component TABLE ═══ */
-        .result-table { width:100%; border-collapse:collapse; margin-top:4px; }
-        .result-table thead { background:rgba(255,255,255,0.03); }
-        .result-table th {
-          padding:10px 14px; text-align:left;
-          font-size:10px; font-weight:700; color:rgba(255,255,255,0.4);
-          text-transform:uppercase; letter-spacing:.5px;
-          border-bottom:1px solid rgba(255,255,255,0.06);
-        }
-        .result-table td {
-          padding:12px 14px; font-size:13px; color:rgba(255,255,255,0.8);
-          border-bottom:1px solid rgba(255,255,255,0.04);
-        }
-        .result-table tbody tr:last-child td { border-bottom:none; }
-        .result-table--right { text-align:right !important; }
-        .result-table--mono { font-variant-numeric:tabular-nums; }
-        .result-dot {
-          display:inline-block; width:8px; height:8px;
-          border-radius:50%; margin-right:8px; vertical-align:middle;
-        }
-        .result-table__foot { background:rgba(61,114,252,0.06); }
-        .result-table__foot td {
-          border-top:2px solid rgba(61,114,252,0.3) !important;
-          border-bottom:none !important; color:#fff;
-          padding:14px;
-        }
+        .ql { display:flex; flex-direction:column; gap:24px; }
+        .qs__title { font-size:12px; font-weight:700; color:rgba(92,176,233,0.75); text-transform:uppercase; letter-spacing:.8px; margin:0 0 10px; padding-bottom:7px; border-bottom:1px solid rgba(92,176,233,0.08); }
+        .qc { padding:12px 14px; background:rgba(255,255,255,0.012); border:1px solid rgba(255,255,255,0.04); border-radius:12px; margin-bottom:7px; }
+        .qc:hover { border-color:rgba(255,255,255,0.08); }
+        .qc--done { border-left:3px solid rgba(92,176,233,0.5); background:rgba(92,176,233,0.012); }
+        .qc__hdr { display:flex; align-items:flex-start; gap:8px; margin-bottom:9px; }
+        .qc__num { flex-shrink:0; padding:2px 7px; background:rgba(61,114,252,0.1); border-radius:5px; font-size:10px; font-weight:700; color:#5CB0E9; }
+        .qc__txt { font-size:12px; color:rgba(255,255,255,0.75); line-height:1.4; flex:1; }
+        .qc__check { color:#22c55e; font-weight:700; font-size:13px; flex-shrink:0; }
+        .qc__body { padding-top:2px; }
 
-        /* ═══ Deployment Summary ═══ */
-        .deploy-summary { margin-top:6px; }
-        .deploy-summary__title {
-          font-size:16px; font-weight:700; color:#fff;
-          margin:0 0 14px; padding-bottom:10px;
-          border-bottom:1px solid rgba(255,255,255,0.06);
-        }
+        .option-grid { display:flex; flex-wrap:wrap; gap:5px; }
+        .chip { padding:6px 12px; background:rgba(255,255,255,0.025); border:1.5px solid rgba(255,255,255,0.08); border-radius:8px; color:rgba(255,255,255,0.6); font-size:11px; cursor:pointer; transition:all .18s; white-space:nowrap; display:inline-flex; align-items:center; }
+        .chip:hover { background:rgba(61,114,252,0.08); border-color:rgba(61,114,252,0.3); color:rgba(255,255,255,0.9); }
+        .chip--on { background:rgba(61,114,252,0.2) !important; border-color:#3D72FC !important; color:#fff !important; font-weight:600; }
+        .chip--sm { padding:4px 9px; font-size:10px; }
 
-        .deploy-card {
-          padding:18px 20px; margin-bottom:12px;
-          background:rgba(255,255,255,0.018);
-          border:1px solid rgba(255,255,255,0.06);
-          border-radius:12px;
-        }
-        .deploy-card--highlight {
-          background:rgba(61,114,252,0.04);
-          border-color:rgba(61,114,252,0.22);
-        }
-        .deploy-card__header {
-          font-size:14px; font-weight:700; color:rgba(255,255,255,0.8);
-          margin-bottom:14px;
-        }
-        .deploy-card__row {
-          display:flex; justify-content:space-between; align-items:center;
-          padding:7px 0;
-        }
-        .deploy-card__row span { font-size:13px; color:rgba(255,255,255,0.45); }
-        .deploy-card__row strong { font-size:14px; color:#fff; font-variant-numeric:tabular-nums; }
-        .deploy-card__row--contract {
-          margin-top:10px; padding-top:12px;
-          border-top:1px solid rgba(255,255,255,0.08);
-        }
-        .deploy-card__row--contract strong { color:#5CB0E9; font-size:18px; }
+        .chk-row { display:flex; align-items:center; gap:7px; margin-top:7px; font-size:11px; color:rgba(255,255,255,0.5); cursor:pointer; }
+        .chk-row input { width:13px; height:13px; accent-color:#3D72FC; }
+        .dual-wrap { display:flex; flex-direction:column; gap:8px; }
+        .dual-group { display:flex; flex-direction:column; gap:5px; }
+        .dual-lbl { font-size:10px; font-weight:700; color:rgba(92,176,233,0.65); text-transform:uppercase; letter-spacing:.5px; }
+        .scale-wrap { display:flex; flex-direction:column; gap:7px; }
+        .scale-row { display:flex; align-items:center; gap:8px; }
+        .scale-lbl { font-size:11px; color:rgba(255,255,255,0.55); flex:1; min-width:90px; }
+        .scale-btns { display:flex; gap:3px; }
+        .scale-btn { width:28px; height:28px; border-radius:6px; background:rgba(255,255,255,0.025); border:1.5px solid rgba(255,255,255,0.07); color:rgba(255,255,255,0.5); font-size:11px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
 
-        /* ═══ RESPONSIVE ═══ */
-        @media(max-width:900px) {
-          .fast-tester { flex-direction:column; }
-          .fast-tester__left { max-height:none !important; width:100% !important; padding:20px 16px 60px; }
-          .drag-handle { display:none; }
-          .fast-tester__right { position:fixed; right:0; top:0; height:100vh; box-shadow:-6px 0 24px rgba(0,0,0,0.6); }
-          .fast-tester__right--closed { width:36px !important; min-width:36px; }
-          .fast-tester__right--open { width:min(420px,90vw) !important; min-width:0 !important; }
+        /* ════ RESPONSIVE ════ */
+        @media(max-width:960px) {
+          .ft { flex-direction:column; }
+          .ft__left { max-height:none !important; width:100% !important; padding:20px 16px 60px; }
+          .dragger { display:none; }
+          .ft__right { position:fixed; right:0; top:0; height:100vh; box-shadow:-6px 0 24px rgba(0,0,0,0.6); }
+          .ft__right--closed { width:36px !important; min-width:36px; }
+          .ft__right--open { width:min(540px,95vw) !important; min-width:0 !important; }
         }
       `}</style>
     </div>

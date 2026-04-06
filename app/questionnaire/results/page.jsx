@@ -67,6 +67,10 @@ export default function DynamicResultsPage() {
   );
 
   const { sitePackages, pocTotals, allTotals, totalSites } = data;
+  const isNetworkOperator = typeof window !== 'undefined'
+    ? JSON.parse(localStorage.getItem('isNetworkOperator') || 'false')
+    : false;
+  const pocSetupFee = isNetworkOperator ? 10000 : pocTotals.network_setup_fee;
 
   return (
     <div className="rp">
@@ -74,7 +78,7 @@ export default function DynamicResultsPage() {
 
       <div className="rp__inner">
         <div className="rp__hdr">
-          <h1>Your Connectivity Plans</h1>
+          <h1>Your Stargrid Connectivity Plans</h1>
           <p>{totalSites} site{totalSites !== 1 ? "s" : ""} configured</p>
         </div>
 
@@ -127,9 +131,9 @@ export default function DynamicResultsPage() {
           <h2 className="ds__t">Deployment Summary</h2>
           <div className="ds__grid">
             <div className="dc">
-              <div className="dc__h"><h3>PoC Sites ({Math.min(2, totalSites)})</h3><p>Fixed PoC pricing</p></div>
+              <div className="dc__h"><h3>PoC Sites ({Math.min(2, totalSites)})</h3><p>{isNetworkOperator ? 'Network Operator PoC' : 'Enterprise PoC'}</p></div>
               <div className="dc__b">
-                <div className="sr"><span className="sl">Network Setup Fee</span><span className="sv">{formatEuro(pocTotals.network_setup_fee)}</span></div>
+                <div className="sr"><span className="sl">Network Setup Fee</span><span className="sv">{formatEuro(pocSetupFee)}</span></div>
                 <div className="sr"><span className="sl">Network Monthly Fee</span><span className="sv">{formatEuro(pocTotals.network_monthly_fee)}</span></div>
                 <div className="sr"><span className="sl">Managed Service Monthly</span><span className="sv">{formatEuro(pocTotals.managed_service_monthly)}</span></div>
               </div>

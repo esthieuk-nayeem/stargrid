@@ -14,12 +14,19 @@ import Process from "@/components/sections/home1/Process";
 import Services from "@/components/sections/home1/Services";
 import SlideingText from "@/components/sections/home1/SlideingText";
 import Testimonial from "@/components/sections/home1/Testimonial";
+import ConfiguratorIntro from "@/components/sections/home1/ConfiguratorIntro";
+import ConfiguratorHow from "@/components/sections/home1/ConfiguratorHow";
+import ConfiguratorProviders from "@/components/sections/home1/ConfiguratorProviders";
+
 export default function Home_One() {
 
     return (
         <Layout headerStyle={2} footerStyle={1}>
             <Banner/>
-            <About/>
+            {/* <About/> */}
+            <ConfiguratorIntro/>
+            <ConfiguratorHow/>
+            <ConfiguratorProviders/>
             {/* <Counter/> */}
             {/* <Services/> */}
             {/* <Choose/> */}
