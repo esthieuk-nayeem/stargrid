@@ -292,7 +292,7 @@ export default function ValidationSummary() {
     <div className="vs">
       <div className="vs__header">
         <h1>📋 Review Your Sites</h1>
-        <p>Review and edit any answer inline — then continue to contact details</p>
+        <p>You have finished the first Site of your Customer Case. Please add now additional sites. Instead you can also “copy” your site and edit the individual responses on the questions.</p>
       </div>
 
       {sites.length === 0 && (
