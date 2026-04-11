@@ -152,6 +152,7 @@ export default function PdfOfferPage() {
         <div className="pp__bar-r">
           {generating && <span className="pp__status">Generating PDF…</span>}
           {generated  && <span className="pp__status pp__status--ok">✓ PDF Downloaded</span>}
+          <button onClick={() => router.push("/questionnaire/results/pdf/editor")} className="pp__edit">✏ Edit PDF</button>
           <button onClick={handleDownload} disabled={generating} className="pp__dl">
             {generating ? "Generating…" : "↓ Download PDF"}
           </button>
@@ -478,6 +479,8 @@ export default function PdfOfferPage() {
         .pp__dl    { padding:11px 26px; background:linear-gradient(135deg,#3D72FC,#5CB0E9); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; }
         .pp__dl:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 14px rgba(61,114,252,0.3); }
         .pp__dl:disabled { opacity:0.55; cursor:wait; }
+        .pp__edit  { padding:9px 18px; background:#f0f4ff; border:1px solid #c7d4fd; border-radius:8px; color:#3D72FC; font-size:14px; font-weight:500; cursor:pointer; }
+        .pp__edit:hover { background:#e6edff; }
         .pp__print { padding:9px 18px; background:#f5f5f5; border:1px solid #ddd; border-radius:8px; color:#444; font-size:14px; cursor:pointer; }
         .pp__print:hover { background:#eee; }
         .pp__status { font-size:13px; color:#999; }
