@@ -32,7 +32,9 @@ export default function PdfOfferPage() {
   const [isOperator, setIsOperator] = useState(false);
   const [loading, setLoading]     = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [generated, setGenerated] = useState(false);
+  const [generated, setGenerated]   = useState(false);
+  const [sending, setSending]       = useState(false);
+  const [sendStatus, setSendStatus] = useState(null); // null | 'ok' | 'err'
   const offerRef = useRef(null);
 
   useEffect(() => {
@@ -119,6 +121,95 @@ export default function PdfOfferPage() {
     }
   };
 
+  // ── Send via email ─────────────────────────────────────────────────────
+  const handleSendEmail = async () => {
+    setSending(true);
+    setSendStatus(null);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF }   = await import("jspdf");
+      const el = offerRef.current;
+      if (!el) return;
+
+      const canvas = await html2canvas(el, {
+        backgroundColor: "#ffffff",
+        scale: 1.5,
+        useCORS: true,
+        logging: false,
+        windowWidth: 860,
+      });
+
+      const pageW = 210, pageH = 297, margin = 10;
+      const contentW  = pageW - margin * 2;
+      const contentH  = pageH - margin * 2;
+      const imgAspect  = canvas.height / canvas.width;
+      const scaledImgH = contentW * imgAspect;
+
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const totalPagesCount = Math.ceil(scaledImgH / contentH);
+
+      for (let p = 0; p < totalPagesCount; p++) {
+        if (p > 0) pdf.addPage();
+        const srcY       = (p * contentH / scaledImgH) * canvas.height;
+        const srcH       = (contentH / scaledImgH) * canvas.height;
+        const isLast     = p === totalPagesCount - 1;
+        const actualSrcH  = isLast ? canvas.height - srcY : srcH;
+        const actualDestH = isLast ? (actualSrcH / canvas.height) * scaledImgH : contentH;
+
+        const pc = document.createElement("canvas");
+        pc.width  = canvas.width;
+        pc.height = Math.ceil(actualSrcH);
+        const ctx = pc.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, pc.width, pc.height);
+        ctx.drawImage(canvas, 0, srcY, canvas.width, actualSrcH, 0, 0, canvas.width, actualSrcH);
+
+        const pageImg = pc.toDataURL("image/jpeg", 0.78);
+        pdf.addImage(pageImg, "JPEG", margin, margin, contentW, actualDestH);
+        pdf.setFontSize(8);
+        pdf.setTextColor(180, 180, 180);
+        pdf.text(`Page ${p + 1} of ${totalPagesCount}`, pageW / 2, pageH - 5, { align: "center" });
+        pdf.text("StarGrid — Confidential", margin, pageH - 5);
+      }
+
+      // Convert to base64 for email attachment
+      const pdfBase64 = pdf.output("datauristring").split(",")[1];
+
+      const contractValue = data?.allTotals
+        ? new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 })
+            .format(data.allTotals.contract_value)
+        : null;
+
+      const res = await fetch("/api/send-proposal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pdfBase64,
+          companyName:   contact.companyName   || "",
+          contactName:   contact.fullName      || "",
+          contactEmail:  contact.email         || "",
+          refId,
+          date:          today,
+          totalSites,
+          contractValue,
+        }),
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        setSendStatus("ok");
+      } else {
+        console.error("Email error:", result.error);
+        setSendStatus("err");
+      }
+    } catch (err) {
+      console.error("Send email error:", err);
+      setSendStatus("err");
+    } finally {
+      setSending(false);
+    }
+  };
+
   // ── Loading / empty states ─────────────────────────────────────────────
   if (loading) return (
     <div style={centerStyle}>
@@ -151,8 +242,14 @@ export default function PdfOfferPage() {
         <button onClick={() => router.push("/questionnaire/results")} className="pp__back">← Back to Results</button>
         <div className="pp__bar-r">
           {generating && <span className="pp__status">Generating PDF…</span>}
+          {sending    && <span className="pp__status">Sending email…</span>}
           {generated  && <span className="pp__status pp__status--ok">✓ PDF Downloaded</span>}
+          {sendStatus === "ok"  && <span className="pp__status pp__status--ok">✓ Email Sent</span>}
+          {sendStatus === "err" && <span className="pp__status pp__status--err">✗ Send Failed</span>}
           <button onClick={() => router.push("/questionnaire/results/pdf/editor")} className="pp__edit">✏ Edit PDF</button>
+          <button onClick={handleSendEmail} disabled={sending || generating} className="pp__send">
+            {sending ? "Sending…" : "✉ Send via Email"}
+          </button>
           <button onClick={handleDownload} disabled={generating} className="pp__dl">
             {generating ? "Generating…" : "↓ Download PDF"}
           </button>
@@ -481,6 +578,10 @@ export default function PdfOfferPage() {
         .pp__dl:disabled { opacity:0.55; cursor:wait; }
         .pp__edit  { padding:9px 18px; background:#f0f4ff; border:1px solid #c7d4fd; border-radius:8px; color:#3D72FC; font-size:14px; font-weight:500; cursor:pointer; }
         .pp__edit:hover { background:#e6edff; }
+        .pp__send  { padding:11px 22px; background:linear-gradient(135deg,#12b981,#059669); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; }
+        .pp__send:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 14px rgba(16,185,129,0.35); }
+        .pp__send:disabled { opacity:0.55; cursor:wait; }
+        .pp__status--err { color:#ef4444; font-weight:600; }
         .pp__print { padding:9px 18px; background:#f5f5f5; border:1px solid #ddd; border-radius:8px; color:#444; font-size:14px; cursor:pointer; }
         .pp__print:hover { background:#eee; }
         .pp__status { font-size:13px; color:#999; }
