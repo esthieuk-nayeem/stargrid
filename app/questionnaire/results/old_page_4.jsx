@@ -23,75 +23,6 @@ function getDualLabel(ans) {
   };
 }
 
-// ── Module-level shared components ────────────────────────────────────────
-function DocHeader({ today, refId }) {
-  return (
-    <div className="doc-header-wrap">
-      <header className="hdr">
-        <div className="hdr__logo">
-          <Image src="/assets/images/icon/icon.png" alt="StarGrid" width={38} height={38} />
-          <div>
-            <div className="hdr__brand">STARGRID</div>
-            <div className="hdr__tagline">Industrial Connectivity Solutions</div>
-          </div>
-        </div>
-        <div className="hdr__meta">
-          <div className="hdr__date">{today}</div>
-          <div className="hdr__ref">Ref: {refId}</div>
-        </div>
-      </header>
-      <div className="rule rule--gradient" />
-    </div>
-  );
-}
-
-function DocFooter({ today, refId, right }) {
-  return (
-    <div className="doc-footer-wrap">
-      <div className="rule rule--gradient" style={{ marginTop: 28 }} />
-      <footer className="ftr">
-        <div className="ftr__left">
-          <strong>StarGrid Europe BV</strong>
-          <span>Zeestraat 70, 2318 AG The Hague, Netherlands</span>
-          <span>al@cellsat.one · www.stargrid.one</span>
-        </div>
-        <div className="ftr__right">
-          <span>Prepared {today}</span>
-          <span>Reference: {refId}</span>
-          {right && <span className="footer-tier">{right}</span>}
-          <span>Confidential — For intended recipient only</span>
-        </div>
-      </footer>
-    </div>
-  );
-}
-
-function BomTable({ rows, emptyMsg }) {
-  if (!rows.length) return <p className="sec__text sec__text--sm" style={{ fontStyle: "italic" }}>{emptyMsg}</p>;
-  return (
-    <table className="tbl bom-tbl">
-      <thead>
-        <tr>
-          <th>Site</th><th>Component</th><th>Hardware</th><th>Airtime Plan</th>
-          <th className="ra">Setup (€)</th><th className="ra">Monthly (€)</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((c, i) => (
-          <tr key={i}>
-            <td><span className="badge badge--sm">Site {c.siteNum}</span></td>
-            <td><span className="dot" style={{ background: c.color }} />{c.type}</td>
-            <td>{c.hardware || "—"}</td>
-            <td>{c.airtime  || "—"}</td>
-            <td className="ra mono">{formatEuro(c.network_setup_fee)}</td>
-            <td className="ra mono">{formatEuro(c.network_monthly_fee)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
 // ── Main component ─────────────────────────────────────────────────────────
 export default function PdfOfferPage() {
   const router = useRouter();
@@ -303,45 +234,6 @@ export default function PdfOfferPage() {
   const today = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
   const refId = `SG-${Date.now().toString(36).toUpperCase().slice(-6)}`;
 
-  // ── Aggregate metrics for Section 3 summary ────────────────────────────
-  let cellularCount = 0, satelliteCount = 0, fixedCount = 0;
-  sitePackages.forEach((sp, idx) => {
-    const site = sites[idx] || {};
-    const ans  = site.answers || {};
-    [ans[11], ans[12]].forEach(conn => {
-      const v = (getLabel(conn) || "").toLowerCase();
-      if (v.includes("cellu") || v.includes("lte") || v.includes("4g") || v.includes("5g")) cellularCount++;
-      else if (v.includes("sat") || v.includes("leo") || v.includes("geo")) satelliteCount++;
-      else if (v !== "—" && !v.includes("none")) fixedCount++;
-    });
-  });
-  const serviceTypes = [...new Set(sitePackages.map(sp => sp.package.servicesLabel).filter(Boolean))].join(" / ") || "—";
-
-  // ── Bill of Materials — categorise all components ──────────────────────
-  const bom = { cellular: [], satellite: [], boxes: [], managed: [] };
-  sitePackages.forEach((sp) => {
-    sp.package.components.forEach(c => {
-      const t = (c.type || "").toLowerCase();
-      const h = (c.hardware || "").toLowerCase();
-      const entry = { ...c, siteName: sp.site_name, siteNum: sp.site_number };
-      if (t.includes("cellu") || t.includes("lte") || t.includes("4g") || t.includes("5g") || h.includes("lte") || h.includes("cellular")) {
-        bom.cellular.push(entry);
-      } else if (t.includes("sat") || t.includes("leo") || t.includes("geo") || t.includes("starlink") || t.includes("iridium") || t.includes("skylo") || t.includes("viasat") || t.includes("oneweb") || h.includes("satell")) {
-        bom.satellite.push(entry);
-      } else {
-        bom.boxes.push(entry);
-      }
-    });
-    if (sp.package.totals.managed_service_monthly > 0) {
-      bom.managed.push({
-        siteNum:  sp.site_number,
-        siteName: sp.site_name,
-        label:    sp.package.servicesLabel || "Managed Service",
-        fee:      sp.package.totals.managed_service_monthly,
-      });
-    }
-  });
-
   // ── Render ──────────────────────────────────────────────────────────────
   return (
     <div className="pp">
@@ -368,18 +260,29 @@ export default function PdfOfferPage() {
       <div className="pp__paper-wrap">
         <div ref={offerRef} className="paper">
 
-          {/* ════════════════════════════════════════════════════════════════
-              PAGE 1 — Connectivity Plan & Proposal  (single A4)
-          ════════════════════════════════════════════════════════════════ */}
-          <DocHeader today={today} refId={refId} />
+          {/* ── HEADER ───────────────────────────────────────────────────── */}
+          <header className="hdr">
+            <div className="hdr__logo">
+              <Image src="/assets/images/icon/icon.png" alt="StarGrid" width={38} height={38} />
+              <div>
+                <div className="hdr__brand">STARGRID</div>
+                <div className="hdr__tagline">Industrial Connectivity Solutions</div>
+              </div>
+            </div>
+            <div className="hdr__meta">
+              <div className="hdr__date">{today}</div>
+              <div className="hdr__ref">Ref: {refId}</div>
+            </div>
+          </header>
+          <div className="rule rule--gradient" />
 
-          <h1 className="doc-title">Connectivity Plan &amp; Proposal</h1>
+          <h1 className="doc-title">Connectivity Solution Proposal</h1>
           <p className="doc-sub">
             {totalSites} Site{totalSites !== 1 ? "s" : ""} — Personalised Plan
             {contact.companyName ? ` for ${contact.companyName}` : ""}
           </p>
 
-          {/* ── 1. Introduction ─────────────────────────────────────────── */}
+          {/* ── 1. INTRODUCTION ──────────────────────────────────────────── */}
           <section className="sec">
             <h2 className="sec__title">1. Introduction</h2>
             <p className="sec__text">
@@ -387,6 +290,11 @@ export default function PdfOfferPage() {
               satellite (LEO/GEO), and fixed-line networks into a single, intelligent platform. Our edge
               devices automatically select the optimal available network, guaranteeing zero-touch,
               always-on connectivity for industrial, offshore, and remote operations worldwide.
+            </p>
+            <p className="sec__text">
+              This proposal has been generated based on the site configurations and requirements
+              provided through the StarGrid Connectivity Planner. It outlines the recommended
+              hardware, airtime plans, and managed service packages tailored to your specific operational needs.
             </p>
             <div className="intro-pills">
               <span className="pill">99.5% Line Availability</span>
@@ -396,7 +304,7 @@ export default function PdfOfferPage() {
             </div>
           </section>
 
-          {/* ── 2. Client Use Case ──────────────────────────────────────── */}
+          {/* ── 2. USE CASE ──────────────────────────────────────────────── */}
           {contact.additionalNotes && (
             <section className="sec">
               <h2 className="sec__title">2. Client Use Case</h2>
@@ -415,48 +323,20 @@ export default function PdfOfferPage() {
             </section>
           )}
 
-          {/* ── 3. StarGrid Solution ────────────────────────────────────── */}
+          {/* ── 3. CONNECTIVITY PARAMETERS ───────────────────────────────── */}
           <section className="sec">
-            <h2 className="sec__title">3. StarGrid Solution</h2>
+            <h2 className="sec__title">3. Connectivity Parameters</h2>
             <p className="sec__text sec__text--sm">
-              Overview of the connectivity configuration across all sites based on survey inputs.
+              The following table summarises the key technical requirements captured per site during the survey.
             </p>
 
-            {/* Solution summary table */}
-            <table className="sum-overview" style={{ marginBottom: 18 }}>
-              <tbody>
-                <tr>
-                  <td style={{ fontWeight:600, color:"#444" }}>Number of Sites</td>
-                  <td className="ra mono" style={{ fontWeight:700 }}>{totalSites}</td>
-                </tr>
-                <tr className="even">
-                  <td style={{ fontWeight:600, color:"#444" }}>Cellular Connections</td>
-                  <td className="ra mono" style={{ fontWeight:700 }}>{cellularCount || "—"}</td>
-                </tr>
-                <tr>
-                  <td style={{ fontWeight:600, color:"#444" }}>Satellite Connections</td>
-                  <td className="ra mono" style={{ fontWeight:700 }}>{satelliteCount || "—"}</td>
-                </tr>
-                {fixedCount > 0 && (
-                  <tr className="even">
-                    <td style={{ fontWeight:600, color:"#444" }}>Fixed / Other Connections</td>
-                    <td className="ra mono" style={{ fontWeight:700 }}>{fixedCount}</td>
-                  </tr>
-                )}
-                <tr className="even">
-                  <td style={{ fontWeight:600, color:"#444" }}>StarGrid Managed Service</td>
-                  <td className="ra" style={{ fontWeight:700, color:"#3D72FC" }}>{serviceTypes}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            {/* Per-site connectivity parameters */}
             {sitePackages.map((sp, idx) => {
-              const site  = sites[idx] || {};
-              const ans   = site.answers || {};
-              const bwAvg = getDualLabel(ans[5]);
-              const bwPeak = getDualLabel(ans[6]);
+              const site     = sites[idx] || {};
+              const ans      = site.answers || {};
+              const bwAvg    = getDualLabel(ans[5]);
+              const bwPeak   = getDualLabel(ans[6]);
               const siteName = site.name || sp.site_name || `Site ${sp.site_number}`;
+
               const params = [
                 { label: "Primary Purpose",        val: getLabel(ans[3]) },
                 { label: "Monthly Data Volume",    val: getLabel(ans[4]) },
@@ -469,6 +349,7 @@ export default function PdfOfferPage() {
                 { label: "Secondary Connection",   val: getLabel(ans[12]) },
                 { label: "Downtime Class",         val: getLabel(ans[7]) },
               ];
+
               return (
                 <div key={idx} className="param-block">
                   <div className="param-block__hdr">
@@ -490,105 +371,11 @@ export default function PdfOfferPage() {
             })}
           </section>
 
-          {/* ── 4. Offering — PoC | Full Deployment ─────────────────────── */}
+          {/* ── 4. CONNECTIVITY SOLUTION OFFER ───────────────────────────── */}
           <section className="sec">
-            <h2 className="sec__title">4. Offering</h2>
+            <h2 className="sec__title">4. Connectivity Solution Offer</h2>
             <p className="sec__text sec__text--sm">
-              Two engagement paths are available: a scoped Proof of Concept and a full multi-site deployment.
-            </p>
-            <div className="offering-cols">
-
-              {/* Left — PoC */}
-              <div className="offering-col">
-                <div className="poc-box">
-                  <div className="poc-box__badge">{pocLabel}</div>
-                  <p className="offering-col__label">Proof of Concept</p>
-                  <p className="sec__text sec__text--sm" style={{ margin:"0 0 12px" }}>
-                    Covers the first {Math.min(2, totalSites)} site{Math.min(2, totalSites) !== 1 ? "s" : ""} at
-                    fixed pricing to validate performance before full rollout.
-                  </p>
-                  <table className="sum-overview">
-                    <thead><tr><th>Line Item</th><th className="ra">Amount</th></tr></thead>
-                    <tbody>
-                      <tr><td>Network Setup Fee</td><td className="ra mono"><strong>{formatEuro(pocSetupFee)}</strong></td></tr>
-                      <tr className="even"><td>Monthly Connectivity</td><td className="ra mono"><strong>{formatEuro(pocTotals.network_monthly_fee)}</strong></td></tr>
-                      <tr><td>Monthly Managed Service</td><td className="ra mono"><strong>{formatEuro(pocTotals.managed_service_monthly)}</strong></td></tr>
-                    </tbody>
-                  </table>
-                  <p className="poc-note">
-                    {isOperator
-                      ? "Network Operator pricing applies. Setup fee reflects operator-tier PoC engagement."
-                      : "Enterprise pricing applies. Includes hardware, installation, and 30-day SLA validation."}
-                  </p>
-                </div>
-              </div>
-
-              {/* Right — Full Deployment */}
-              <div className="offering-col">
-                <div className="deploy-box">
-                  <div className="poc-box__badge deploy-badge">Full Deployment</div>
-                  <p className="offering-col__label">All {totalSites} Site{totalSites !== 1 ? "s" : ""}</p>
-                  <p className="sec__text sec__text--sm" style={{ margin:"0 0 12px" }}>
-                    Complete rollout across all configured sites with full managed service coverage.
-                  </p>
-                  <table className="sum-overview">
-                    <thead><tr><th>Line Item</th><th className="ra">Amount</th></tr></thead>
-                    <tbody>
-                      <tr><td>Total Network Setup Fee</td><td className="ra mono"><strong>{formatEuro(allTotals.network_setup_fee)}</strong></td></tr>
-                      <tr className="even"><td>Total Monthly Connectivity</td><td className="ra mono"><strong>{formatEuro(allTotals.network_monthly_fee)}</strong></td></tr>
-                      <tr><td>Total Monthly Managed Service</td><td className="ra mono"><strong>{formatEuro(allTotals.managed_service_monthly)}</strong></td></tr>
-                      <tr className="cv-row">
-                        <td><strong>Total Contract Value</strong><small className="cv-sub"> / {allTotals.contract_months} months</small></td>
-                        <td className="ra mono cv-val"><strong>{formatEuro(allTotals.contract_value)}</strong></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  {allTotals.setup_discount_pct > 0 && (
-                    <p className="discount-note">* {(allTotals.setup_discount_pct * 100).toFixed(0)}% bulk discount applied to setup fee.</p>
-                  )}
-                </div>
-              </div>
-
-            </div>
-          </section>
-
-          {/* ── 5. Terms & Conditions ───────────────────────────────────── */}
-          <section className="sec">
-            <h2 className="sec__title">5. Terms &amp; Conditions</h2>
-            <p className="sec__text sec__text--sm">
-              This proposal is governed by the <strong>StarGrid Standard Agreement</strong> (available at{" "}
-              <span className="link-ref">www.stargrid.one/legal</span>). Key terms:
-            </p>
-            <div className="terms">
-              <ul>
-                <li>All prices are in EUR and exclude applicable VAT/taxes.</li>
-                <li>This offer is valid for <strong>30 days</strong> from the date of issue.</li>
-                <li>Setup fees are one-time charges payable upon contract signing.</li>
-                <li>Monthly fees are billed in advance on the 1st of each month.</li>
-                <li>Managed service includes 24/7 monitoring, firmware updates, and SLA-based support.</li>
-                <li>Contract duration as stated above; early termination fees may apply per the StarGrid Standard Agreement.</li>
-                <li>Hardware remains StarGrid property until full setup fee is received.</li>
-                <li>SLA credits apply as defined in the StarGrid Standard Agreement, Section 4.</li>
-              </ul>
-            </div>
-          </section>
-
-          <DocFooter today={today} refId={refId} />
-
-          {/* ════════════════════════════════════════════════════════════════
-              ANNEX — Connectivity Plan & Proposal  (page 2 and on)
-          ════════════════════════════════════════════════════════════════ */}
-          <div className="annex-break" />
-          <DocHeader today={today} refId={refId} />
-
-          <h1 className="doc-title">Annex: Connectivity Plan &amp; Proposal</h1>
-          <p className="doc-sub">Technical &amp; Financial Breakdown — {totalSites} Site{totalSites !== 1 ? "s" : ""}</p>
-
-          {/* ── Annex 1. Connectivity Solution Offer ────────────────────── */}
-          <section className="sec">
-            <h2 className="sec__title">1. Connectivity Solution Offer</h2>
-            <p className="sec__text sec__text--sm">
-              Full overview of financial details per site — setup costs, monthly network fees, and StarGrid Managed Service fee.
+              Recommended hardware, airtime plans, and managed service tiers per site based on survey inputs.
             </p>
 
             {sitePackages.map((sp, idx) => {
@@ -596,6 +383,7 @@ export default function PdfOfferPage() {
               const site     = sites[idx] || {};
               const siteType = site?.answers?.[22]?.label || "Fixed Site";
               const siteName = site?.name || site_name;
+
               return (
                 <div key={sp.site_id || idx} className="site">
                   <div className="site__hdr">
@@ -606,11 +394,16 @@ export default function PdfOfferPage() {
                       {site?.location?.address && <span className="site__loc">{site.location.address}</span>}
                     </div>
                   </div>
+
                   <table className="tbl">
                     <thead>
                       <tr>
-                        <th>Component</th><th>Hardware</th><th>Airtime Plan</th>
-                        <th className="ra">Setup Fee</th><th className="ra">Monthly Fee</th><th className="ra">Managed Svc</th>
+                        <th>Component</th>
+                        <th>Hardware</th>
+                        <th>Airtime Plan</th>
+                        <th className="ra">Setup Fee</th>
+                        <th className="ra">Monthly Fee</th>
+                        <th className="ra">Managed Svc</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -637,77 +430,137 @@ export default function PdfOfferPage() {
                 </div>
               );
             })}
+          </section>
 
-            {/* All-sites total banner */}
+          {/* ── 5. DEPLOYMENT SUMMARY ────────────────────────────────────── */}
+          <section className="sec">
+            <h2 className="sec__title">5. Deployment Summary</h2>
+            <p className="sec__text sec__text--sm">
+              Overview of total investment across all configured sites.
+            </p>
+            <table className="sum-overview">
+              <thead>
+                <tr>
+                  <th>Line Item</th>
+                  <th className="ra">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>Total Network Setup Fee</td><td className="ra mono"><strong>{formatEuro(allTotals.network_setup_fee)}</strong></td></tr>
+                <tr className="even"><td>Total Monthly Connectivity</td><td className="ra mono"><strong>{formatEuro(allTotals.network_monthly_fee)}</strong></td></tr>
+                <tr><td>Total Monthly Managed Service</td><td className="ra mono"><strong>{formatEuro(allTotals.managed_service_monthly)}</strong></td></tr>
+                <tr className="cv-row">
+                  <td><strong>Total Contract Value</strong><small className="cv-sub"> / {allTotals.contract_months} months</small></td>
+                  <td className="ra mono cv-val"><strong>{formatEuro(allTotals.contract_value)}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+            {allTotals.setup_discount_pct > 0 && (
+              <p className="discount-note">
+                * A {(allTotals.setup_discount_pct * 100).toFixed(0)}% bulk discount has been applied to the setup fee for full rollout.
+              </p>
+            )}
+          </section>
+
+          {/* ── 6. POC SECTION ───────────────────────────────────────────── */}
+          <section className="sec">
+            <h2 className="sec__title">6. Proof of Concept (PoC)</h2>
+            <p className="sec__text sec__text--sm">
+              StarGrid offers a structured PoC covering the first {Math.min(2, totalSites)} site{Math.min(2, totalSites) !== 1 ? "s" : ""}
+              at fixed pricing to validate performance before full deployment.
+            </p>
+            <div className="poc-box">
+              <div className="poc-box__badge">{pocLabel}</div>
+              <table className="sum-overview">
+                <thead>
+                  <tr><th>Line Item</th><th className="ra">PoC Amount</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Network Setup Fee</td><td className="ra mono"><strong>{formatEuro(pocSetupFee)}</strong></td></tr>
+                  <tr className="even"><td>Monthly Connectivity</td><td className="ra mono"><strong>{formatEuro(pocTotals.network_monthly_fee)}</strong></td></tr>
+                  <tr><td>Monthly Managed Service</td><td className="ra mono"><strong>{formatEuro(pocTotals.managed_service_monthly)}</strong></td></tr>
+                </tbody>
+              </table>
+              <p className="poc-note">
+                {isOperator
+                  ? "Network Operator pricing applies. Setup fee reflects operator-tier PoC engagement."
+                  : "Enterprise pricing applies. PoC setup includes hardware, installation, and 30-day SLA validation."}
+              </p>
+            </div>
+          </section>
+
+          {/* ── 7. FULL CUSTOMER CASE ────────────────────────────────────── */}
+          <section className="sec">
+            <h2 className="sec__title">7. Full Customer Case</h2>
+            <p className="sec__text sec__text--sm">
+              Combined summary across all {totalSites} site{totalSites !== 1 ? "s" : ""} for full deployment.
+            </p>
+            <div className="sum-grid">
+              {sitePackages.map((sp, idx) => {
+                const site     = sites[idx] || {};
+                const siteName = site?.name || sp.site_name || `Site ${sp.site_number}`;
+                return (
+                  <div key={idx} className="sum-box">
+                    <div className="sum-box__hdr">
+                      <span className="badge badge--sm">Site {sp.site_number}</span>
+                      <span className="sum-box__name">{siteName}</span>
+                    </div>
+                    <table className="sum-tbl">
+                      <tbody>
+                        <tr><td>Setup Fee</td><td className="ra mono">{formatEuro(sp.package.totals.network_setup_fee)}</td></tr>
+                        <tr><td>Monthly Fee</td><td className="ra mono">{formatEuro(sp.package.totals.network_monthly_fee)}</td></tr>
+                        <tr><td>Managed Svc</td><td className="ra mono">{formatEuro(sp.package.totals.managed_service_monthly)}</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })}
+            </div>
             <div className="total-banner">
               <span>Total Contract Value ({allTotals.contract_months} months)</span>
               <span className="total-banner__val">{formatEuro(allTotals.contract_value)}</span>
             </div>
           </section>
 
-          {/* ── Annex 2. Bill of Materials ──────────────────────────────── */}
+          {/* ── 8. TERMS & CONDITIONS ────────────────────────────────────── */}
           <section className="sec">
-            <h2 className="sec__title">2. Bill of Materials</h2>
-            <p className="sec__text sec__text--sm">Full list of components purchased across all sites.</p>
-
-            {/* Cellular Components */}
-            <div className="bom-group">
-              <div className="bom-group__hdr">
-                <span className="bom-dot" style={{ background:"#3D72FC" }} />
-                Cellular Components
-              </div>
-              <BomTable rows={bom.cellular} emptyMsg="No cellular components in this configuration." />
+            <h2 className="sec__title">8. Terms &amp; Conditions</h2>
+            <p className="sec__text sec__text--sm">
+              This proposal is governed by the <strong>StarGrid Standard Agreement</strong> (available at{" "}
+              <span className="link-ref">www.stargrid.one/legal</span>). Key terms:
+            </p>
+            <div className="terms">
+              <ul>
+                <li>All prices are in EUR and exclude applicable VAT/taxes.</li>
+                <li>This offer is valid for <strong>30 days</strong> from the date of issue.</li>
+                <li>Setup fees are one-time charges payable upon contract signing.</li>
+                <li>Monthly fees are billed in advance on the 1st of each month.</li>
+                <li>Managed service includes 24/7 monitoring, firmware updates, and SLA-based support.</li>
+                <li>Contract duration as stated above; early termination fees may apply per the StarGrid Standard Agreement.</li>
+                <li>Hardware remains StarGrid property until full setup fee is received.</li>
+                <li>SLA credits apply as defined in the StarGrid Standard Agreement, Section 4.</li>
+              </ul>
             </div>
-
-            {/* Satellite Components */}
-            <div className="bom-group">
-              <div className="bom-group__hdr">
-                <span className="bom-dot" style={{ background:"#5CB0E9" }} />
-                Satellite Components
-              </div>
-              <BomTable rows={bom.satellite} emptyMsg="No satellite components in this configuration." />
-            </div>
-
-            {/* StarGrid Boxes / Other */}
-            {bom.boxes.length > 0 && (
-              <div className="bom-group">
-                <div className="bom-group__hdr">
-                  <span className="bom-dot" style={{ background:"#6669D8" }} />
-                  StarGrid Boxes &amp; Other Components
-                </div>
-                <BomTable rows={bom.boxes} emptyMsg="" />
-              </div>
-            )}
-
-            {/* Managed Services */}
-            {bom.managed.length > 0 && (
-              <div className="bom-group">
-                <div className="bom-group__hdr">
-                  <span className="bom-dot" style={{ background:"#22c55e" }} />
-                  Managed Services
-                </div>
-                <table className="tbl bom-tbl">
-                  <thead>
-                    <tr><th>Site</th><th>Service Tier</th><th className="ra">Monthly Fee</th></tr>
-                  </thead>
-                  <tbody>
-                    {bom.managed.map((m, i) => (
-                      <tr key={i}>
-                        <td><span className="badge badge--sm">Site {m.siteNum}</span></td>
-                        <td>{m.label}</td>
-                        <td className="ra mono">{formatEuro(m.fee)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </section>
 
-          <DocFooter today={today} refId={refId} right={isOperator ? "Network Operator" : "Enterprise"} />
+          {/* ── FOOTER ───────────────────────────────────────────────────── */}
+          <div className="rule rule--gradient" />
+          <footer className="ftr">
+            <div className="ftr__left">
+              <strong>StarGrid</strong>
+              <span>Cellular · Satellite · Fixed</span>
+              <span>al@cellsat.one · www.stargrid.one</span>
+            </div>
+            <div className="ftr__right">
+              <span>Prepared {today}</span>
+              <span>Reference: {refId}</span>
+              <span>Confidential — For intended recipient only</span>
+            </div>
+          </footer>
 
         </div>
       </div>
+
       <style jsx>{`
         /* ── Chrome ─────────────────────────────────── */
         .pp { min-height:100vh; background:#e8ecf1; }
