@@ -134,14 +134,14 @@ export default function DynamicResultsPage() {
             <div className="sc__tots">
               <div className="ti"><span className="tl">Setup Fee</span><span className="tv">{formatEuro(EH_SETUP)}</span></div>
               <div className="ti"><span className="tl">Monthly Fee</span><span className="tv">{formatEuro(EH_MONTHLY)}</span></div>
-              <div className="ti"><span className="tl">Managed Svc</span><span className="tv">{formatEuro(ehManagedSvc)}</span></div>
+              <div className="ti"><span className="tl">Managed Service Fee</span><span className="tv">{formatEuro(ehManagedSvc)}</span></div>
             </div>
             <button className="eb">{expandedSite === 'hub' ? "▼" : "▶"}</button>
           </div>
           {expandedSite === 'hub' && (
             <div className="sc__body">
               <table className="ct">
-                <thead><tr><th>Component</th><th>Hardware</th><th>Airtime Plan</th><th className="r">Setup Fee</th><th className="r">Monthly Fee</th><th className="r">Managed Svc</th></tr></thead>
+                <thead><tr><th>Component</th><th>Hardware</th><th>Airtime Plan</th><th className="r">Setup Fee</th><th className="r">Monthly Fee</th><th className="r">Managed Service Fee</th></tr></thead>
                 <tbody>
                   <tr>
                     <td><span className="cb" style={{ background:"#2ECC71" }}>Enterprise Hub</span></td>
@@ -174,7 +174,7 @@ export default function DynamicResultsPage() {
                 <div className="sc__tots">
                   <div className="ti"><span className="tl">Setup Fee</span><span className="tv">{formatEuro(pkg.totals.network_setup_fee)}</span></div>
                   <div className="ti"><span className="tl">Monthly Fee</span><span className="tv">{formatEuro(pkg.totals.network_monthly_fee)}</span></div>
-                  <div className="ti"><span className="tl">Managed Svc</span><span className="tv">{formatEuro(pkg.totals.managed_service_monthly)}</span></div>
+                  <div className="ti"><span className="tl">Managed Service Fee</span><span className="tv">{formatEuro(pkg.totals.managed_service_monthly)}</span></div>
                 </div>
                 <button className="eb">{isExp ? "▼" : "▶"}</button>
               </div>
@@ -182,7 +182,7 @@ export default function DynamicResultsPage() {
               {isExp && (
                 <div className="sc__body">
                   <table className="ct">
-                    <thead><tr><th>Component</th><th>Hardware</th><th>Airtime Plan</th><th className="r">Setup Fee</th><th className="r">Monthly Fee</th><th className="r">Managed Svc</th></tr></thead>
+                    <thead><tr><th>Component</th><th>Hardware</th><th>Airtime Plan</th><th className="r">Setup Fee</th><th className="r">Monthly Fee</th><th className="r">Managed Service Fee</th></tr></thead>
                     <tbody>
                       {pkg.components.map((c, ci) => {
                         const isBillable = /router|stargrid\s*box/i.test(c.type);
