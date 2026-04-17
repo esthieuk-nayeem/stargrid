@@ -70,7 +70,48 @@ export default function DynamicResultsPage() {
   const isNetworkOperator = typeof window !== 'undefined'
     ? JSON.parse(localStorage.getItem('isNetworkOperator') || 'false')
     : false;
-  const pocSetupFee = isNetworkOperator ? 10000 : pocTotals.network_setup_fee;
+  const msServiceTier = typeof window !== 'undefined'
+    ? (localStorage.getItem('msServiceTier') || 'care')
+    : 'care';
+  const pocSetupFee = isNetworkOperator ? 11500 : 2900;
+
+  // Managed service tier table
+  const MS_TIERS = [
+    { min: 1000, assist: 0.03, care: 0.10 },
+    { min: 500,  assist: 0.04, care: 0.12 },
+    { min: 100,  assist: 0.05, care: 0.14 },
+    { min: 50,   assist: 0.06, care: 0.16 },
+    { min: 10,   assist: 0.07, care: 0.20 },
+    { min: 1,    assist: 0.08, care: 0.20 },
+  ];
+  const msRate = (() => {
+    const row = MS_TIERS.find(t => totalSites >= t.min) || MS_TIERS[MS_TIERS.length - 1];
+    return row[msServiceTier] ?? row.care;
+  })();
+
+  // Enterprise Hub hardcoded component (single central hub for all sites)
+  const EH_SETUP = 1149;
+  const EH_MONTHLY = 33;
+  const ehManagedSvc = EH_SETUP * msRate;
+
+  // Adjusted totals: include EH + router managed svc across all sites
+  const totalRouterManagedSvc = sitePackages.reduce((sum, sp) => {
+    const billable = sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type));
+    return sum + billable.reduce((s, c) => s + c.network_setup_fee * msRate, 0);
+  }, 0);
+  const adjAllSetup    = allTotals.network_setup_fee + EH_SETUP;
+  const adjAllMonthly  = allTotals.network_monthly_fee + EH_MONTHLY;
+  const adjAllManagedSvc = totalRouterManagedSvc + ehManagedSvc;
+  const adjContractValue = adjAllSetup + (adjAllMonthly + adjAllManagedSvc) * allTotals.contract_months;
+
+  const pocSites = sitePackages.slice(0, Math.min(2, totalSites));
+  const pocRouterManagedSvc = pocSites.reduce((sum, sp) => {
+    const billable = sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type));
+    return sum + billable.reduce((s, c) => s + c.network_setup_fee * msRate, 0);
+  }, 0);
+  const adjPocSetup      = pocSetupFee + EH_SETUP;
+  const adjPocMonthly    = pocTotals.network_monthly_fee + EH_MONTHLY;
+  const adjPocManagedSvc = pocRouterManagedSvc + ehManagedSvc;
 
   return (
     <div className="rp">
@@ -82,6 +123,41 @@ export default function DynamicResultsPage() {
           <p>{totalSites} site{totalSites !== 1 ? "s" : ""} configured</p>
         </div>
 
+        {/* Enterprise Hub — central node */}
+        <div className="sc sc--hub">
+          <div className="sc__hdr" onClick={() => toggle('hub')}>
+            <div className="sc__title">
+              <span className="sb sb--hub">Central Hub</span>
+              <h2>Enterprise Hub</h2>
+              <span className="sc__sub">Central connectivity node · All {totalSites} site{totalSites !== 1 ? "s" : ""} connected</span>
+            </div>
+            <div className="sc__tots">
+              <div className="ti"><span className="tl">Setup Fee</span><span className="tv">{formatEuro(EH_SETUP)}</span></div>
+              <div className="ti"><span className="tl">Monthly Fee</span><span className="tv">{formatEuro(EH_MONTHLY)}</span></div>
+              <div className="ti"><span className="tl">Managed Svc</span><span className="tv">{formatEuro(ehManagedSvc)}</span></div>
+            </div>
+            <button className="eb">{expandedSite === 'hub' ? "▼" : "▶"}</button>
+          </div>
+          {expandedSite === 'hub' && (
+            <div className="sc__body">
+              <table className="ct">
+                <thead><tr><th>Component</th><th>Hardware</th><th>Airtime Plan</th><th className="r">Setup Fee</th><th className="r">Monthly Fee</th><th className="r">Managed Svc</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><span className="cb" style={{ background:"#2ECC71" }}>Enterprise Hub</span></td>
+                    <td>Large</td>
+                    <td>—</td>
+                    <td className="r num">{formatEuro(EH_SETUP)}</td>
+                    <td className="r num">{formatEuro(EH_MONTHLY)}</td>
+                    <td className="r num">{formatEuro(ehManagedSvc)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Site cards */}
         {sitePackages.map((sp, idx) => {
           const isExp = expandedSite === idx;
           const { site, site_name, site_number, package: pkg } = sp;
@@ -108,16 +184,20 @@ export default function DynamicResultsPage() {
                   <table className="ct">
                     <thead><tr><th>Component</th><th>Hardware</th><th>Airtime Plan</th><th className="r">Setup Fee</th><th className="r">Monthly Fee</th><th className="r">Managed Svc</th></tr></thead>
                     <tbody>
-                      {pkg.components.map((c, ci) => (
-                        <tr key={ci}>
-                          <td><span className="cb" style={{ background:c.color }}>{c.type}</span></td>
-                          <td>{c.hardware}</td>
-                          <td>{c.airtime}</td>
-                          <td className="r num">{formatEuro(c.network_setup_fee)}</td>
-                          <td className="r num">{formatEuro(c.network_monthly_fee)}</td>
-                          <td className="r num">{formatEuro(c.managed_service_monthly)}</td>
-                        </tr>
-                      ))}
+                      {pkg.components.map((c, ci) => {
+                        const isBillable = /router|stargrid\s*box/i.test(c.type);
+                        const msSvc = isBillable ? c.network_setup_fee * msRate : c.managed_service_monthly;
+                        return (
+                          <tr key={ci}>
+                            <td><span className="cb" style={{ background:c.color }}>{c.type}</span></td>
+                            <td>{c.hardware}</td>
+                            <td>{c.airtime}</td>
+                            <td className="r num">{formatEuro(c.network_setup_fee)}</td>
+                            <td className="r num">{formatEuro(c.network_monthly_fee)}</td>
+                            <td className="r num">{formatEuro(msSvc)}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -133,19 +213,19 @@ export default function DynamicResultsPage() {
             <div className="dc">
               <div className="dc__h"><h3>PoC Sites ({Math.min(2, totalSites)})</h3><p>{isNetworkOperator ? 'Network Operator PoC' : 'Enterprise PoC'}</p></div>
               <div className="dc__b">
-                <div className="sr"><span className="sl">Network Setup Fee</span><span className="sv">{formatEuro(pocSetupFee)}</span></div>
-                <div className="sr"><span className="sl">Network Monthly Fee</span><span className="sv">{formatEuro(pocTotals.network_monthly_fee)}</span></div>
-                <div className="sr"><span className="sl">Managed Service Monthly</span><span className="sv">{formatEuro(pocTotals.managed_service_monthly)}</span></div>
+                <div className="sr"><span className="sl">Network Setup Fee</span><span className="sv">{formatEuro(adjPocSetup)}</span></div>
+                <div className="sr"><span className="sl">Network Monthly Fee</span><span className="sv">{formatEuro(adjPocMonthly)}</span></div>
+                <div className="sr"><span className="sl">Managed Service Monthly</span><span className="sv">{formatEuro(adjPocManagedSvc)}</span></div>
               </div>
             </div>
 
             <div className="dc dc--hl">
               <div className="dc__h"><h3>All Sites ({totalSites})</h3><p>{allTotals.setup_discount_pct > 0 ? `${(allTotals.setup_discount_pct*100).toFixed(0)}% bulk discount` : "Standard pricing"}</p></div>
               <div className="dc__b">
-                <div className="sr"><span className="sl">Network Setup Fee</span><span className="sv">{formatEuro(allTotals.network_setup_fee)}</span></div>
-                <div className="sr"><span className="sl">Network Monthly Fee</span><span className="sv">{formatEuro(allTotals.network_monthly_fee)}</span></div>
-                <div className="sr"><span className="sl">Managed Service Monthly</span><span className="sv">{formatEuro(allTotals.managed_service_monthly)}</span></div>
-                <div className="sr sr--hl"><span className="sl">Contract Value ({allTotals.contract_months}mo)</span><span className="sv sv--big">{formatEuro(allTotals.contract_value)}</span></div>
+                <div className="sr"><span className="sl">Network Setup Fee</span><span className="sv">{formatEuro(adjAllSetup)}</span></div>
+                <div className="sr"><span className="sl">Network Monthly Fee</span><span className="sv">{formatEuro(adjAllMonthly)}</span></div>
+                <div className="sr"><span className="sl">Managed Service Monthly</span><span className="sv">{formatEuro(adjAllManagedSvc)}</span></div>
+                <div className="sr sr--hl"><span className="sl">Contract Value ({allTotals.contract_months}mo)</span><span className="sv sv--big">{formatEuro(adjContractValue)}</span></div>
               </div>
             </div>
 
@@ -180,6 +260,9 @@ export default function DynamicResultsPage() {
 
         .sc { background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.1); border-radius:22px; margin-bottom:20px; overflow:hidden; transition:all 0.3s; }
         .sc:hover { border-color:rgba(61,114,252,0.4); }
+        .sc--hub { background:rgba(46,204,113,0.05); border-color:rgba(46,204,113,0.25); margin-bottom:32px; }
+        .sc--hub:hover { border-color:rgba(46,204,113,0.5); }
+        .sb--hub { background:linear-gradient(135deg,#2ECC71,#1aad5e); }
         .sc__hdr { display:flex; align-items:center; padding:28px 32px; cursor:pointer; transition:background 0.2s; gap:24px; }
         .sc__hdr:hover { background:rgba(255,255,255,0.02); }
         .sc__title { flex:1; display:flex; flex-direction:column; gap:6px; min-width:0; }

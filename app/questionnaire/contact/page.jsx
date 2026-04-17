@@ -16,6 +16,7 @@ export default function ContactFormPage() {
     additionalNotes: '',
   });
   const [isNetworkOperator, setIsNetworkOperator] = useState(false);
+  const [msServiceTier, setMsServiceTier] = useState("care");
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -82,6 +83,7 @@ export default function ContactFormPage() {
         localStorage.setItem('submissionId', String(response.id));
         localStorage.setItem('questionnaire_contact', JSON.stringify(formData));
         localStorage.setItem('isNetworkOperator', JSON.stringify(isNetworkOperator));
+        localStorage.setItem('msServiceTier', isNetworkOperator ? msServiceTier : 'care');
       }
 
       // Navigate to results
@@ -208,6 +210,24 @@ export default function ContactFormPage() {
                 <span className="operator-checkmark">{isNetworkOperator ? '✅' : ''}</span>
                 I am a Network Operator
               </label>
+
+              {isNetworkOperator && (
+                <div className="svc-tier-wrap">
+                  <span className="svc-tier-label">Managed Service Tier</span>
+                  <div className="svc-tier-toggle">
+                    <button
+                      type="button"
+                      className={`svc-tier-btn${msServiceTier === 'assist' ? ' svc-tier-btn--active' : ''}`}
+                      onClick={() => setMsServiceTier('assist')}
+                    >Assist</button>
+                    <button
+                      type="button"
+                      className={`svc-tier-btn${msServiceTier === 'care' ? ' svc-tier-btn--active' : ''}`}
+                      onClick={() => setMsServiceTier('care')}
+                    >Care</button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="contact-form__submit">
@@ -334,6 +354,29 @@ export default function ContactFormPage() {
         }
         .operator-label input[type="checkbox"]:checked + .operator-checkmark {
           border-color: #3D72FC; background: rgba(61,114,252,0.15);
+        }
+        .svc-tier-wrap {
+          display: flex; align-items: center; gap: 16px; margin-top: 18px; padding: 16px 20px;
+          background: rgba(61,114,252,0.06); border: 1px solid rgba(61,114,252,0.2);
+          border-radius: 14px;
+        }
+        .svc-tier-label {
+          font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.75); white-space: nowrap;
+        }
+        .svc-tier-toggle {
+          display: flex; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 10px; padding: 4px; gap: 4px;
+        }
+        .svc-tier-btn {
+          padding: 8px 22px; border: none; border-radius: 8px;
+          font-size: 14px; font-weight: 600; cursor: pointer;
+          background: transparent; color: rgba(255,255,255,0.5);
+          transition: all 0.2s;
+        }
+        .svc-tier-btn:hover { color: rgba(255,255,255,0.85); }
+        .svc-tier-btn--active {
+          background: linear-gradient(135deg, #3D72FC, #5CB0E9);
+          color: #fff; box-shadow: 0 4px 12px rgba(61,114,252,0.35);
         }
         .contact-form__submit { margin-top: 36px; text-align: center; }
         .contact-form__btn {

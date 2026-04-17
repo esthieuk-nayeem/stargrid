@@ -15,14 +15,6 @@ function getLabel(ans) {
   return "—";
 }
 
-function getDualLabel(ans) {
-  if (!ans) return { down: "—", up: "—" };
-  return {
-    down: ans.downlink?.label || ans.downlink || "—",
-    up:   ans.uplink?.label  || ans.uplink  || "—",
-  };
-}
-
 // ── Module-level shared components ────────────────────────────────────────
 function DocHeader({ today, refId }) {
   return (
@@ -99,6 +91,7 @@ export default function PdfOfferPage() {
   const [sites, setSites]         = useState([]);
   const [contact, setContact]     = useState({});
   const [isOperator, setIsOperator] = useState(false);
+  const [msServiceTier, setMsServiceTier] = useState("care");
   const [loading, setLoading]     = useState(true);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated]   = useState(false);
@@ -110,8 +103,10 @@ export default function PdfOfferPage() {
     // Read localStorage values client-side
     const storedContact  = JSON.parse(localStorage.getItem("questionnaire_contact") || "{}");
     const storedOperator = JSON.parse(localStorage.getItem("isNetworkOperator") || "false");
+    const storedTier     = localStorage.getItem("msServiceTier") || "care";
     setContact(storedContact);
     setIsOperator(storedOperator);
+    setMsServiceTier(storedTier);
 
     const fetchData = async () => {
       const allSites = getAllSites();
@@ -300,6 +295,43 @@ export default function PdfOfferPage() {
   const pocSetupFee = isOperator ? 10000 : pocTotals.network_setup_fee;
   const pocLabel    = isOperator ? "Network Operator PoC" : "Enterprise PoC";
 
+  // Managed service tier
+  const MS_TIERS = [
+    { min: 1000, assist: 0.03, care: 0.10 },
+    { min: 500,  assist: 0.04, care: 0.12 },
+    { min: 100,  assist: 0.05, care: 0.14 },
+    { min: 50,   assist: 0.06, care: 0.16 },
+    { min: 10,   assist: 0.07, care: 0.20 },
+    { min: 1,    assist: 0.08, care: 0.20 },
+  ];
+  const msRate = (() => {
+    const row = MS_TIERS.find(t => totalSites >= t.min) || MS_TIERS[MS_TIERS.length - 1];
+    return row[msServiceTier] ?? row.care;
+  })();
+  const compMsSvc = (c) => /router|stargrid\s*box/i.test(c.type) ? c.network_setup_fee * msRate : c.managed_service_monthly;
+
+  // Enterprise Hub
+  const EH_SETUP = 1149;
+  const EH_MONTHLY = 33;
+  const ehManagedSvc = EH_SETUP * msRate;
+
+  // Adjusted totals (sites + EH)
+  const totalBillableMsSvc = sitePackages.reduce((sum, sp) => {
+    return sum + sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type))
+      .reduce((s, c) => s + c.network_setup_fee * msRate, 0);
+  }, 0);
+  const pocBillableMsSvc = sitePackages.slice(0, Math.min(2, totalSites)).reduce((sum, sp) => {
+    return sum + sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type))
+      .reduce((s, c) => s + c.network_setup_fee * msRate, 0);
+  }, 0);
+  const adjAllSetup      = allTotals.network_setup_fee + EH_SETUP;
+  const adjAllMonthly    = allTotals.network_monthly_fee + EH_MONTHLY;
+  const adjAllManagedSvc = totalBillableMsSvc + ehManagedSvc;
+  const adjContractValue = adjAllSetup + (adjAllMonthly + adjAllManagedSvc) * allTotals.contract_months;
+  const adjPocSetup      = pocSetupFee + EH_SETUP;
+  const adjPocMonthly    = pocTotals.network_monthly_fee + EH_MONTHLY;
+  const adjPocManagedSvc = pocBillableMsSvc + ehManagedSvc;
+
   const today = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
   const refId = `SG-${Date.now().toString(36).toUpperCase().slice(-6)}`;
 
@@ -419,26 +451,28 @@ export default function PdfOfferPage() {
           <section className="sec">
             <h2 className="sec__title">3. StarGrid Solution</h2>
             <p className="sec__text sec__text--sm">
-              Overview of the connectivity configuration across all sites based on survey inputs.
+              Overview of the recommended connectivity configuration based on survey inputs.
             </p>
-
-            {/* Solution summary table */}
-            <table className="sum-overview" style={{ marginBottom: 18 }}>
+            <table className="sum-overview">
               <tbody>
                 <tr>
-                  <td style={{ fontWeight:600, color:"#444" }}>Number of Sites</td>
+                  <td style={{ fontWeight:600, color:"#444" }}>Sites Configured</td>
                   <td className="ra mono" style={{ fontWeight:700 }}>{totalSites}</td>
                 </tr>
                 <tr className="even">
+                  <td style={{ fontWeight:600, color:"#444" }}>Central Enterprise Hub</td>
+                  <td className="ra" style={{ fontWeight:700, color:"#2ECC71" }}>1 × Large</td>
+                </tr>
+                <tr>
                   <td style={{ fontWeight:600, color:"#444" }}>Cellular Connections</td>
                   <td className="ra mono" style={{ fontWeight:700 }}>{cellularCount || "—"}</td>
                 </tr>
-                <tr>
+                <tr className="even">
                   <td style={{ fontWeight:600, color:"#444" }}>Satellite Connections</td>
                   <td className="ra mono" style={{ fontWeight:700 }}>{satelliteCount || "—"}</td>
                 </tr>
                 {fixedCount > 0 && (
-                  <tr className="even">
+                  <tr>
                     <td style={{ fontWeight:600, color:"#444" }}>Fixed / Other Connections</td>
                     <td className="ra mono" style={{ fontWeight:700 }}>{fixedCount}</td>
                   </tr>
@@ -447,47 +481,12 @@ export default function PdfOfferPage() {
                   <td style={{ fontWeight:600, color:"#444" }}>StarGrid Managed Service</td>
                   <td className="ra" style={{ fontWeight:700, color:"#3D72FC" }}>{serviceTypes}</td>
                 </tr>
+                <tr>
+                  <td style={{ fontWeight:600, color:"#444" }}>Managed Service Tier</td>
+                  <td className="ra" style={{ fontWeight:700, color:"#3D72FC", textTransform:"capitalize" }}>{msServiceTier}</td>
+                </tr>
               </tbody>
             </table>
-
-            {/* Per-site connectivity parameters */}
-            {sitePackages.map((sp, idx) => {
-              const site  = sites[idx] || {};
-              const ans   = site.answers || {};
-              const bwAvg = getDualLabel(ans[5]);
-              const bwPeak = getDualLabel(ans[6]);
-              const siteName = site.name || sp.site_name || `Site ${sp.site_number}`;
-              const params = [
-                { label: "Primary Purpose",        val: getLabel(ans[3]) },
-                { label: "Monthly Data Volume",    val: getLabel(ans[4]) },
-                { label: "Avg Bandwidth — Down",   val: bwAvg.down },
-                { label: "Avg Bandwidth — Up",     val: bwAvg.up },
-                { label: "Peak Bandwidth — Down",  val: bwPeak.down },
-                { label: "Peak Bandwidth — Up",    val: bwPeak.up },
-                { label: "Latency Requirement",    val: getLabel(ans[9]) },
-                { label: "Primary Connection",     val: getLabel(ans[11]) },
-                { label: "Secondary Connection",   val: getLabel(ans[12]) },
-                { label: "Downtime Class",         val: getLabel(ans[7]) },
-              ];
-              return (
-                <div key={idx} className="param-block">
-                  <div className="param-block__hdr">
-                    <span className="badge">Site {sp.site_number}</span>
-                    <span className="param-block__name">{siteName}</span>
-                  </div>
-                  <table className="param-tbl">
-                    <tbody>
-                      {params.map((p, pi) => (
-                        <tr key={pi} className={pi % 2 === 0 ? "even" : ""}>
-                          <td className="param-tbl__lbl">{p.label}</td>
-                          <td className="param-tbl__val">{p.val}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })}
           </section>
 
           {/* ── 4. Offering — PoC | Full Deployment ─────────────────────── */}
@@ -510,9 +509,9 @@ export default function PdfOfferPage() {
                   <table className="sum-overview">
                     <thead><tr><th>Line Item</th><th className="ra">Amount</th></tr></thead>
                     <tbody>
-                      <tr><td>Network Setup Fee</td><td className="ra mono"><strong>{formatEuro(pocSetupFee)}</strong></td></tr>
-                      <tr className="even"><td>Monthly Connectivity</td><td className="ra mono"><strong>{formatEuro(pocTotals.network_monthly_fee)}</strong></td></tr>
-                      <tr><td>Monthly Managed Service</td><td className="ra mono"><strong>{formatEuro(pocTotals.managed_service_monthly)}</strong></td></tr>
+                      <tr><td>Network Setup Fee</td><td className="ra mono"><strong>{formatEuro(adjPocSetup)}</strong></td></tr>
+                      <tr className="even"><td>Monthly Connectivity</td><td className="ra mono"><strong>{formatEuro(adjPocMonthly)}</strong></td></tr>
+                      <tr><td>Monthly Managed Service</td><td className="ra mono"><strong>{formatEuro(adjPocManagedSvc)}</strong></td></tr>
                     </tbody>
                   </table>
                   <p className="poc-note">
@@ -534,12 +533,12 @@ export default function PdfOfferPage() {
                   <table className="sum-overview">
                     <thead><tr><th>Line Item</th><th className="ra">Amount</th></tr></thead>
                     <tbody>
-                      <tr><td>Total Network Setup Fee</td><td className="ra mono"><strong>{formatEuro(allTotals.network_setup_fee)}</strong></td></tr>
-                      <tr className="even"><td>Total Monthly Connectivity</td><td className="ra mono"><strong>{formatEuro(allTotals.network_monthly_fee)}</strong></td></tr>
-                      <tr><td>Total Monthly Managed Service</td><td className="ra mono"><strong>{formatEuro(allTotals.managed_service_monthly)}</strong></td></tr>
+                      <tr><td>Total Network Setup Fee</td><td className="ra mono"><strong>{formatEuro(adjAllSetup)}</strong></td></tr>
+                      <tr className="even"><td>Total Monthly Connectivity</td><td className="ra mono"><strong>{formatEuro(adjAllMonthly)}</strong></td></tr>
+                      <tr><td>Total Monthly Managed Service</td><td className="ra mono"><strong>{formatEuro(adjAllManagedSvc)}</strong></td></tr>
                       <tr className="cv-row">
                         <td><strong>Total Contract Value</strong><small className="cv-sub"> / {allTotals.contract_months} months</small></td>
-                        <td className="ra mono cv-val"><strong>{formatEuro(allTotals.contract_value)}</strong></td>
+                        <td className="ra mono cv-val"><strong>{formatEuro(adjContractValue)}</strong></td>
                       </tr>
                     </tbody>
                   </table>
@@ -569,7 +568,15 @@ export default function PdfOfferPage() {
                 <li>Contract duration as stated above; early termination fees may apply per the StarGrid Standard Agreement.</li>
                 <li>Hardware remains StarGrid property until full setup fee is received.</li>
                 <li>SLA credits apply as defined in the StarGrid Standard Agreement, Section 4.</li>
+                <li>All commercial data are valid upon personal approval by StarGrid.</li>
               </ul>
+              <div className="gdpr-note">
+                <strong>Data &amp; Privacy Disclaimer —</strong> We process personal data in accordance with the General Data
+                Protection Regulation (GDPR). All data is collected and used solely for legitimate purposes, kept secure,
+                and retained only as long as necessary. While we take appropriate measures to ensure data accuracy and
+                protection, we cannot guarantee absolute security. Individuals have the right to access, rectify, or erase
+                their personal data, as well as other rights as provided under GDPR.
+              </div>
             </div>
           </section>
 
@@ -591,11 +598,49 @@ export default function PdfOfferPage() {
               Full overview of financial details per site — setup costs, monthly network fees, and StarGrid Managed Service fee.
             </p>
 
+            {/* Enterprise Hub — central node */}
+            <div className="site site--hub">
+              <div className="site__hdr site__hdr--hub">
+                <span className="badge badge--hub">Central Hub</span>
+                <div className="site__info">
+                  <span className="site__name">Enterprise Hub</span>
+                  <span className="site__type">Central connectivity node — all {totalSites} site{totalSites !== 1 ? "s" : ""} connected</span>
+                </div>
+              </div>
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>Component</th><th>Hardware</th><th>Airtime Plan</th>
+                    <th className="ra">Setup Fee</th><th className="ra">Monthly Fee</th><th className="ra">Managed Svc</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span className="dot" style={{ background:"#2ECC71" }} />Enterprise Hub</td>
+                    <td>Large</td>
+                    <td>—</td>
+                    <td className="ra mono">{formatEuro(EH_SETUP)}</td>
+                    <td className="ra mono">{formatEuro(EH_MONTHLY)}</td>
+                    <td className="ra mono">{formatEuro(ehManagedSvc)}</td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr className="tfoot-row tfoot-row--hub">
+                    <td colSpan={3}><strong>Enterprise Hub Total</strong></td>
+                    <td className="ra mono"><strong>{formatEuro(EH_SETUP)}</strong></td>
+                    <td className="ra mono"><strong>{formatEuro(EH_MONTHLY)}</strong></td>
+                    <td className="ra mono"><strong>{formatEuro(ehManagedSvc)}</strong></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
             {sitePackages.map((sp, idx) => {
               const { site_name, site_number, package: pkg } = sp;
               const site     = sites[idx] || {};
               const siteType = site?.answers?.[22]?.label || "Fixed Site";
               const siteName = site?.name || site_name;
+              const siteMsSvc = pkg.components.reduce((s, c) => s + compMsSvc(c), 0);
               return (
                 <div key={sp.site_id || idx} className="site">
                   <div className="site__hdr">
@@ -621,7 +666,7 @@ export default function PdfOfferPage() {
                           <td>{c.airtime}</td>
                           <td className="ra mono">{formatEuro(c.network_setup_fee)}</td>
                           <td className="ra mono">{formatEuro(c.network_monthly_fee)}</td>
-                          <td className="ra mono">{formatEuro(c.managed_service_monthly)}</td>
+                          <td className="ra mono">{formatEuro(compMsSvc(c))}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -630,7 +675,7 @@ export default function PdfOfferPage() {
                         <td colSpan={3}><strong>Site {site_number} Subtotal</strong></td>
                         <td className="ra mono"><strong>{formatEuro(pkg.totals.network_setup_fee)}</strong></td>
                         <td className="ra mono"><strong>{formatEuro(pkg.totals.network_monthly_fee)}</strong></td>
-                        <td className="ra mono"><strong>{formatEuro(pkg.totals.managed_service_monthly)}</strong></td>
+                        <td className="ra mono"><strong>{formatEuro(siteMsSvc)}</strong></td>
                       </tr>
                     </tfoot>
                   </table>
@@ -641,7 +686,7 @@ export default function PdfOfferPage() {
             {/* All-sites total banner */}
             <div className="total-banner">
               <span>Total Contract Value ({allTotals.contract_months} months)</span>
-              <span className="total-banner__val">{formatEuro(allTotals.contract_value)}</span>
+              <span className="total-banner__val">{formatEuro(adjContractValue)}</span>
             </div>
           </section>
 
@@ -808,7 +853,11 @@ export default function PdfOfferPage() {
 
         /* ── Site offer table ────────────────────────── */
         .site { margin-bottom:24px; border:1px solid #e4e6ec; border-radius:12px; overflow:hidden; page-break-inside:avoid; }
+        .site--hub { border-color:#a7f3c0; margin-bottom:28px; }
         .site__hdr { display:flex; align-items:center; gap:16px; padding:14px 20px; background:#f7f8fc; border-bottom:1px solid #e4e6ec; }
+        .site__hdr--hub { background:#f0fdf5; border-bottom-color:#a7f3c0; }
+        .badge--hub { background:linear-gradient(135deg,#2ECC71,#1aad5e); }
+        .tfoot-row--hub td { background:#f0fdf5; border-top-color:#2ECC71 !important; }
         .site__info { display:flex; flex-direction:column; gap:2px; }
         .site__name { font-size:15px; font-weight:700; color:#12132a; }
         .site__type { font-size:11px; color:#777; }
@@ -872,8 +921,13 @@ export default function PdfOfferPage() {
 
         /* ── Terms ───────────────────────────────────── */
         .terms { background:#fafbfd; border:1px solid #eef0f4; border-radius:10px; padding:16px 20px; }
-        .terms ul { margin:0; padding:0 0 0 18px; }
+        .terms ul { margin:0 0 14px; padding:0 0 0 18px; }
         .terms li { font-size:12px; color:#666; line-height:1.8; }
+        .gdpr-note {
+          margin-top:0; padding:12px 16px;
+          background:#fff8f0; border:1px solid #fde8c8; border-left:3px solid #f59e0b;
+          border-radius:0 8px 8px 0; font-size:11.5px; color:#78350f; line-height:1.7;
+        }
 
         /* ── Footer ──────────────────────────────────── */
         .ftr { display:flex; justify-content:space-between; padding-top:8px; font-size:11px; color:#bbb; }
@@ -896,12 +950,68 @@ export default function PdfOfferPage() {
           .sum-grid { grid-template-columns:1fr; }
         }
 
+        /* ── DocHeader / DocFooter wrapper strips (removes extra margin) ── */
+        .doc-header-wrap { margin:0; }
+        .doc-footer-wrap { margin:0; }
+        .footer-tier { font-weight:700; color:#3D72FC; }
+
+        /* ── Annex page break ────────────────────────── */
+        .annex-break {
+          height:0; margin:40px 0 0;
+          border-top:3px dashed #c7d4fd;
+          position:relative;
+        }
+        .annex-break::after {
+          content:"— Annex begins on next page —";
+          position:absolute; top:-11px; left:50%; transform:translateX(-50%);
+          background:#fff; padding:0 14px;
+          font-size:10px; font-weight:600; color:#aab; letter-spacing:0.8px; text-transform:uppercase;
+        }
+
+        /* ── Offering two-column layout ──────────────── */
+        .offering-cols {
+          display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:16px;
+        }
+        .offering-col { display:flex; flex-direction:column; }
+        .offering-col__label {
+          font-size:13px; font-weight:700; color:#12132a; margin:0 0 8px;
+        }
+        .deploy-box {
+          border:2px solid #22c55e; border-radius:12px;
+          padding:20px 24px; background:#f6fff9; flex:1;
+        }
+        .deploy-badge {
+          display:inline-flex; padding:4px 14px; margin-bottom:14px;
+          background:linear-gradient(135deg,#16a34a,#22c55e); color:#fff;
+          border-radius:20px; font-size:11px; font-weight:700;
+        }
+
+        /* ── Bill of Materials ───────────────────────── */
+        .bom-group { margin-bottom:24px; }
+        .bom-group__hdr {
+          display:flex; align-items:center; gap:10px;
+          font-size:13px; font-weight:700; color:#12132a;
+          margin-bottom:10px; padding-bottom:6px;
+          border-bottom:1px solid #e4e6ec;
+        }
+        .bom-dot {
+          display:inline-block; width:10px; height:10px;
+          border-radius:50%; flex-shrink:0;
+        }
+        .bom-tbl th { font-size:10px; }
+        .bom-tbl td { font-size:11.5px; }
+
         /* ── Print ───────────────────────────────────── */
         @media print {
           .pp__bar { display:none !important; }
           .pp { background:#fff !important; }
           .pp__paper-wrap { padding:0 !important; }
           .paper { box-shadow:none !important; border:none !important; width:100% !important; max-width:100% !important; padding:20px !important; }
+          .annex-break { border-top:1px solid #ddd; }
+          .annex-break::after { display:none; }
+        }
+        @media(max-width:700px) {
+          .offering-cols { grid-template-columns:1fr; }
         }
       `}</style>
     </div>
