@@ -216,8 +216,8 @@ export default function LandingHero() {
           background: rgba(61,114,252,0.1);
           border: 1px solid rgba(61,114,252,0.28);
           border-radius: 100px;
-          font-size: 12.5px;
-          font-weight: 600;
+          font-size: 18.5px;
+          font-weight: 900;
           color: rgba(255,255,255,0.7);
           margin-bottom: 26px;
           letter-spacing: 0.15px;

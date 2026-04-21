@@ -21,7 +21,7 @@ function DocHeader({ today, refId }) {
     <div className="doc-header-wrap">
       <header className="hdr">
         <div className="hdr__logo">
-          <Image src="/assets/images/icon/icon.png" alt="StarGrid" width={38} height={38} />
+          <Image src="/assets/images/icon/icon.png" alt="StarGrid" width={34} height={34} />
           <div>
             <div className="hdr__brand">STARGRID</div>
             <div className="hdr__tagline">Industrial Connectivity Solutions</div>
@@ -40,7 +40,7 @@ function DocHeader({ today, refId }) {
 function DocFooter({ today, refId, right }) {
   return (
     <div className="doc-footer-wrap">
-      <div className="rule rule--gradient" style={{ marginTop: 28 }} />
+      <div className="rule rule--gradient" style={{ marginTop: 20 }} />
       <footer className="ftr">
         <div className="ftr__left">
           <strong>StarGrid Europe BV</strong>
@@ -96,11 +96,10 @@ export default function PdfOfferPage() {
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated]   = useState(false);
   const [sending, setSending]       = useState(false);
-  const [sendStatus, setSendStatus] = useState(null); // null | 'ok' | 'err'
+  const [sendStatus, setSendStatus] = useState(null);
   const offerRef = useRef(null);
 
   useEffect(() => {
-    // Read localStorage values client-side
     const storedContact  = JSON.parse(localStorage.getItem("questionnaire_contact") || "{}");
     const storedOperator = JSON.parse(localStorage.getItem("isNetworkOperator") || "false");
     const storedTier     = localStorage.getItem("msServiceTier") || "care";
@@ -124,7 +123,6 @@ export default function PdfOfferPage() {
     fetchData();
   }, []);
 
-  // ── PDF download — JPEG + scale 1 keeps file under 1 MB ──
   const handleDownload = async () => {
     setGenerating(true);
     try {
@@ -135,7 +133,7 @@ export default function PdfOfferPage() {
 
       const canvas = await html2canvas(el, {
         backgroundColor: "#ffffff",
-        scale: 1.5,            // was 2 — halving pixel count ~56% smaller
+        scale: 1.5,
         useCORS: true,
         logging: false,
         windowWidth: 860,
@@ -166,7 +164,6 @@ export default function PdfOfferPage() {
         ctx.fillRect(0, 0, pc.width, pc.height);
         ctx.drawImage(canvas, 0, srcY, canvas.width, actualSrcH, 0, 0, canvas.width, actualSrcH);
 
-        // JPEG at 0.78 quality — ~6× smaller than PNG at scale 2
         const pageImg = pc.toDataURL("image/jpeg", 0.78);
         pdf.addImage(pageImg, "JPEG", margin, margin, contentW, actualDestH);
         pdf.setFontSize(8);
@@ -185,7 +182,6 @@ export default function PdfOfferPage() {
     }
   };
 
-  // ── Send via email ─────────────────────────────────────────────────────
   const handleSendEmail = async () => {
     setSending(true);
     setSendStatus(null);
@@ -236,7 +232,6 @@ export default function PdfOfferPage() {
         pdf.text("StarGrid — Confidential", margin, pageH - 5);
       }
 
-      // Convert to base64 for email attachment
       const pdfBase64 = pdf.output("datauristring").split(",")[1];
 
       const contractValue = data?.allTotals
@@ -274,7 +269,6 @@ export default function PdfOfferPage() {
     }
   };
 
-  // ── Loading / empty states ─────────────────────────────────────────────
   if (loading) return (
     <div style={centerStyle}>
       <div style={spinnerStyle} />
@@ -295,7 +289,6 @@ export default function PdfOfferPage() {
   const pocSetupFee = isOperator ? 11500 : 2900;
   const pocLabel    = isOperator ? "Network Operator PoC" : "Enterprise PoC";
 
-  // Managed service tier
   const MS_TIERS = [
     { min: 1000, assist: 0.03, care: 0.10 },
     { min: 500,  assist: 0.04, care: 0.12 },
@@ -310,12 +303,10 @@ export default function PdfOfferPage() {
   })();
   const compMsSvc = (c) => /router|stargrid\s*box/i.test(c.type) ? c.network_setup_fee * msRate : c.managed_service_monthly;
 
-  // Enterprise Hub
   const EH_SETUP = 1149;
   const EH_MONTHLY = 33;
   const ehManagedSvc = EH_SETUP * msRate;
 
-  // Adjusted totals (sites + EH)
   const totalBillableMsSvc = sitePackages.reduce((sum, sp) => {
     return sum + sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type))
       .reduce((s, c) => s + c.network_setup_fee * msRate, 0);
@@ -328,14 +319,13 @@ export default function PdfOfferPage() {
   const adjAllMonthly    = allTotals.network_monthly_fee + EH_MONTHLY;
   const adjAllManagedSvc = totalBillableMsSvc + ehManagedSvc;
   const adjContractValue = adjAllSetup + (adjAllMonthly + adjAllManagedSvc) * allTotals.contract_months;
-  const adjPocSetup      = pocSetupFee ;
+  const adjPocSetup      = pocSetupFee;
   const adjPocMonthly    = 0;
   const adjPocManagedSvc = 0;
 
   const today = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
   const refId = `SG-${Date.now().toString(36).toUpperCase().slice(-6)}`;
 
-  // ── Aggregate metrics for Section 3 summary ────────────────────────────
   let cellularCount = 0, satelliteCount = 0, fixedCount = 0;
   sitePackages.forEach((sp, idx) => {
     const site = sites[idx] || {};
@@ -349,7 +339,6 @@ export default function PdfOfferPage() {
   });
   const serviceTypes = [...new Set(sitePackages.map(sp => sp.package.servicesLabel).filter(Boolean))].join(" / ") || "—";
 
-  // ── Bill of Materials — categorise all components ──────────────────────
   const bom = { cellular: [], satellite: [], boxes: [], managed: [] };
   sitePackages.forEach((sp) => {
     sp.package.components.forEach(c => {
@@ -374,7 +363,6 @@ export default function PdfOfferPage() {
     }
   });
 
-  // ── Render ──────────────────────────────────────────────────────────────
   return (
     <div className="pp">
       {/* Sticky toolbar */}
@@ -428,71 +416,79 @@ export default function PdfOfferPage() {
             </div>
           </section>
 
-          {/* ── 2. Client Use Case ──────────────────────────────────────── */}
-          {contact.additionalNotes && (
-            <section className="sec">
-              <h2 className="sec__title">2. Client Use Case</h2>
-              {contact.fullName && (
-                <div className="contact-row">
-                  <span><strong>Contact:</strong> {contact.fullName}</span>
-                  {contact.jobTitle && <span> · {contact.jobTitle}</span>}
-                  {contact.email   && <span> · {contact.email}</span>}
-                  {contact.phone   && <span> · {contact.phone}</span>}
-                </div>
-              )}
-              <blockquote className="use-case">
-                <span className="use-case__icon">"</span>
-                <p>{contact.additionalNotes}</p>
-              </blockquote>
-            </section>
-          )}
+          {/* ── 2 & 3. Client Use Case + StarGrid Solution — side by side ── */}
+          <div className="two-col-sections">
 
-          {/* ── 3. StarGrid Solution ────────────────────────────────────── */}
-          <section className="sec">
-            <h2 className="sec__title">3. StarGrid Solution</h2>
-            <p className="sec__text sec__text--sm">
-              Overview of the recommended connectivity configuration based on survey inputs.
-            </p>
-            <table className="sum-overview">
-              <tbody>
-                <tr>
-                  <td style={{ fontWeight:600, color:"#444" }}>Sites Configured</td>
-                  <td className="ra mono" style={{ fontWeight:700 }}>{totalSites}</td>
-                </tr>
-                <tr className="even">
-                  <td style={{ fontWeight:600, color:"#444" }}>Central Enterprise Hub</td>
-                  <td className="ra" style={{ fontWeight:700, color:"#2ECC71" }}>1 × Large</td>
-                </tr>
-                <tr>
-                  <td style={{ fontWeight:600, color:"#444" }}>Cellular Connections</td>
-                  <td className="ra mono" style={{ fontWeight:700 }}>{cellularCount || "—"}</td>
-                </tr>
-                <tr className="even">
-                  <td style={{ fontWeight:600, color:"#444" }}>Satellite Connections</td>
-                  <td className="ra mono" style={{ fontWeight:700 }}>{satelliteCount || "—"}</td>
-                </tr>
-                {fixedCount > 0 && (
-                  <tr>
-                    <td style={{ fontWeight:600, color:"#444" }}>Fixed / Other Connections</td>
-                    <td className="ra mono" style={{ fontWeight:700 }}>{fixedCount}</td>
-                  </tr>
+            {/* Left — Client Use Case (only shown if there are notes) */}
+            {contact.additionalNotes ? (
+              <section className="sec sec--col">
+                <h2 className="sec__title">2. Client Use Case</h2>
+                {contact.fullName && (
+                  <div className="contact-row">
+                    <span><strong>{contact.fullName}</strong></span>
+                    {contact.jobTitle && <span> · {contact.jobTitle}</span>}
+                    {contact.email   && <><br /><span>{contact.email}</span></>}
+                    {contact.phone   && <span> · {contact.phone}</span>}
+                  </div>
                 )}
-                <tr className="even">
-                  <td style={{ fontWeight:600, color:"#444" }}>StarGrid Managed Service</td>
-                  <td className="ra" style={{ fontWeight:700, color:"#3D72FC" }}>{serviceTypes}</td>
-                </tr>
-                <tr>
-                  <td style={{ fontWeight:600, color:"#444" }}>Managed Service Tier</td>
-                  <td className="ra" style={{ fontWeight:700, color:"#3D72FC", textTransform:"capitalize" }}>{msServiceTier}</td>
-                </tr>
-              </tbody>
-            </table>
-          </section>
+                <blockquote className="use-case">
+                  <span className="use-case__icon">"</span>
+                  <p>{contact.additionalNotes}</p>
+                </blockquote>
+              </section>
+            ) : (
+              /* Placeholder column if no use case, keeps grid balanced */
+              <div className="sec sec--col" />
+            )}
+
+            {/* Right — StarGrid Solution */}
+            <section className="sec sec--col">
+              <h2 className="sec__title">{contact.additionalNotes ? "3." : "2."} StarGrid Solution</h2>
+              <p className="sec__text sec__text--sm" style={{ marginBottom: 8 }}>
+                Overview of the recommended connectivity configuration.
+              </p>
+              <table className="sum-overview">
+                <tbody>
+                  <tr>
+                    <td style={{ fontWeight:600, color:"#444" }}>Sites Configured</td>
+                    <td className="ra mono" style={{ fontWeight:700 }}>{totalSites}</td>
+                  </tr>
+                  <tr className="even">
+                    <td style={{ fontWeight:600, color:"#444" }}>Central Enterprise Hub</td>
+                    <td className="ra" style={{ fontWeight:700, color:"#2ECC71" }}>1 × Large</td>
+                  </tr>
+                  <tr>
+                    <td style={{ fontWeight:600, color:"#444" }}>Cellular Connections</td>
+                    <td className="ra mono" style={{ fontWeight:700 }}>{cellularCount || "—"}</td>
+                  </tr>
+                  <tr className="even">
+                    <td style={{ fontWeight:600, color:"#444" }}>Satellite Connections</td>
+                    <td className="ra mono" style={{ fontWeight:700 }}>{satelliteCount || "—"}</td>
+                  </tr>
+                  {fixedCount > 0 && (
+                    <tr>
+                      <td style={{ fontWeight:600, color:"#444" }}>Fixed / Other</td>
+                      <td className="ra mono" style={{ fontWeight:700 }}>{fixedCount}</td>
+                    </tr>
+                  )}
+                  <tr className={fixedCount > 0 ? "even" : ""}>
+                    <td style={{ fontWeight:600, color:"#444" }}>Managed Service</td>
+                    <td className="ra" style={{ fontWeight:700, color:"#3D72FC" }}>{serviceTypes}</td>
+                  </tr>
+                  <tr className={fixedCount > 0 ? "" : "even"}>
+                    <td style={{ fontWeight:600, color:"#444" }}>Service Tier</td>
+                    <td className="ra" style={{ fontWeight:700, color:"#3D72FC", textTransform:"capitalize" }}>{msServiceTier}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+          </div>{/* /two-col-sections */}
 
           {/* ── 4. Offering — PoC | Full Deployment ─────────────────────── */}
           <section className="sec">
-            <h2 className="sec__title">4. Offering</h2>
-            <p className="sec__text sec__text--sm">
+            <h2 className="sec__title">{contact.additionalNotes ? "4." : "3."} Offering</h2>
+            <p className="sec__text sec__text--sm" style={{ marginBottom: 10 }}>
               Two engagement paths are available: a scoped Proof of Concept and a full multi-site deployment.
             </p>
             <div className="offering-cols">
@@ -502,7 +498,7 @@ export default function PdfOfferPage() {
                 <div className="poc-box">
                   <div className="poc-box__badge">{pocLabel}</div>
                   <p className="offering-col__label">Proof of Concept</p>
-                  <p className="sec__text sec__text--sm" style={{ margin:"0 0 12px" }}>
+                  <p className="sec__text sec__text--sm" style={{ margin:"0 0 10px" }}>
                     Covers the first {Math.min(2, totalSites)} site{Math.min(2, totalSites) !== 1 ? "s" : ""} at
                     fixed pricing to validate performance before full rollout.
                   </p>
@@ -527,7 +523,7 @@ export default function PdfOfferPage() {
                 <div className="deploy-box">
                   <div className="poc-box__badge deploy-badge">Full Deployment</div>
                   <p className="offering-col__label">All {totalSites} Site{totalSites !== 1 ? "s" : ""}</p>
-                  <p className="sec__text sec__text--sm" style={{ margin:"0 0 12px" }}>
+                  <p className="sec__text sec__text--sm" style={{ margin:"0 0 10px" }}>
                     Complete rollout across all configured sites with full managed service coverage.
                   </p>
                   <table className="sum-overview">
@@ -553,8 +549,8 @@ export default function PdfOfferPage() {
 
           {/* ── 5. Terms & Conditions ───────────────────────────────────── */}
           <section className="sec">
-            <h2 className="sec__title">5. Terms &amp; Conditions</h2>
-            <p className="sec__text sec__text--sm">
+            <h2 className="sec__title">{contact.additionalNotes ? "5." : "4."} Terms &amp; Conditions</h2>
+            <p className="sec__text sec__text--sm" style={{ marginBottom: 8 }}>
               This proposal is governed by the <strong>StarGrid Standard Agreement</strong> (available at{" "}
               <span className="link-ref">www.stargrid.one/legal</span>). Key terms:
             </p>
@@ -598,7 +594,6 @@ export default function PdfOfferPage() {
               Full overview of financial details per site — setup costs, monthly network fees, and StarGrid Managed Service fee.
             </p>
 
-            {/* Enterprise Hub — central node */}
             <div className="site site--hub">
               <div className="site__hdr site__hdr--hub">
                 <span className="badge badge--hub">Central Hub</span>
@@ -683,7 +678,6 @@ export default function PdfOfferPage() {
               );
             })}
 
-            {/* All-sites total banner */}
             <div className="total-banner">
               <span>Total Contract Value ({allTotals.contract_months} months)</span>
               <span className="total-banner__val">{formatEuro(adjContractValue)}</span>
@@ -695,7 +689,6 @@ export default function PdfOfferPage() {
             <h2 className="sec__title">2. Bill of Materials</h2>
             <p className="sec__text sec__text--sm">Full list of components purchased across all sites.</p>
 
-            {/* Cellular Components */}
             <div className="bom-group">
               <div className="bom-group__hdr">
                 <span className="bom-dot" style={{ background:"#3D72FC" }} />
@@ -704,7 +697,6 @@ export default function PdfOfferPage() {
               <BomTable rows={bom.cellular} emptyMsg="No cellular components in this configuration." />
             </div>
 
-            {/* Satellite Components */}
             <div className="bom-group">
               <div className="bom-group__hdr">
                 <span className="bom-dot" style={{ background:"#5CB0E9" }} />
@@ -713,7 +705,6 @@ export default function PdfOfferPage() {
               <BomTable rows={bom.satellite} emptyMsg="No satellite components in this configuration." />
             </div>
 
-            {/* StarGrid Boxes / Other */}
             {bom.boxes.length > 0 && (
               <div className="bom-group">
                 <div className="bom-group__hdr">
@@ -724,7 +715,6 @@ export default function PdfOfferPage() {
               </div>
             )}
 
-            {/* Managed Services */}
             {bom.managed.length > 0 && (
               <div className="bom-group">
                 <div className="bom-group__hdr">
@@ -785,128 +775,131 @@ export default function PdfOfferPage() {
         .paper {
           width:860px; max-width:100%; background:#ffffff;
           border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.08),0 8px 40px rgba(0,0,0,0.06);
-          padding:52px 60px;
+          padding:44px 56px;
           font-family:'Segoe UI',-apple-system,Arial,Helvetica,sans-serif;
-          color:#1e1e2e; font-size:13px; line-height:1.55;
+          color:#1e1e2e; font-size:13px; line-height:1.5;
         }
 
         /* ── Header ─────────────────────────────────── */
         .hdr { display:flex; justify-content:space-between; align-items:center; }
-        .hdr__logo { display:flex; align-items:center; gap:14px; }
-        .hdr__brand { font-size:22px; font-weight:800; letter-spacing:1.5px; color:#12132a; }
-        .hdr__tagline { font-size:11px; color:#999; letter-spacing:0.4px; margin-top:1px; }
+        .hdr__logo { display:flex; align-items:center; gap:12px; }
+        .hdr__brand { font-size:20px; font-weight:800; letter-spacing:1.5px; color:#12132a; }
+        .hdr__tagline { font-size:10.5px; color:#999; letter-spacing:0.4px; margin-top:1px; }
         .hdr__meta { text-align:right; }
         .hdr__date { font-size:13px; font-weight:600; color:#333; }
         .hdr__ref  { font-size:11px; color:#bbb; margin-top:3px; }
 
-        .rule { height:1px; background:#e0e0e0; margin:20px 0; }
+        .rule { height:1px; background:#e0e0e0; margin:16px 0; }
         .rule--gradient { height:3px; background:linear-gradient(90deg,#3D72FC,#5CB0E9,#6669D8); border-radius:2px; }
 
-        .doc-title { font-size:26px; font-weight:700; color:#12132a; margin:22px 0 6px; }
-        .doc-sub   { font-size:14px; color:#777; margin:0 0 8px; }
+        .doc-title { font-size:24px; font-weight:700; color:#12132a; margin:16px 0 4px; }
+        .doc-sub   { font-size:13px; color:#777; margin:0 0 4px; }
 
         /* ── Section container ───────────────────────── */
-        .sec { margin-top:32px; }
+        .sec { margin-top:22px; }
         .sec__title {
-          font-size:16px; font-weight:700; color:#12132a;
-          margin:0 0 12px; padding-bottom:8px;
+          font-size:15px; font-weight:700; color:#12132a;
+          margin:0 0 10px; padding-bottom:6px;
           border-bottom:2px solid #3D72FC;
           display:flex; align-items:center; gap:8px;
         }
-        .sec__text { font-size:13px; color:#555; line-height:1.7; margin:0 0 12px; }
+        .sec__text { font-size:13px; color:#555; line-height:1.65; margin:0 0 10px; }
         .sec__text--sm { font-size:12px; color:#777; }
 
+        /* ── Two-column layout for sections 2 & 3 ───── */
+        .two-col-sections {
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:20px;
+          margin-top:0;
+          align-items:start;
+        }
+        .sec--col { margin-top:22px; }
+
         /* ── Intro pills ─────────────────────────────── */
-        .intro-pills { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+        .intro-pills { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
         .pill {
-          padding:4px 12px; border-radius:20px;
+          padding:3px 11px; border-radius:20px;
           background:#eef2ff; border:1px solid #c7d4fd;
-          font-size:11.5px; font-weight:600; color:#3D72FC;
+          font-size:11px; font-weight:600; color:#3D72FC;
         }
 
         /* ── Contact row ─────────────────────────────── */
-        .contact-row { font-size:12px; color:#888; margin-bottom:10px; }
+        .contact-row { font-size:11.5px; color:#888; margin-bottom:8px; line-height:1.6; }
 
         /* ── Use case blockquote ─────────────────────── */
         .use-case {
-          position:relative; margin:12px 0 0; padding:16px 20px 16px 48px;
+          position:relative; margin:8px 0 0; padding:12px 16px 12px 40px;
           background:#f8f9ff; border:1px solid #dce4fd; border-left:4px solid #3D72FC;
           border-radius:0 10px 10px 0;
         }
         .use-case__icon {
-          position:absolute; left:14px; top:10px;
-          font-size:32px; color:#c7d4fd; font-family:Georgia,serif; line-height:1;
+          position:absolute; left:12px; top:8px;
+          font-size:28px; color:#c7d4fd; font-family:Georgia,serif; line-height:1;
         }
-        .use-case p { margin:0; font-size:13px; color:#444; line-height:1.75; font-style:italic; }
+        .use-case p { margin:0; font-size:12px; color:#444; line-height:1.7; font-style:italic; }
 
         /* ── Connectivity parameter table ────────────── */
-        .param-block { margin-bottom:20px; border:1px solid #e4e6ec; border-radius:10px; overflow:hidden; }
+        .param-block { margin-bottom:16px; border:1px solid #e4e6ec; border-radius:10px; overflow:hidden; }
         .param-block__hdr {
           display:flex; align-items:center; gap:12px;
-          padding:10px 16px; background:#f7f8fc; border-bottom:1px solid #e4e6ec;
+          padding:8px 14px; background:#f7f8fc; border-bottom:1px solid #e4e6ec;
         }
-        .param-block__name { font-size:13px; font-weight:600; color:#333; }
+        .param-block__name { font-size:12px; font-weight:600; color:#333; }
         .param-tbl { width:100%; border-collapse:collapse; }
         .param-tbl tr.even { background:#fafbfd; }
-        .param-tbl__lbl { padding:8px 16px; font-size:12px; color:#777; width:46%; }
-        .param-tbl__val { padding:8px 16px; font-size:12px; font-weight:600; color:#333; }
+        .param-tbl__lbl { padding:7px 14px; font-size:11.5px; color:#777; width:46%; }
+        .param-tbl__val { padding:7px 14px; font-size:11.5px; font-weight:600; color:#333; }
 
         /* ── Site offer table ────────────────────────── */
-        .site { margin-bottom:24px; border:1px solid #e4e6ec; border-radius:12px; overflow:hidden; page-break-inside:avoid; }
-        .site--hub { border-color:#a7f3c0; margin-bottom:28px; }
-        .site__hdr { display:flex; align-items:center; gap:16px; padding:14px 20px; background:#f7f8fc; border-bottom:1px solid #e4e6ec; }
+        .site { margin-bottom:20px; border:1px solid #e4e6ec; border-radius:12px; overflow:hidden; page-break-inside:avoid; }
+        .site--hub { border-color:#a7f3c0; margin-bottom:24px; }
+        .site__hdr { display:flex; align-items:center; gap:14px; padding:12px 18px; background:#f7f8fc; border-bottom:1px solid #e4e6ec; }
         .site__hdr--hub { background:#f0fdf5; border-bottom-color:#a7f3c0; }
         .badge--hub { background:linear-gradient(135deg,#2ECC71,#1aad5e); }
         .tfoot-row--hub td { background:#f0fdf5; border-top-color:#2ECC71 !important; }
         .site__info { display:flex; flex-direction:column; gap:2px; }
-        .site__name { font-size:15px; font-weight:700; color:#12132a; }
+        .site__name { font-size:14px; font-weight:700; color:#12132a; }
         .site__type { font-size:11px; color:#777; }
         .site__loc  { font-size:10px; color:#aaa; }
 
         .tbl { width:100%; border-collapse:collapse; }
-        .tbl th { padding:10px 14px; text-align:left; font-size:10px; font-weight:700; color:#999; text-transform:uppercase; letter-spacing:0.7px; background:#fafbfd; border-bottom:2px solid #eef0f4; }
-        .tbl td { padding:11px 14px; border-bottom:1px solid #f0f1f5; color:#333; font-size:12px; }
+        .tbl th { padding:9px 12px; text-align:left; font-size:10px; font-weight:700; color:#999; text-transform:uppercase; letter-spacing:0.7px; background:#fafbfd; border-bottom:2px solid #eef0f4; }
+        .tbl td { padding:10px 12px; border-bottom:1px solid #f0f1f5; color:#333; font-size:12px; }
         .tfoot-row { background:#eef2ff !important; }
-        .tfoot-row td { border-top:2px solid #3D72FC; border-bottom:none; padding:12px 14px; }
+        .tfoot-row td { border-top:2px solid #3D72FC; border-bottom:none; padding:10px 12px; }
         .ra   { text-align:right; }
         .mono { font-variant-numeric:tabular-nums; }
         .dot  { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; vertical-align:middle; }
 
         /* ── Deployment summary table ────────────────── */
         .sum-overview { width:100%; border-collapse:collapse; border:1px solid #e4e6ec; border-radius:10px; overflow:hidden; }
-        .sum-overview th { padding:10px 16px; background:#f7f8fc; font-size:11px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:0.5px; text-align:left; border-bottom:1px solid #e4e6ec; }
+        .sum-overview th { padding:8px 14px; background:#f7f8fc; font-size:10.5px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:0.5px; text-align:left; border-bottom:1px solid #e4e6ec; }
         .sum-overview th.ra { text-align:right; }
-        .sum-overview td { padding:10px 16px; font-size:13px; color:#444; border-bottom:1px solid #f0f0f0; }
+        .sum-overview td { padding:8px 14px; font-size:12.5px; color:#444; border-bottom:1px solid #f0f0f0; }
         .sum-overview tr.even td { background:#fafbfd; }
         .sum-overview tr:last-child td { border-bottom:none; }
         .cv-row td { border-top:2px solid #3D72FC !important; }
-        .cv-val { font-size:18px !important; color:#3D72FC !important; }
-        .cv-sub { font-size:11px; color:#aaa; font-weight:normal; margin-left:4px; }
-        .discount-note { font-size:11px; color:#888; margin-top:10px; font-style:italic; }
+        .cv-val { font-size:17px !important; color:#3D72FC !important; }
+        .cv-sub { font-size:10px; color:#aaa; font-weight:normal; margin-left:4px; }
+        .discount-note { font-size:11px; color:#888; margin-top:8px; font-style:italic; }
 
         /* ── PoC box ─────────────────────────────────── */
-        .poc-box { border:2px solid #3D72FC; border-radius:12px; padding:20px 24px; background:#f8f9ff; }
+        .poc-box { border:2px solid #3D72FC; border-radius:12px; padding:16px 20px; background:#f8f9ff; }
         .poc-box__badge {
-          display:inline-flex; padding:4px 14px; margin-bottom:14px;
+          display:inline-flex; padding:3px 12px; margin-bottom:10px;
           background:linear-gradient(135deg,#3D72FC,#5CB0E9); color:#fff;
           border-radius:20px; font-size:11px; font-weight:700;
         }
-        .poc-note { margin-top:12px; font-size:11.5px; color:#777; font-style:italic; }
+        .poc-note { margin-top:10px; font-size:11px; color:#777; font-style:italic; }
 
-        /* ── Full customer case ──────────────────────── */
-        .sum-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; margin-bottom:18px; }
-        .sum-box  { border:1px solid #e4e6ec; border-radius:10px; padding:16px 18px; }
-        .sum-box__hdr { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
-        .sum-box__name { font-size:12px; font-weight:600; color:#333; }
-        .sum-tbl { width:100%; border-collapse:collapse; }
-        .sum-tbl td { padding:5px 0; font-size:12px; color:#555; border-bottom:1px solid #f5f5f5; }
-        .sum-tbl tr:last-child td { border-bottom:none; }
+        /* ── Full deployment ─────────────────────────── */
         .total-banner {
           display:flex; justify-content:space-between; align-items:center;
-          padding:14px 20px; background:#12132a; border-radius:10px; color:#fff;
-          font-size:14px; font-weight:600;
+          padding:12px 18px; background:#12132a; border-radius:10px; color:#fff;
+          font-size:13px; font-weight:600;
         }
-        .total-banner__val { font-size:20px; color:#5CB0E9; font-weight:800; }
+        .total-banner__val { font-size:19px; color:#5CB0E9; font-weight:800; }
 
         /* ── Badge ───────────────────────────────────── */
         .badge {
@@ -920,44 +913,45 @@ export default function PdfOfferPage() {
         .link-ref { color:#3D72FC; font-style:normal; }
 
         /* ── Terms ───────────────────────────────────── */
-        .terms { background:#fafbfd; border:1px solid #eef0f4; border-radius:10px; padding:16px 20px; }
-        .terms ul { margin:0 0 14px; padding:0 0 0 18px; }
-        .terms li { font-size:12px; color:#666; line-height:1.8; }
+        .terms { background:#fafbfd; border:1px solid #eef0f4; border-radius:10px; padding:12px 18px; }
+        .terms ul { margin:0 0 10px; padding:0 0 0 16px; }
+        .terms li { font-size:11.5px; color:#666; line-height:1.75; }
         .gdpr-note {
-          margin-top:0; padding:12px 16px;
+          margin-top:0; padding:10px 14px;
           background:#fff8f0; border:1px solid #fde8c8; border-left:3px solid #f59e0b;
-          border-radius:0 8px 8px 0; font-size:11.5px; color:#78350f; line-height:1.7;
+          border-radius:0 8px 8px 0; font-size:11px; color:#78350f; line-height:1.65;
         }
 
         /* ── Footer ──────────────────────────────────── */
-        .ftr { display:flex; justify-content:space-between; padding-top:8px; font-size:11px; color:#bbb; }
+        .ftr { display:flex; justify-content:space-between; padding-top:6px; font-size:10.5px; color:#bbb; }
         .ftr__left  { display:flex; flex-direction:column; gap:2px; }
-        .ftr__left strong { color:#555; font-size:12px; }
+        .ftr__left strong { color:#555; font-size:11.5px; }
         .ftr__right { text-align:right; display:flex; flex-direction:column; gap:2px; }
 
         /* ── Responsive ──────────────────────────────── */
         @media(max-width:920px) {
-          .paper { padding:32px 24px; }
-          .sum-grid { grid-template-columns:1fr 1fr; }
+          .paper { padding:28px 20px; }
           .hdr { flex-direction:column; align-items:flex-start; gap:10px; }
           .hdr__meta { text-align:left; }
           .ftr { flex-direction:column; gap:10px; }
           .ftr__right { text-align:left; }
           .pp__bar { flex-direction:column; gap:10px; align-items:stretch; }
           .pp__bar-r { justify-content:center; flex-wrap:wrap; }
+          .two-col-sections { grid-template-columns:1fr; }
         }
-        @media(max-width:600px) {
-          .sum-grid { grid-template-columns:1fr; }
+        @media(max-width:700px) {
+          .offering-cols { grid-template-columns:1fr; }
+          .two-col-sections { grid-template-columns:1fr; }
         }
 
-        /* ── DocHeader / DocFooter wrapper strips (removes extra margin) ── */
+        /* ── DocHeader / DocFooter wrapper strips ────── */
         .doc-header-wrap { margin:0; }
         .doc-footer-wrap { margin:0; }
         .footer-tier { font-weight:700; color:#3D72FC; }
 
         /* ── Annex page break ────────────────────────── */
         .annex-break {
-          height:0; margin:40px 0 0;
+          height:0; margin:32px 0 0;
           border-top:3px dashed #c7d4fd;
           position:relative;
         }
@@ -970,28 +964,28 @@ export default function PdfOfferPage() {
 
         /* ── Offering two-column layout ──────────────── */
         .offering-cols {
-          display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:16px;
+          display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:0;
         }
         .offering-col { display:flex; flex-direction:column; }
         .offering-col__label {
-          font-size:13px; font-weight:700; color:#12132a; margin:0 0 8px;
+          font-size:13px; font-weight:700; color:#12132a; margin:0 0 6px;
         }
         .deploy-box {
           border:2px solid #22c55e; border-radius:12px;
-          padding:20px 24px; background:#f6fff9; flex:1;
+          padding:16px 20px; background:#f6fff9; flex:1;
         }
         .deploy-badge {
-          display:inline-flex; padding:4px 14px; margin-bottom:14px;
+          display:inline-flex; padding:3px 12px; margin-bottom:10px;
           background:linear-gradient(135deg,#16a34a,#22c55e); color:#fff;
           border-radius:20px; font-size:11px; font-weight:700;
         }
 
         /* ── Bill of Materials ───────────────────────── */
-        .bom-group { margin-bottom:24px; }
+        .bom-group { margin-bottom:20px; }
         .bom-group__hdr {
           display:flex; align-items:center; gap:10px;
-          font-size:13px; font-weight:700; color:#12132a;
-          margin-bottom:10px; padding-bottom:6px;
+          font-size:12.5px; font-weight:700; color:#12132a;
+          margin-bottom:8px; padding-bottom:5px;
           border-bottom:1px solid #e4e6ec;
         }
         .bom-dot {
@@ -1006,12 +1000,54 @@ export default function PdfOfferPage() {
           .pp__bar { display:none !important; }
           .pp { background:#fff !important; }
           .pp__paper-wrap { padding:0 !important; }
-          .paper { box-shadow:none !important; border:none !important; width:100% !important; max-width:100% !important; padding:20px !important; }
-          .annex-break { border-top:1px solid #ddd; }
-          .annex-break::after { display:none; }
-        }
-        @media(max-width:700px) {
-          .offering-cols { grid-template-columns:1fr; }
+          .paper {
+            box-shadow:none !important; border:none !important;
+            width:100% !important; max-width:100% !important;
+            padding:14px 20px !important;
+            font-size:11.5px !important;
+            line-height:1.45 !important;
+          }
+          .doc-title { font-size:20px !important; margin:12px 0 3px !important; }
+          .doc-sub { font-size:11.5px !important; }
+          .sec { margin-top:14px !important; }
+          .sec__title { font-size:12.5px !important; margin-bottom:7px !important; padding-bottom:4px !important; }
+          .sec__text { font-size:11px !important; margin-bottom:7px !important; }
+          .sec__text--sm { font-size:10.5px !important; }
+          .intro-pills { gap:4px !important; margin-top:7px !important; }
+          .pill { font-size:10px !important; padding:2px 9px !important; }
+          .two-col-sections { gap:14px !important; margin-top:0 !important; }
+          .sec--col { margin-top:14px !important; }
+          .use-case { padding:9px 14px 9px 36px !important; }
+          .use-case p { font-size:11px !important; }
+          .contact-row { font-size:10.5px !important; margin-bottom:6px !important; }
+          .sum-overview td { padding:6px 12px !important; font-size:11px !important; }
+          .sum-overview th { padding:6px 12px !important; font-size:9.5px !important; }
+          .offering-cols { gap:14px !important; }
+          .poc-box, .deploy-box { padding:12px 16px !important; }
+          .poc-box__badge, .deploy-badge { padding:2px 10px !important; font-size:10px !important; margin-bottom:7px !important; }
+          .poc-note { font-size:10px !important; }
+          .offering-col__label { font-size:11.5px !important; margin-bottom:4px !important; }
+          .terms { padding:9px 14px !important; }
+          .terms li { font-size:10.5px !important; line-height:1.6 !important; }
+          .terms ul { margin-bottom:7px !important; padding-left:14px !important; }
+          .gdpr-note { font-size:10px !important; padding:8px 12px !important; }
+          .ftr { font-size:9.5px !important; padding-top:4px !important; }
+          .ftr__left strong { font-size:10.5px !important; }
+          .rule--gradient { margin:12px 0 !important; }
+          .annex-break { margin:24px 0 0 !important; border-top:1px solid #ddd !important; }
+          .annex-break::after { display:none !important; }
+          .hdr__brand { font-size:18px !important; }
+          .tbl th { padding:7px 10px !important; font-size:9px !important; }
+          .tbl td { padding:8px 10px !important; font-size:11px !important; }
+          .site { margin-bottom:14px !important; }
+          .site__hdr { padding:9px 14px !important; }
+          .site__name { font-size:12.5px !important; }
+          .site__type { font-size:10px !important; }
+          .total-banner { padding:9px 14px !important; font-size:12px !important; }
+          .total-banner__val { font-size:16px !important; }
+          .cv-val { font-size:15px !important; }
+          .bom-group { margin-bottom:14px !important; }
+          .bom-group__hdr { font-size:11.5px !important; margin-bottom:6px !important; }
         }
       `}</style>
     </div>
