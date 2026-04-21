@@ -292,7 +292,7 @@ export default function PdfOfferPage() {
   );
 
   const { sitePackages, pocTotals, allTotals, totalSites } = data;
-  const pocSetupFee = isOperator ? 10000 : pocTotals.network_setup_fee;
+  const pocSetupFee = isOperator ? 11500 : 2900;
   const pocLabel    = isOperator ? "Network Operator PoC" : "Enterprise PoC";
 
   // Managed service tier
@@ -328,9 +328,9 @@ export default function PdfOfferPage() {
   const adjAllMonthly    = allTotals.network_monthly_fee + EH_MONTHLY;
   const adjAllManagedSvc = totalBillableMsSvc + ehManagedSvc;
   const adjContractValue = adjAllSetup + (adjAllMonthly + adjAllManagedSvc) * allTotals.contract_months;
-  const adjPocSetup      = pocSetupFee + EH_SETUP;
-  const adjPocMonthly    = pocTotals.network_monthly_fee + EH_MONTHLY;
-  const adjPocManagedSvc = pocBillableMsSvc + ehManagedSvc;
+  const adjPocSetup      = pocSetupFee ;
+  const adjPocMonthly    = 0;
+  const adjPocManagedSvc = 0;
 
   const today = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
   const refId = `SG-${Date.now().toString(36).toUpperCase().slice(-6)}`;

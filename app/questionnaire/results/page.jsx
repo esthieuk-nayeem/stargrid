@@ -109,9 +109,9 @@ export default function DynamicResultsPage() {
     const billable = sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type));
     return sum + billable.reduce((s, c) => s + c.network_setup_fee * msRate, 0);
   }, 0);
-  const adjPocSetup      = pocSetupFee + EH_SETUP;
-  const adjPocMonthly    = pocTotals.network_monthly_fee + EH_MONTHLY;
-  const adjPocManagedSvc = pocRouterManagedSvc + ehManagedSvc;
+  const adjPocSetup      = pocSetupFee ;
+  const adjPocMonthly    = 0 ;
+  const adjPocManagedSvc = 0 ;
 
   return (
     <div className="rp">
@@ -132,16 +132,16 @@ export default function DynamicResultsPage() {
               <span className="sc__sub">Central connectivity node · All {totalSites} site{totalSites !== 1 ? "s" : ""} connected</span>
             </div>
             <div className="sc__tots">
-              <div className="ti"><span className="tl">Setup Fee</span><span className="tv">{formatEuro(EH_SETUP)}</span></div>
-              <div className="ti"><span className="tl">Monthly Fee</span><span className="tv">{formatEuro(EH_MONTHLY)}</span></div>
-              <div className="ti"><span className="tl">Managed Service Fee</span><span className="tv">{formatEuro(ehManagedSvc)}</span></div>
+              <div className="ti"><span className="tl">Network Setup Fee</span><span className="tv">{formatEuro(EH_SETUP)}</span></div>
+              <div className="ti"><span className="tl">Network Monthly Fee</span><span className="tv">{formatEuro(EH_MONTHLY)}</span></div>
+              <div className="ti"><span className="tl">Managed Service Monthly</span><span className="tv">{formatEuro(ehManagedSvc)}</span></div>
             </div>
             <button className="eb">{expandedSite === 'hub' ? "▼" : "▶"}</button>
           </div>
           {expandedSite === 'hub' && (
             <div className="sc__body">
               <table className="ct">
-                <thead><tr><th>Component</th><th>Hardware</th><th>Airtime Plan</th><th className="r">Setup Fee</th><th className="r">Monthly Fee</th><th className="r">Managed Service Fee</th></tr></thead>
+                <thead><tr><th>Component</th><th>Hardware</th><th>Airtime Plan</th><th className="r">Network Setup Fee</th><th className="r">Network Monthly Fee</th><th className="r">Managed Service Monthly</th></tr></thead>
                 <tbody>
                   <tr>
                     <td><span className="cb" style={{ background:"#2ECC71" }}>Enterprise Hub</span></td>
@@ -157,54 +157,85 @@ export default function DynamicResultsPage() {
           )}
         </div>
 
-        {/* Site cards */}
-        {sitePackages.map((sp, idx) => {
-          const isExp = expandedSite === idx;
-          const { site, site_name, site_number, package: pkg } = sp;
-          const siteName = site?.name || site_name || `Site ${site_number}`;
-          const siteType = site?.answers?.[22]?.label || "Site";
-          return (
-            <div key={sp.site_id || idx} className="sc">
-              <div className="sc__hdr" onClick={() => toggle(idx)}>
-                <div className="sc__title">
-                  <span className="sb">Site {site_number}</span>
-                  <h2>{siteName}</h2>
-                  <span className="sc__sub">{siteType} • {pkg.servicesLabel}</span>
-                </div>
-                <div className="sc__tots">
-                  <div className="ti"><span className="tl">Setup Fee</span><span className="tv">{formatEuro(pkg.totals.network_setup_fee)}</span></div>
-                  <div className="ti"><span className="tl">Monthly Fee</span><span className="tv">{formatEuro(pkg.totals.network_monthly_fee)}</span></div>
-                  <div className="ti"><span className="tl">Managed Service Fee</span><span className="tv">{formatEuro(pkg.totals.managed_service_monthly)}</span></div>
-                </div>
-                <button className="eb">{isExp ? "▼" : "▶"}</button>
-              </div>
+{/* Site cards */}
+{sitePackages.map((sp, idx) => {
+  const isExp = expandedSite === idx;
+  const { site, site_name, site_number, package: pkg } = sp;
+  const siteName = site?.name || site_name || `Site ${site_number}`;
+  const siteType = site?.answers?.[22]?.label || "Site";
 
-              {isExp && (
-                <div className="sc__body">
-                  <table className="ct">
-                    <thead><tr><th>Component</th><th>Hardware</th><th>Airtime Plan</th><th className="r">Setup Fee</th><th className="r">Monthly Fee</th><th className="r">Managed Service Fee</th></tr></thead>
-                    <tbody>
-                      {pkg.components.map((c, ci) => {
-                        const isBillable = /router|stargrid\s*box/i.test(c.type);
-                        const msSvc = isBillable ? c.network_setup_fee * msRate : c.managed_service_monthly;
-                        return (
-                          <tr key={ci}>
-                            <td><span className="cb" style={{ background:c.color }}>{c.type}</span></td>
-                            <td>{c.hardware}</td>
-                            <td>{c.airtime}</td>
-                            <td className="r num">{formatEuro(c.network_setup_fee)}</td>
-                            <td className="r num">{formatEuro(c.network_monthly_fee)}</td>
-                            <td className="r num">{formatEuro(msSvc)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          );
-        })}
+  // === FIX: Calculate correct Managed Service Fee for this site ===
+  const siteRouterManagedSvc = pkg.components.reduce((sum, c) => {
+    const isBillable = /router|stargrid\s*box/i.test(c.type);
+    if (isBillable) {
+      return sum + c.network_setup_fee * msRate;
+    }
+    return sum + (c.managed_service_monthly || 0);
+  }, 0);
+
+  return (
+    <div key={sp.site_id || idx} className="sc">
+      <div className="sc__hdr" onClick={() => toggle(idx)}>
+        <div className="sc__title">
+          <span className="sb">Site {site_number}</span>
+          <h2>{siteName}</h2>
+          <span className="sc__sub">{siteType} • {pkg.servicesLabel}</span>
+        </div>
+        <div className="sc__tots">
+          <div className="ti">
+            <span className="tl">Network Setup Fee</span>
+            <span className="tv">{formatEuro(pkg.totals.network_setup_fee)}</span>
+          </div>
+          <div className="ti">
+            <span className="tl">Network Monthly Fee</span>
+            <span className="tv">{formatEuro(pkg.totals.network_monthly_fee)}</span>
+          </div>
+          <div className="ti">
+            <span className="tl">Managed Service Monthly</span>
+            <span className="tv">{formatEuro(siteRouterManagedSvc)}</span>   {/* ← Fixed */}
+          </div>
+        </div>
+        <button className="eb">{isExp ? "▼" : "▶"}</button>
+      </div>
+
+      {isExp && (
+        <div className="sc__body">
+          <table className="ct">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Hardware</th>
+                <th>Airtime Plan</th>
+                <th className="r">Network Setup Fee</th>
+                <th className="r">Network Monthly Fee</th>
+                <th className="r">Managed Service Monthly</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pkg.components.map((c, ci) => {
+                const isBillable = /router|stargrid\s*box/i.test(c.type);
+                const msSvc = isBillable 
+                  ? c.network_setup_fee * msRate 
+                  : c.managed_service_monthly;
+
+                return (
+                  <tr key={ci}>
+                    <td><span className="cb" style={{ background: c.color }}>{c.type}</span></td>
+                    <td>{c.hardware}</td>
+                    <td>{c.airtime}</td>
+                    <td className="r num">{formatEuro(c.network_setup_fee)}</td>
+                    <td className="r num">{formatEuro(c.network_monthly_fee)}</td>
+                    <td className="r num">{formatEuro(msSvc)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+})}
 
         {/* Deployment Summary */}
         <div className="ds">
