@@ -179,7 +179,7 @@ export async function POST(req) {
 </body>
 </html>`;
 
-    const toAddresses = ["esthieuk@gmail.com","sales@stargrid.com"];
+    const toAddresses = ["esthieuk@gmail.com","sales@stargrid.one"];
     if (contactEmail && contactEmail !== "esthieuk@gmail.com") {
       toAddresses.push(contactEmail);
     }

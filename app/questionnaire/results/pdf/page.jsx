@@ -529,6 +529,7 @@ export default function PdfOfferPage() {
                   <table className="sum-overview">
                     <thead><tr><th>Line Item</th><th className="ra">Amount</th></tr></thead>
                     <tbody>
+                      <tr><td>Stargrid Offering</td><td className="ra mono"><strong>{formatEuro(EH_SETUP + EH_MONTHLY)}</strong></td></tr>
                       <tr><td>Total Network Setup Fee</td><td className="ra mono"><strong>{formatEuro(adjAllSetup)}</strong></td></tr>
                       <tr className="even"><td>Total Monthly Connectivity</td><td className="ra mono"><strong>{formatEuro(adjAllMonthly)}</strong></td></tr>
                       <tr><td>Total Monthly Managed Service</td><td className="ra mono"><strong>{formatEuro(adjAllManagedSvc)}</strong></td></tr>

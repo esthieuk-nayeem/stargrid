@@ -253,6 +253,7 @@ export default function DynamicResultsPage() {
             <div className="dc dc--hl">
               <div className="dc__h"><h3>All Sites ({totalSites})</h3><p>{allTotals.setup_discount_pct > 0 ? `${(allTotals.setup_discount_pct*100).toFixed(0)}% bulk discount` : "Standard pricing"}</p></div>
               <div className="dc__b">
+                <div className="sr"><span className="sl">Stargrid Offering</span><span className="sv">{formatEuro(EH_SETUP + EH_MONTHLY)}</span></div>
                 <div className="sr"><span className="sl">Network Setup Fee</span><span className="sv">{formatEuro(adjAllSetup)}</span></div>
                 <div className="sr"><span className="sl">Network Monthly Fee</span><span className="sv">{formatEuro(adjAllMonthly)}</span></div>
                 <div className="sr"><span className="sl">Managed Service Monthly</span><span className="sv">{formatEuro(adjAllManagedSvc)}</span></div>
