@@ -99,6 +99,22 @@ export default function DynamicResultsPage() {
     const billable = sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type));
     return sum + billable.reduce((s, c) => s + c.network_setup_fee * msRate, 0);
   }, 0);
+
+
+    // Adjusted totals: include EH + router managed svc across all sites
+  const totalRouterManagedSvc2 = sitePackages.reduce((sum, sp) => {
+    const billable = sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type));
+    return sum + billable.reduce((s, c) => s + c.network_monthly_fee , 0);
+  }, 0);
+
+
+      // Adjusted totals: include EH + router managed svc across all sites
+  const totalRouterManagedSvc3 = sitePackages.reduce((sum, sp) => {
+    const billable = sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type));
+    return sum + billable.reduce((s, c) => s + c.managed_service_monthly , 0);
+  }, 0);
+
+
   const adjAllSetup    = allTotals.network_setup_fee + EH_SETUP;
   const adjAllMonthly  = allTotals.network_monthly_fee + EH_MONTHLY;
   const adjAllManagedSvc = totalRouterManagedSvc + ehManagedSvc;
@@ -244,22 +260,52 @@ export default function DynamicResultsPage() {
             <div className="dc">
               <div className="dc__h"><h3>PoC Sites ({Math.min(2, totalSites)})</h3><p>{isNetworkOperator ? 'Network Operator PoC' : 'Enterprise PoC'}</p></div>
               <div className="dc__b">
-                <div className="sr"><span className="sl">Network Setup Fee</span><span className="sv">{formatEuro(adjPocSetup)}</span></div>
-                <div className="sr"><span className="sl">Network Monthly Fee</span><span className="sv">{formatEuro(adjPocMonthly)}</span></div>
+                <div className="sr"><span className="sl">Network Setup</span><span className="sv">{formatEuro(adjPocSetup)}</span></div>
+                <div className="sr"><span className="sl">Network Monthly</span><span className="sv">{formatEuro(adjPocMonthly)}</span></div>
                 <div className="sr"><span className="sl">Managed Service Monthly</span><span className="sv">{formatEuro(adjPocManagedSvc)}</span></div>
               </div>
             </div>
 
-            <div className="dc dc--hl">
-              <div className="dc__h"><h3>All Sites ({totalSites})</h3><p>{allTotals.setup_discount_pct > 0 ? `${(allTotals.setup_discount_pct*100).toFixed(0)}% bulk discount` : "Standard pricing"}</p></div>
-              <div className="dc__b">
-                <div className="sr"><span className="sl">Stargrid Offering</span><span className="sv">{formatEuro(EH_SETUP + EH_MONTHLY)}</span></div>
-                <div className="sr"><span className="sl">Network Setup Fee</span><span className="sv">{formatEuro(adjAllSetup)}</span></div>
-                <div className="sr"><span className="sl">Network Monthly Fee</span><span className="sv">{formatEuro(adjAllMonthly)}</span></div>
-                <div className="sr"><span className="sl">Managed Service Monthly</span><span className="sv">{formatEuro(adjAllManagedSvc)}</span></div>
-                <div className="sr sr--hl"><span className="sl">Contract Value ({allTotals.contract_months}mo)</span><span className="sv sv--big">{formatEuro(adjContractValue)}</span></div>
-              </div>
-            </div>
+<div className="dc dc--hl">
+  <div className="dc__h">
+    <h3>All Sites ({totalSites})</h3>
+    <p>{allTotals.setup_discount_pct > 0 ? `${(allTotals.setup_discount_pct*100).toFixed(0)}% bulk discount` : "Standard pricing"}</p>
+  </div>
+
+  <div className="dc__b">
+    <table className="pt">
+      <thead>
+        <tr>
+          <th className="pt__th pt__th--left">Fee items</th>
+          <th className="pt__th">Stargrid &amp; connectivity</th>
+          <th className="pt__th">Stargrid only</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td className="pt__label">Network Setup</td>
+          <td className="pt__val">{formatEuro(adjAllSetup)}</td>
+          <td className="pt__val">{formatEuro(totalRouterManagedSvc)}</td>
+        </tr>
+        <tr>
+          <td className="pt__label">Network Monthly</td>
+          <td className="pt__val">{formatEuro(adjAllMonthly)}</td>
+          <td className="pt__val">{formatEuro(totalRouterManagedSvc2)}</td>
+        </tr>
+        <tr>
+          <td className="pt__label">Managed Service Monthly</td>
+          <td className="pt__val">{formatEuro(adjAllManagedSvc)}</td>
+          <td className="pt__val">{formatEuro(totalRouterManagedSvc3)}</td>
+        </tr>
+        <tr className="pt__tr--hl">
+          <td className="pt__label pt__label--hl">Contract Value ({allTotals.contract_months}mo)</td>
+          <td className="pt__val pt__val--big">{formatEuro(adjContractValue)}</td>
+          <td className="pt__val pt__val--big">{formatEuro(totalRouterManagedSvc + totalRouterManagedSvc2 + totalRouterManagedSvc3)}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
 
             <div className="pdf-wrap">
               <button className="btn-pdf" onClick={() => router.push("/questionnaire/results/pdf")}>
@@ -331,6 +377,68 @@ export default function DynamicResultsPage() {
         .sr--hl { padding-top:16px; margin-top:8px; border-top:1px solid rgba(255,255,255,0.15); }
         .sl { font-size:14px; color:rgba(255,255,255,0.7); }
         .sv { font-size:18px; font-weight:700; color:#fff; font-variant-numeric:tabular-nums; }
+
+.pt {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.pt colgroup .col-label { width: 40%; }
+.pt colgroup .col-val   { width: 30%; }
+
+.pt__th {
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-align: right;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pt__th--left { text-align: left; }
+
+.pt__label {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.65);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  vertical-align: middle;
+}
+.pt__label--hl {
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.pt__val {
+  padding: 12px 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.pt__tr--hl td {
+  background: rgba(61,114,252,0.08);
+  border-top: 1px solid rgba(255,255,255,0.12);
+  border-bottom: none;
+}
+.pt__tr--hl td:first-child { border-radius: 0 0 0 10px; }
+.pt__tr--hl td:last-child  { border-radius: 0 0 10px 0; }
+
+.pt__val--big {
+  font-size: 20px;
+  color: #5CB0E9;
+}
         .sv--big { font-size:22px; color:#5CB0E9; }
 
         .pdf-wrap { display:flex; align-items:center; }

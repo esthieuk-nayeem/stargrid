@@ -311,6 +311,29 @@ export default function PdfOfferPage() {
     return sum + sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type))
       .reduce((s, c) => s + c.network_setup_fee * msRate, 0);
   }, 0);
+
+  // Adjusted totals: include EH + router managed svc across all sites
+  const totalRouterManagedSvc = sitePackages.reduce((sum, sp) => {
+    const billable = sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type));
+    return sum + billable.reduce((s, c) => s + c.network_setup_fee * msRate, 0);
+  }, 0);
+
+
+    // Adjusted totals: include EH + router managed svc across all sites
+  const totalRouterManagedSvc2 = sitePackages.reduce((sum, sp) => {
+    const billable = sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type));
+    return sum + billable.reduce((s, c) => s + c.network_monthly_fee , 0);
+  }, 0);
+
+
+      // Adjusted totals: include EH + router managed svc across all sites
+  const totalRouterManagedSvc3 = sitePackages.reduce((sum, sp) => {
+    const billable = sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type));
+    return sum + billable.reduce((s, c) => s + c.managed_service_monthly , 0);
+  }, 0);
+
+
+
   const pocBillableMsSvc = sitePackages.slice(0, Math.min(2, totalSites)).reduce((sum, sp) => {
     return sum + sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type))
       .reduce((s, c) => s + c.network_setup_fee * msRate, 0);
@@ -374,7 +397,7 @@ export default function PdfOfferPage() {
           {generated  && <span className="pp__status pp__status--ok">✓ PDF Downloaded</span>}
           {sendStatus === "ok"  && <span className="pp__status pp__status--ok">✓ Email Sent</span>}
           {sendStatus === "err" && <span className="pp__status pp__status--err">✗ Send Failed</span>}
-          <button onClick={() => router.push("/questionnaire/results/pdf/editor")} className="pp__edit">✏ Edit PDF</button>
+          {/* <button onClick={() => router.push("/questionnaire/results/pdf/editor")} className="pp__edit">✏ Edit PDF</button> */}
           <button onClick={handleSendEmail} disabled={sending || generating} className="pp__send">
             {sending ? "Sending…" : "✉ Send via Email"}
           </button>
@@ -485,69 +508,101 @@ export default function PdfOfferPage() {
 
           </div>{/* /two-col-sections */}
 
-          {/* ── 4. Offering — PoC | Full Deployment ─────────────────────── */}
-          <section className="sec">
-            <h2 className="sec__title">{contact.additionalNotes ? "4." : "3."} Offering</h2>
-            <p className="sec__text sec__text--sm" style={{ marginBottom: 10 }}>
-              Two engagement paths are available: a scoped Proof of Concept and a full multi-site deployment.
-            </p>
-            <div className="offering-cols">
+{/* ── 4. Offering — PoC | Full Deployment ─────────────────────── */}
+<section className="sec">
+  <h2 className="sec__title">{contact.additionalNotes ? "4." : "3."} Offering</h2>
+  <p className="sec__text sec__text--sm" style={{ marginBottom: 10 }}>
+    Two engagement paths are available: a scoped Proof of Concept and a full multi-site deployment.
+  </p>
+  <div className="offering-cols">
 
-              {/* Left — PoC */}
-              <div className="offering-col">
-                <div className="poc-box">
-                  <div className="poc-box__badge">{pocLabel}</div>
-                  <p className="offering-col__label">Proof of Concept</p>
-                  <p className="sec__text sec__text--sm" style={{ margin:"0 0 10px" }}>
-                    Covers the first {Math.min(2, totalSites)} site{Math.min(2, totalSites) !== 1 ? "s" : ""} at
-                    fixed pricing to validate performance before full rollout.
-                  </p>
-                  <table className="sum-overview">
-                    <thead><tr><th>Line Item</th><th className="ra">Amount</th></tr></thead>
-                    <tbody>
-                      <tr><td>Network Setup Fee</td><td className="ra mono"><strong>{formatEuro(adjPocSetup)}</strong></td></tr>
-                      <tr className="even"><td>Monthly Connectivity</td><td className="ra mono"><strong>{formatEuro(adjPocMonthly)}</strong></td></tr>
-                      <tr><td>Monthly Managed Service</td><td className="ra mono"><strong>{formatEuro(adjPocManagedSvc)}</strong></td></tr>
-                    </tbody>
-                  </table>
-                  <p className="poc-note">
-                    {isOperator
-                      ? "Network Operator pricing applies. Setup fee reflects operator-tier PoC engagement."
-                      : "Enterprise pricing applies. Includes hardware, installation, and 30-day SLA validation."}
-                  </p>
-                </div>
-              </div>
+    {/* Left — PoC */}
+    <div className="offering-col offering-col--poc">
+      <div className="poc-box">
+        <div className="poc-box__badge">{pocLabel}</div>
+        <p className="offering-col__label">Proof of Concept</p>
+        <p className="sec__text sec__text--sm" style={{ margin:"0 0 10px" }}>
+          Covers the first {Math.min(2, totalSites)} site{Math.min(2, totalSites) !== 1 ? "s" : ""} at
+          fixed pricing to validate performance before full rollout.
+        </p>
+        <table className="sum-overview sum-overview--poc">
+          <thead>
+            <tr>
+              <th>Fee Item</th>
+              <th className="ra">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Network Setup</td>
+              <td className="ra mono"><strong>{formatEuro(adjPocSetup)}</strong></td>
+            </tr>
+            <tr className="even">
+              <td>Monthly Connectivity</td>
+              <td className="ra mono"><strong>{formatEuro(adjPocMonthly)}</strong></td>
+            </tr>
+            <tr>
+              <td>Monthly Managed Service</td>
+              <td className="ra mono"><strong>{formatEuro(adjPocManagedSvc)}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+        <p className="poc-note">
+          {isOperator
+            ? "Network Operator pricing applies. Setup fee reflects operator-tier PoC engagement."
+            : "Enterprise pricing applies. Includes hardware, installation, and 30-day SLA validation."}
+        </p>
+      </div>
+    </div>
 
-              {/* Right — Full Deployment */}
-              <div className="offering-col">
-                <div className="deploy-box">
-                  <div className="poc-box__badge deploy-badge">Full Deployment</div>
-                  <p className="offering-col__label">All {totalSites} Site{totalSites !== 1 ? "s" : ""}</p>
-                  <p className="sec__text sec__text--sm" style={{ margin:"0 0 10px" }}>
-                    Complete rollout across all configured sites with full managed service coverage.
-                  </p>
-                  <table className="sum-overview">
-                    <thead><tr><th>Line Item</th><th className="ra">Amount</th></tr></thead>
-                    <tbody>
-                      <tr><td>Stargrid Offering</td><td className="ra mono"><strong>{formatEuro(EH_SETUP + EH_MONTHLY)}</strong></td></tr>
-                      <tr><td>Total Network Setup Fee</td><td className="ra mono"><strong>{formatEuro(adjAllSetup)}</strong></td></tr>
-                      <tr className="even"><td>Total Monthly Connectivity</td><td className="ra mono"><strong>{formatEuro(adjAllMonthly)}</strong></td></tr>
-                      <tr><td>Total Monthly Managed Service</td><td className="ra mono"><strong>{formatEuro(adjAllManagedSvc)}</strong></td></tr>
-                      <tr className="cv-row">
-                        <td><strong>Total Contract Value</strong><small className="cv-sub"> / {allTotals.contract_months} months</small></td>
-                        <td className="ra mono cv-val"><strong>{formatEuro(adjContractValue)}</strong></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  {allTotals.setup_discount_pct > 0 && (
-                    <p className="discount-note">* {(allTotals.setup_discount_pct * 100).toFixed(0)}% bulk discount applied to setup fee.</p>
-                  )}
-                </div>
-              </div>
+    {/* Right — Full Deployment */}
+    <div className="offering-col offering-col--deploy">
+      <div className="deploy-box">
+        <div className="poc-box__badge deploy-badge">Full Deployment</div>
+        <p className="offering-col__label">All {totalSites} Site{totalSites !== 1 ? "s" : ""}</p>
+        <p className="sec__text sec__text--sm" style={{ margin:"0 0 10px" }}>
+          Complete rollout across all configured sites with full managed service coverage.
+        </p>
+        <table className="sum-overview sum-overview--deploy">
+          <thead>
+            <tr>
+              <th>Fee items</th>
+              <th className="ra">Stargrid &amp; connectivity</th>
+              <th className="ra">Stargrid only</th>
+            </tr>
+          </thead>
+          <tbody>
+         
+            <tr className="even">
+              <td>Total Network Setup</td>
+              <td className="ra mono"><strong>{formatEuro(adjAllSetup)}</strong></td>
+              <td className="ra mono"><strong>{formatEuro(totalRouterManagedSvc)}</strong></td>
+            </tr>
+            <tr>
+              <td>Total Monthly Connectivity</td>
+              <td className="ra mono"><strong>{formatEuro(adjAllMonthly)}</strong></td>
+              <td className="ra mono"><strong>{formatEuro(totalRouterManagedSvc2)}</strong></td>
+            </tr>
+            <tr className="even">
+              <td>Total Monthly Managed Service</td>
+              <td className="ra mono"><strong>{formatEuro(adjAllManagedSvc)}</strong></td>
+              <td className="ra mono"><strong>{formatEuro(totalRouterManagedSvc3)}</strong></td>
+            </tr>
+            <tr className="cv-row">
+              <td><strong>Total Contract Value</strong><small className="cv-sub"> / {allTotals.contract_months} months</small></td>
+              <td className="ra mono cv-val"><strong>{formatEuro(adjContractValue)}</strong></td>
+              <td className="ra mono cv-val"><strong>{formatEuro(totalRouterManagedSvc + totalRouterManagedSvc2 + totalRouterManagedSvc3)}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+        {allTotals.setup_discount_pct > 0 && (
+          <p className="discount-note">* {(allTotals.setup_discount_pct * 100).toFixed(0)}% bulk discount applied to setup fee.</p>
+        )}
+      </div>
+    </div>
 
-            </div>
-          </section>
-
+  </div>
+</section>
           {/* ── 5. Terms & Conditions ───────────────────────────────────── */}
           <section className="sec">
             <h2 className="sec__title">{contact.additionalNotes ? "5." : "4."} Terms &amp; Conditions</h2>
@@ -873,35 +928,102 @@ export default function PdfOfferPage() {
         .mono { font-variant-numeric:tabular-nums; }
         .dot  { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; vertical-align:middle; }
 
-        /* ── Deployment summary table ────────────────── */
-        .sum-overview { width:100%; border-collapse:collapse; border:1px solid #e4e6ec; border-radius:10px; overflow:hidden; }
-        .sum-overview th { padding:8px 14px; background:#f7f8fc; font-size:10.5px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:0.5px; text-align:left; border-bottom:1px solid #e4e6ec; }
-        .sum-overview th.ra { text-align:right; }
-        .sum-overview td { padding:8px 14px; font-size:12.5px; color:#444; border-bottom:1px solid #f0f0f0; }
-        .sum-overview tr.even td { background:#fafbfd; }
-        .sum-overview tr:last-child td { border-bottom:none; }
-        .cv-row td { border-top:2px solid #3D72FC !important; }
-        .cv-val { font-size:17px !important; color:#3D72FC !important; }
-        .cv-sub { font-size:10px; color:#aaa; font-weight:normal; margin-left:4px; }
-        .discount-note { font-size:11px; color:#888; margin-top:8px; font-style:italic; }
+/* ── Offering two-column layout ──────────────── */
+.offering-cols {
+  grid-template-columns: 1fr 3fr;  /* was 2fr 3fr */
+  gap: 18px;
+  margin-top: 0;
+  align-items: start;
+}
+// .offering-col { display: flex; flex-direction: column; }
+.offering-col__label {
+  font-size: 13px; font-weight: 700; color: #12132a; margin: 0 0 6px;
+}
 
-        /* ── PoC box ─────────────────────────────────── */
-        .poc-box { border:2px solid #3D72FC; border-radius:12px; padding:16px 20px; background:#f8f9ff; }
-        .poc-box__badge {
-          display:inline-flex; padding:3px 12px; margin-bottom:10px;
-          background:linear-gradient(135deg,#3D72FC,#5CB0E9); color:#fff;
-          border-radius:20px; font-size:11px; font-weight:700;
-        }
-        .poc-note { margin-top:10px; font-size:11px; color:#777; font-style:italic; }
+/* ── PoC box ─────────────────────────────────── */
+.poc-box {
+  border: 2px solid #3D72FC;
+  border-radius: 12px;
+  padding: 16px 18px;
+  background: #f8f9ff;
+}
+.poc-box__badge {
+  display: inline-flex; padding: 3px 12px; margin-bottom: 10px;
+  background: linear-gradient(135deg, #3D72FC, #5CB0E9); color: #fff;
+  border-radius: 20px; font-size: 11px; font-weight: 700;
+}
+.poc-note { margin-top: 10px; font-size: 11px; color: #777; font-style: italic; }
 
-        /* ── Full deployment ─────────────────────────── */
-        .total-banner {
-          display:flex; justify-content:space-between; align-items:center;
-          padding:12px 18px; background:#12132a; border-radius:10px; color:#fff;
-          font-size:13px; font-weight:600;
-        }
-        .total-banner__val { font-size:19px; color:#5CB0E9; font-weight:800; }
+/* ── Deploy box ──────────────────────────────── */
+.deploy-box {
+  border: 2px solid #22c55e;
+  border-radius: 12px;
+  padding: 16px 18px;
+  background: #f6fff9;
+  flex: 1;
+}
+.deploy-badge {
+  display: inline-flex; padding: 3px 12px; margin-bottom: 10px;
+  background: linear-gradient(135deg, #16a34a, #22c55e); color: #fff;
+  border-radius: 20px; font-size: 11px; font-weight: 700;
+}
 
+/* ── Shared table base ───────────────────────── */
+.sum-overview {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #e4e6ec;
+  border-radius: 10px;
+  overflow: hidden;
+  table-layout: fixed;
+}
+.sum-overview th {
+  padding: 7px 10px;
+  background: #f7f8fc;
+  font-size: 10px;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: left;
+  border-bottom: 1px solid #e4e6ec;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sum-overview th.ra { text-align: right; }
+.sum-overview td {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #444;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sum-overview td:not(:first-child) { text-align: right; }
+.sum-overview tr.even td { background: #fafbfd; }
+.sum-overview tr:last-child td { border-bottom: none; }
+
+/* ── PoC table — 2 columns ───────────────────── */
+.sum-overview--poc th:first-child { width: 62%; }
+.sum-overview--poc th:nth-child(2) { width: 38%; }
+
+/* ── Deploy table — 3 columns ────────────────── */
+.sum-overview--deploy th:first-child  { width: 36%; }
+.sum-overview--deploy th:nth-child(2) { width: 32%; }
+.sum-overview--deploy th:nth-child(3) { width: 32%; }
+
+/* ── Contract value row ──────────────────────── */
+.cv-row td { border-top: 2px solid #3D72FC !important; border-bottom: none; }
+.cv-val { font-size: 15px !important; color: #3D72FC !important; }
+.cv-sub { font-size: 10px; color: #aaa; font-weight: normal; margin-left: 4px; }
+.discount-note { font-size: 11px; color: #888; margin-top: 8px; font-style: italic; }
+
+/* ── Responsive ──────────────────────────────── */
+@media (max-width: 768px) {
+  .offering-cols { grid-template-columns: 1fr; }
+}
         /* ── Badge ───────────────────────────────────── */
         .badge {
           display:inline-flex; padding:4px 12px; border-radius:16px;
@@ -965,7 +1087,7 @@ export default function PdfOfferPage() {
 
         /* ── Offering two-column layout ──────────────── */
         .offering-cols {
-          display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:0;
+          display:grid; grid-template-columns:1.6fr 2fr; gap:18px; margin-top:0;
         }
         .offering-col { display:flex; flex-direction:column; }
         .offering-col__label {
