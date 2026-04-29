@@ -123,77 +123,55 @@ export default function PdfOfferPage() {
     fetchData();
   }, []);
 
-  // ── Shared PDF generation logic ──────────────────────────────────────────
-  const generatePdfFromElement = async (el) => {
-    const html2canvas = (await import("html2canvas")).default;
-    const { jsPDF }   = await import("jspdf");
-
-    const canvas = await html2canvas(el, {
-      backgroundColor: "#ffffff",
-      scale: 1.5,
-      useCORS: true,
-      logging: false,
-      windowWidth: 860,
-      // Ignore print media queries so html2canvas captures screen layout
-      onclone: (clonedDoc) => {
-        // Force all grid/flex containers to use their screen layout
-        const style = clonedDoc.createElement("style");
-        style.textContent = `
-          * { print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; }
-          .two-col-sections { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 16px !important; }
-          .offering-cols { display: grid !important; grid-template-columns: 1fr 1.8fr !important; gap: 14px !important; }
-          .hdr--with-tc { display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: flex-start !important; gap: 20px !important; }
-          .hdr__tc-box { max-width: 420px !important; flex: 1 !important; }
-          .ftr { display: flex !important; flex-direction: row !important; justify-content: space-between !important; }
-          .ftr__right { text-align: right !important; }
-          .pp__bar { display: none !important; }
-        `;
-        clonedDoc.head.appendChild(style);
-      },
-    });
-
-    const pageW = 210, pageH = 297, margin = 10;
-    const contentW = pageW - margin * 2;
-    const contentH = pageH - margin * 2;
-    const imgAspect  = canvas.height / canvas.width;
-    const scaledImgH = contentW * imgAspect;
-
-    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const totalPages = Math.ceil(scaledImgH / contentH);
-
-    for (let p = 0; p < totalPages; p++) {
-      if (p > 0) pdf.addPage();
-      const srcY        = (p * contentH / scaledImgH) * canvas.height;
-      const srcH        = (contentH / scaledImgH) * canvas.height;
-      const isLast      = p === totalPages - 1;
-      const actualSrcH  = isLast ? canvas.height - srcY : srcH;
-      const actualDestH = isLast ? (actualSrcH / canvas.height) * scaledImgH : contentH;
-
-      const pc = document.createElement("canvas");
-      pc.width  = canvas.width;
-      pc.height = Math.ceil(actualSrcH);
-      const ctx = pc.getContext("2d");
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, pc.width, pc.height);
-      ctx.drawImage(canvas, 0, srcY, canvas.width, actualSrcH, 0, 0, canvas.width, actualSrcH);
-
-      const pageImg = pc.toDataURL("image/jpeg", 0.78);
-      pdf.addImage(pageImg, "JPEG", margin, margin, contentW, actualDestH);
-      pdf.setFontSize(8);
-      pdf.setTextColor(180, 180, 180);
-      pdf.text(`Page ${p + 1} of ${totalPages}`, pageW / 2, pageH - 5, { align: "center" });
-      pdf.text("StarGrid — Confidential", margin, pageH - 5);
-    }
-
-    return pdf;
-  };
-
   const handleDownload = async () => {
     setGenerating(true);
     try {
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF }   = await import("jspdf");
       const el = offerRef.current;
       if (!el) return;
-      const pdf = await generatePdfFromElement(el);
+
+      const canvas = await html2canvas(el, {
+        backgroundColor: "#ffffff",
+        scale: 1.5,
+        useCORS: true,
+        logging: false,
+        windowWidth: 860,
+      });
+
+      const pageW = 210, pageH = 297, margin = 10;
+      const contentW = pageW - margin * 2;
+      const contentH = pageH - margin * 2;
+      const imgAspect  = canvas.height / canvas.width;
+      const scaledImgH = contentW * imgAspect;
+
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const totalPages = Math.ceil(scaledImgH / contentH);
+
+      for (let p = 0; p < totalPages; p++) {
+        if (p > 0) pdf.addPage();
+        const srcY        = (p * contentH / scaledImgH) * canvas.height;
+        const srcH        = (contentH / scaledImgH) * canvas.height;
+        const isLast      = p === totalPages - 1;
+        const actualSrcH  = isLast ? canvas.height - srcY : srcH;
+        const actualDestH = isLast ? (actualSrcH / canvas.height) * scaledImgH : contentH;
+
+        const pc = document.createElement("canvas");
+        pc.width  = canvas.width;
+        pc.height = Math.ceil(actualSrcH);
+        const ctx = pc.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, pc.width, pc.height);
+        ctx.drawImage(canvas, 0, srcY, canvas.width, actualSrcH, 0, 0, canvas.width, actualSrcH);
+
+        const pageImg = pc.toDataURL("image/jpeg", 0.78);
+        pdf.addImage(pageImg, "JPEG", margin, margin, contentW, actualDestH);
+        pdf.setFontSize(8);
+        pdf.setTextColor(180, 180, 180);
+        pdf.text(`Page ${p + 1} of ${totalPages}`, pageW / 2, pageH - 5, { align: "center" });
+        pdf.text("StarGrid — Confidential", margin, pageH - 5);
+      }
+
       pdf.save("StarGrid-Connectivity-Offer.pdf");
       setGenerated(true);
     } catch (err) {
@@ -208,9 +186,52 @@ export default function PdfOfferPage() {
     setSending(true);
     setSendStatus(null);
     try {
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF }   = await import("jspdf");
       const el = offerRef.current;
       if (!el) return;
-      const pdf = await generatePdfFromElement(el);
+
+      const canvas = await html2canvas(el, {
+        backgroundColor: "#ffffff",
+        scale: 1.5,
+        useCORS: true,
+        logging: false,
+        windowWidth: 860,
+      });
+
+      const pageW = 210, pageH = 297, margin = 10;
+      const contentW  = pageW - margin * 2;
+      const contentH  = pageH - margin * 2;
+      const imgAspect  = canvas.height / canvas.width;
+      const scaledImgH = contentW * imgAspect;
+
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const totalPagesCount = Math.ceil(scaledImgH / contentH);
+
+      for (let p = 0; p < totalPagesCount; p++) {
+        if (p > 0) pdf.addPage();
+        const srcY       = (p * contentH / scaledImgH) * canvas.height;
+        const srcH       = (contentH / scaledImgH) * canvas.height;
+        const isLast     = p === totalPagesCount - 1;
+        const actualSrcH  = isLast ? canvas.height - srcY : srcH;
+        const actualDestH = isLast ? (actualSrcH / canvas.height) * scaledImgH : contentH;
+
+        const pc = document.createElement("canvas");
+        pc.width  = canvas.width;
+        pc.height = Math.ceil(actualSrcH);
+        const ctx = pc.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, pc.width, pc.height);
+        ctx.drawImage(canvas, 0, srcY, canvas.width, actualSrcH, 0, 0, canvas.width, actualSrcH);
+
+        const pageImg = pc.toDataURL("image/jpeg", 0.78);
+        pdf.addImage(pageImg, "JPEG", margin, margin, contentW, actualDestH);
+        pdf.setFontSize(8);
+        pdf.setTextColor(180, 180, 180);
+        pdf.text(`Page ${p + 1} of ${totalPagesCount}`, pageW / 2, pageH - 5, { align: "center" });
+        pdf.text("StarGrid — Confidential", margin, pageH - 5);
+      }
+
       const pdfBase64 = pdf.output("datauristring").split(",")[1];
 
       const contractValue = data?.allTotals
@@ -291,20 +312,27 @@ export default function PdfOfferPage() {
       .reduce((s, c) => s + c.network_setup_fee * msRate, 0);
   }, 0);
 
+  // Adjusted totals: include EH + router managed svc across all sites
   const totalRouterManagedSvc = sitePackages.reduce((sum, sp) => {
     const billable = sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type));
     return sum + billable.reduce((s, c) => s + c.network_setup_fee * msRate, 0);
   }, 0);
 
+
+    // Adjusted totals: include EH + router managed svc across all sites
   const totalRouterManagedSvc2 = sitePackages.reduce((sum, sp) => {
     const billable = sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type));
-    return sum + billable.reduce((s, c) => s + c.network_monthly_fee, 0);
+    return sum + billable.reduce((s, c) => s + c.network_monthly_fee , 0);
   }, 0);
 
+
+      // Adjusted totals: include EH + router managed svc across all sites
   const totalRouterManagedSvc3 = sitePackages.reduce((sum, sp) => {
     const billable = sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type));
-    return sum + billable.reduce((s, c) => s + c.managed_service_monthly, 0);
+    return sum + billable.reduce((s, c) => s + c.managed_service_monthly , 0);
   }, 0);
+
+
 
   const pocBillableMsSvc = sitePackages.slice(0, Math.min(2, totalSites)).reduce((sum, sp) => {
     return sum + sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type))
@@ -358,8 +386,6 @@ export default function PdfOfferPage() {
     }
   });
 
-  const sectionNum = (n) => contact.additionalNotes ? n : n - 1;
-
   return (
     <div className="pp">
       {/* Sticky toolbar */}
@@ -371,6 +397,7 @@ export default function PdfOfferPage() {
           {generated  && <span className="pp__status pp__status--ok">✓ PDF Downloaded</span>}
           {sendStatus === "ok"  && <span className="pp__status pp__status--ok">✓ Email Sent</span>}
           {sendStatus === "err" && <span className="pp__status pp__status--err">✗ Send Failed</span>}
+          {/* <button onClick={() => router.push("/questionnaire/results/pdf/editor")} className="pp__edit">✏ Edit PDF</button> */}
           <button onClick={handleSendEmail} disabled={sending || generating} className="pp__send">
             {sending ? "Sending…" : "✉ Send via Email"}
           </button>
@@ -385,39 +412,9 @@ export default function PdfOfferPage() {
         <div ref={offerRef} className="paper">
 
           {/* ════════════════════════════════════════════════════════════════
-              PAGE 1 — Connectivity Plan & Proposal
+              PAGE 1 — Connectivity Plan & Proposal  (single A4)
           ════════════════════════════════════════════════════════════════ */}
-
-          {/* ── Header with T&C box in top-right ─────────────────────── */}
-          <div className="doc-header-wrap">
-            <header className="hdr hdr--with-tc">
-              <div className="hdr__left-block">
-                <div className="hdr__logo">
-                  <Image src="/assets/images/icon/icon.png" alt="StarGrid" width={34} height={34} />
-                  <div>
-                    <div className="hdr__brand">STARGRID</div>
-                    <div className="hdr__tagline">Industrial Connectivity Solutions</div>
-                  </div>
-                </div>
-                <div className="hdr__meta" style={{ marginTop: 6 }}>
-                  <div className="hdr__date">{today}</div>
-                  <div className="hdr__ref">Ref: {refId}</div>
-                </div>
-              </div>
-              {/* Terms & Conditions — top right per annotation */}
-              <div className="hdr__tc-box">
-                <div className="hdr__tc-title">Terms &amp; Conditions — This proposal is governed by the StarGrid Standard Agreement. Key terms:</div>
-                <ul className="hdr__tc-list">
-                  <li>All prices are in EUR and exclude applicable VAT/taxes.</li>
-                  <li>This offer is valid for <strong>30 days</strong> from the date of issue.</li>
-                  <li>Setup fees are one-time charges payable upon contract signing.</li>
-                  <li>Monthly fees are billed in advance on the 1st of each month.</li>
-                  <li>All commercial data are valid upon personal approval by StarGrid.</li>
-                </ul>
-              </div>
-            </header>
-            <div className="rule rule--gradient" />
-          </div>
+          <DocHeader today={today} refId={refId} />
 
           <h1 className="doc-title">Connectivity Plan &amp; Proposal</h1>
           <p className="doc-sub">
@@ -426,22 +423,28 @@ export default function PdfOfferPage() {
           </p>
 
           {/* ── 1. Introduction ─────────────────────────────────────────── */}
-          <section className="sec sec--tight">
+          <section className="sec">
             <h2 className="sec__title">1. Introduction</h2>
-            <p className="sec__text sec__text--intro">
-              StarGrid delivers fully managed hybrid connectivity solutions combining cellular (4G/5G),
-              satellite (LEO/GEO), and fixed-line networks into a single intelligent platform. Our edge
+            <p className="sec__text">
+              StarGrid delivers fully managed hybrid connectivity solutions that combine cellular (4G/5G),
+              satellite (LEO/GEO), and fixed-line networks into a single, intelligent platform. Our edge
               devices automatically select the optimal available network, guaranteeing zero-touch,
               always-on connectivity for industrial, offshore, and remote operations worldwide.
             </p>
-            {/* Pills REMOVED per annotation */}
+            <div className="intro-pills">
+              <span className="pill">99.5% Line Availability</span>
+              <span className="pill">Zero-Second Failover</span>
+              <span className="pill">Global LEO/GEO Backup</span>
+              <span className="pill">24/7 Managed Service</span>
+            </div>
           </section>
 
           {/* ── 2 & 3. Client Use Case + StarGrid Solution — side by side ── */}
           <div className="two-col-sections">
 
+            {/* Left — Client Use Case (only shown if there are notes) */}
             {contact.additionalNotes ? (
-              <section className="sec sec--col sec--tight">
+              <section className="sec sec--col">
                 <h2 className="sec__title">2. Client Use Case</h2>
                 {contact.fullName && (
                   <div className="contact-row">
@@ -457,11 +460,16 @@ export default function PdfOfferPage() {
                 </blockquote>
               </section>
             ) : (
-              <div className="sec sec--col sec--tight" />
+              /* Placeholder column if no use case, keeps grid balanced */
+              <div className="sec sec--col" />
             )}
 
-            <section className="sec sec--col sec--tight">
+            {/* Right — StarGrid Solution */}
+            <section className="sec sec--col">
               <h2 className="sec__title">{contact.additionalNotes ? "3." : "2."} StarGrid Solution</h2>
+              <p className="sec__text sec__text--sm" style={{ marginBottom: 8 }}>
+                Overview of the recommended connectivity configuration.
+              </p>
               <table className="sum-overview">
                 <tbody>
                   <tr>
@@ -498,101 +506,136 @@ export default function PdfOfferPage() {
               </table>
             </section>
 
-          </div>
+          </div>{/* /two-col-sections */}
 
-          {/* ── 3/4. Offering ────────────────────────────────────────────── */}
-          <section className="sec sec--tight">
-            <h2 className="sec__title">{contact.additionalNotes ? "4." : "3."} Offering</h2>
-            {/* Subtitle line REMOVED per annotation */}
-            <div className="offering-cols">
+{/* ── 4. Offering — PoC | Full Deployment ─────────────────────── */}
+<section className="sec">
+  <h2 className="sec__title">{contact.additionalNotes ? "4." : "3."} Offering</h2>
+  <p className="sec__text sec__text--sm" style={{ marginBottom: 10 }}>
+    Two engagement paths are available: a scoped Proof of Concept and a full multi-site deployment.
+  </p>
+  <div className="offering-cols">
 
-              {/* Left — PoC */}
-              <div className="offering-col">
-                <div className="poc-box">
-                  <div className="poc-box__badge">{pocLabel}</div>
-                  <p className="offering-col__label">Proof of Concept</p>
-                  <p className="sec__text sec__text--sm offering-desc">Validate performance on {Math.min(2, totalSites)} site{Math.min(2, totalSites) !== 1 ? "s" : ""} before full rollout.</p>
-                  <table className="sum-overview sum-overview--poc">
-                    <thead>
-                      <tr>
-                        <th>Fee Item</th>
-                        <th className="ra">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>Network Setup</td>
-                        <td className="ra mono"><strong>{formatEuro(adjPocSetup)}</strong></td>
-                      </tr>
-                      <tr className="even">
-                        <td>Monthly Connectivity</td>
-                        <td className="ra mono"><strong>{formatEuro(adjPocMonthly)}</strong></td>
-                      </tr>
-                      <tr>
-                        <td>Monthly Managed Service</td>
-                        <td className="ra mono"><strong>{formatEuro(adjPocManagedSvc)}</strong></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <p className="poc-note">
-                    {isOperator
-                      ? "Network Operator pricing applies."
-                      : "Enterprise pricing. Includes hardware, installation, 30-day SLA."}
-                  </p>
-                </div>
+    {/* Left — PoC */}
+    <div className="offering-col offering-col--poc">
+      <div className="poc-box">
+        <div className="poc-box__badge">{pocLabel}</div>
+        <p className="offering-col__label">Proof of Concept</p>
+        <p className="sec__text sec__text--sm" style={{ margin:"0 0 10px" }}>
+          Covers the first {Math.min(2, totalSites)} site{Math.min(2, totalSites) !== 1 ? "s" : ""} at
+          fixed pricing to validate performance before full rollout.
+        </p>
+        <table className="sum-overview sum-overview--poc">
+          <thead>
+            <tr>
+              <th>Fee Item</th>
+              <th className="ra">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Network Setup</td>
+              <td className="ra mono"><strong>{formatEuro(adjPocSetup)}</strong></td>
+            </tr>
+            <tr className="even">
+              <td>Monthly Connectivity</td>
+              <td className="ra mono"><strong>{formatEuro(adjPocMonthly)}</strong></td>
+            </tr>
+            <tr>
+              <td>Monthly Managed Service</td>
+              <td className="ra mono"><strong>{formatEuro(adjPocManagedSvc)}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+        <p className="poc-note">
+          {isOperator
+            ? "Network Operator pricing applies. Setup fee reflects operator-tier PoC engagement."
+            : "Enterprise pricing applies. Includes hardware, installation, and 30-day SLA validation."}
+        </p>
+      </div>
+    </div>
+
+    {/* Right — Full Deployment */}
+    <div className="offering-col offering-col--deploy">
+      <div className="deploy-box">
+        <div className="poc-box__badge deploy-badge">Full Deployment</div>
+        <p className="offering-col__label">All {totalSites} Site{totalSites !== 1 ? "s" : ""}</p>
+        <p className="sec__text sec__text--sm" style={{ margin:"0 0 10px" }}>
+          Complete rollout across all configured sites with full managed service coverage.
+        </p>
+        <table className="sum-overview sum-overview--deploy">
+          <thead>
+            <tr>
+              <th>Fee items</th>
+              <th className="ra">Stargrid &amp; connectivity</th>
+              <th className="ra">Stargrid only</th>
+            </tr>
+          </thead>
+          <tbody>
+         
+            <tr className="even">
+              <td>Total Network Setup</td>
+              <td className="ra mono"><strong>{formatEuro(adjAllSetup)}</strong></td>
+              <td className="ra mono"><strong>{formatEuro(totalRouterManagedSvc)}</strong></td>
+            </tr>
+            <tr>
+              <td>Total Monthly Connectivity</td>
+              <td className="ra mono"><strong>{formatEuro(adjAllMonthly)}</strong></td>
+              <td className="ra mono"><strong>{formatEuro(totalRouterManagedSvc2)}</strong></td>
+            </tr>
+            <tr className="even">
+              <td>Total Monthly Managed Service</td>
+              <td className="ra mono"><strong>{formatEuro(adjAllManagedSvc)}</strong></td>
+              <td className="ra mono"><strong>{formatEuro(totalRouterManagedSvc3)}</strong></td>
+            </tr>
+            <tr className="cv-row">
+              <td><strong>Total Contract Value</strong><small className="cv-sub"> / {allTotals.contract_months} months</small></td>
+              <td className="ra mono cv-val"><strong>{formatEuro(adjContractValue)}</strong></td>
+              <td className="ra mono cv-val"><strong>{formatEuro(totalRouterManagedSvc + totalRouterManagedSvc2 + totalRouterManagedSvc3)}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+        {allTotals.setup_discount_pct > 0 && (
+          <p className="discount-note">* {(allTotals.setup_discount_pct * 100).toFixed(0)}% bulk discount applied to setup fee.</p>
+        )}
+      </div>
+    </div>
+
+  </div>
+</section>
+          {/* ── 5. Terms & Conditions ───────────────────────────────────── */}
+          <section className="sec">
+            <h2 className="sec__title">{contact.additionalNotes ? "5." : "4."} Terms &amp; Conditions</h2>
+            <p className="sec__text sec__text--sm" style={{ marginBottom: 8 }}>
+              This proposal is governed by the <strong>StarGrid Standard Agreement</strong> (available at{" "}
+              <span className="link-ref">www.stargrid.one/legal</span>). Key terms:
+            </p>
+            <div className="terms">
+              <ul>
+                <li>All prices are in EUR and exclude applicable VAT/taxes.</li>
+                <li>This offer is valid for <strong>30 days</strong> from the date of issue.</li>
+                <li>Setup fees are one-time charges payable upon contract signing.</li>
+                <li>Monthly fees are billed in advance on the 1st of each month.</li>
+                <li>Managed service includes 24/7 monitoring, firmware updates, and SLA-based support.</li>
+                <li>Contract duration as stated above; early termination fees may apply per the StarGrid Standard Agreement.</li>
+                <li>Hardware remains StarGrid property until full setup fee is received.</li>
+                <li>SLA credits apply as defined in the StarGrid Standard Agreement, Section 4.</li>
+                <li>All commercial data are valid upon personal approval by StarGrid.</li>
+              </ul>
+              <div className="gdpr-note">
+                <strong>Data &amp; Privacy Disclaimer —</strong> We process personal data in accordance with the General Data
+                Protection Regulation (GDPR). All data is collected and used solely for legitimate purposes, kept secure,
+                and retained only as long as necessary. While we take appropriate measures to ensure data accuracy and
+                protection, we cannot guarantee absolute security. Individuals have the right to access, rectify, or erase
+                their personal data, as well as other rights as provided under GDPR.
               </div>
-
-              {/* Right — Full Deployment */}
-              <div className="offering-col">
-                <div className="deploy-box">
-                  <div className="deploy-badge">Full Deployment</div>
-                  <p className="offering-col__label">All {totalSites} Site{totalSites !== 1 ? "s" : ""}</p>
-                  <p className="sec__text sec__text--sm offering-desc">Complete rollout with full managed service coverage.</p>
-                  <table className="sum-overview sum-overview--deploy">
-                    <thead>
-                      <tr>
-                        <th>Fee Items</th>
-                        <th className="ra">StarGrid &amp; Connectivity</th>
-                        <th className="ra">StarGrid Only</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="even">
-                        <td>Total Network Setup</td>
-                        <td className="ra mono"><strong>{formatEuro(adjAllSetup)}</strong></td>
-                        <td className="ra mono"><strong>{formatEuro(totalRouterManagedSvc)}</strong></td>
-                      </tr>
-                      <tr>
-                        <td>Total Monthly Connectivity</td>
-                        <td className="ra mono"><strong>{formatEuro(adjAllMonthly)}</strong></td>
-                        <td className="ra mono"><strong>{formatEuro(totalRouterManagedSvc2)}</strong></td>
-                      </tr>
-                      <tr className="even">
-                        <td>Total Monthly Managed Service</td>
-                        <td className="ra mono"><strong>{formatEuro(adjAllManagedSvc)}</strong></td>
-                        <td className="ra mono"><strong>{formatEuro(totalRouterManagedSvc3)}</strong></td>
-                      </tr>
-                      <tr className="cv-row">
-                        <td><strong>Total Contract Value</strong><small className="cv-sub"> / {allTotals.contract_months} mo</small></td>
-                        <td className="ra mono cv-val"><strong>{formatEuro(adjContractValue)}</strong></td>
-                        <td className="ra mono cv-val"><strong>{formatEuro(totalRouterManagedSvc + totalRouterManagedSvc2 + totalRouterManagedSvc3)}</strong></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  {allTotals.setup_discount_pct > 0 && (
-                    <p className="discount-note">* {(allTotals.setup_discount_pct * 100).toFixed(0)}% bulk discount applied.</p>
-                  )}
-                </div>
-              </div>
-
             </div>
           </section>
 
-          {/* ── Footer between tables and page number (per annotation) ── */}
           <DocFooter today={today} refId={refId} />
 
           {/* ════════════════════════════════════════════════════════════════
-              ANNEX — page 2+
+              ANNEX — Connectivity Plan & Proposal  (page 2 and on)
           ════════════════════════════════════════════════════════════════ */}
           <div className="annex-break" />
           <DocHeader today={today} refId={refId} />
@@ -752,36 +795,6 @@ export default function PdfOfferPage() {
             )}
           </section>
 
-          {/* ── Annex 3. Terms & Conditions (full) ─────────────────────── */}
-          <section className="sec">
-            <h2 className="sec__title">3. Terms &amp; Conditions</h2>
-            <p className="sec__text sec__text--sm" style={{ marginBottom: 8 }}>
-              This proposal is governed by the <strong>StarGrid Standard Agreement</strong> (available at{" "}
-              <span className="link-ref">www.stargrid.one/legal</span>). Key terms:
-            </p>
-            <div className="terms">
-              <ul>
-                <li>All prices are in EUR and exclude applicable VAT/taxes.</li>
-                <li>This offer is valid for <strong>30 days</strong> from the date of issue.</li>
-                <li>Setup fees are one-time charges payable upon contract signing.</li>
-                <li>Monthly fees are billed in advance on the 1st of each month.</li>
-                <li>Managed service includes 24/7 monitoring, firmware updates, and SLA-based support.</li>
-                <li>Contract duration as stated above; early termination fees may apply per the StarGrid Standard Agreement.</li>
-                <li>Hardware remains StarGrid property until full setup fee is received.</li>
-                <li>SLA credits apply as defined in the StarGrid Standard Agreement, Section 4.</li>
-                <li>All commercial data are valid upon personal approval by StarGrid.</li>
-              </ul>
-              {/* GDPR Disclaimer moved here — last page per annotation */}
-              <div className="gdpr-note">
-                <strong>Data &amp; Privacy Disclaimer —</strong> We process personal data in accordance with the General Data
-                Protection Regulation (GDPR). All data is collected and used solely for legitimate purposes, kept secure,
-                and retained only as long as necessary. While we take appropriate measures to ensure data accuracy and
-                protection, we cannot guarantee absolute security. Individuals have the right to access, rectify, or erase
-                their personal data, as well as other rights as provided under GDPR.
-              </div>
-            </div>
-          </section>
-
           <DocFooter today={today} refId={refId} right={isOperator ? "Network Operator" : "Enterprise"} />
 
         </div>
@@ -801,6 +814,8 @@ export default function PdfOfferPage() {
         .pp__dl    { padding:11px 26px; background:linear-gradient(135deg,#3D72FC,#5CB0E9); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; }
         .pp__dl:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 14px rgba(61,114,252,0.3); }
         .pp__dl:disabled { opacity:0.55; cursor:wait; }
+        .pp__edit  { padding:9px 18px; background:#f0f4ff; border:1px solid #c7d4fd; border-radius:8px; color:#3D72FC; font-size:14px; font-weight:500; cursor:pointer; }
+        .pp__edit:hover { background:#e6edff; }
         .pp__send  { padding:11px 22px; background:linear-gradient(135deg,#12b981,#059669); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; }
         .pp__send:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 14px rgba(16,185,129,0.35); }
         .pp__send:disabled { opacity:0.55; cursor:wait; }
@@ -816,188 +831,88 @@ export default function PdfOfferPage() {
         .paper {
           width:860px; max-width:100%; background:#ffffff;
           border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.08),0 8px 40px rgba(0,0,0,0.06);
-          padding:36px 52px;
+          padding:44px 56px;
           font-family:'Segoe UI',-apple-system,Arial,Helvetica,sans-serif;
-          color:#1e1e2e; font-size:12.5px; line-height:1.45;
+          color:#1e1e2e; font-size:13px; line-height:1.5;
         }
 
-        /* ── Header with T&C box ─────────────────────── */
-        .hdr--with-tc {
-          display:flex !important; flex-direction:row !important;
-          justify-content:space-between; align-items:flex-start; gap:20px;
-        }
-        .hdr__left-block { display:flex; flex-direction:column; gap:0; flex-shrink:0; }
+        /* ── Header ─────────────────────────────────── */
+        .hdr { display:flex; justify-content:space-between; align-items:center; }
         .hdr__logo { display:flex; align-items:center; gap:12px; }
         .hdr__brand { font-size:20px; font-weight:800; letter-spacing:1.5px; color:#12132a; }
         .hdr__tagline { font-size:10.5px; color:#999; letter-spacing:0.4px; margin-top:1px; }
-        .hdr__meta { text-align:left; margin-top:6px; }
-        .hdr__date { font-size:12px; font-weight:600; color:#333; }
-        .hdr__ref  { font-size:10.5px; color:#bbb; margin-top:2px; }
+        .hdr__meta { text-align:right; }
+        .hdr__date { font-size:13px; font-weight:600; color:#333; }
+        .hdr__ref  { font-size:11px; color:#bbb; margin-top:3px; }
 
-        /* T&C box in header */
-        .hdr__tc-box {
-          flex:1; max-width:420px;
-          border:1px solid #d1e0fe; border-left:3px solid #3D72FC;
-          background:#f0f5ff; border-radius:0 8px 8px 0;
-          padding:8px 12px;
-        }
-        .hdr__tc-title {
-          font-size:10px; font-weight:700; color:#1e3a8a;
-          margin-bottom:5px; line-height:1.4;
-        }
-        .hdr__tc-list {
-          margin:0; padding:0 0 0 14px;
-          list-style:disc;
-        }
-        .hdr__tc-list li {
-          font-size:10px; color:#374151; line-height:1.55;
-        }
-
-        .rule { height:1px; background:#e0e0e0; margin:12px 0; }
+        .rule { height:1px; background:#e0e0e0; margin:16px 0; }
         .rule--gradient { height:3px; background:linear-gradient(90deg,#3D72FC,#5CB0E9,#6669D8); border-radius:2px; }
 
-        .doc-title { font-size:22px; font-weight:700; color:#12132a; margin:12px 0 3px; }
-        .doc-sub   { font-size:12px; color:#777; margin:0 0 4px; }
+        .doc-title { font-size:24px; font-weight:700; color:#12132a; margin:16px 0 4px; }
+        .doc-sub   { font-size:13px; color:#777; margin:0 0 4px; }
 
-        /* ── Tight sections for page 1 ───────────────── */
-        .sec { margin-top:18px; }
-        .sec--tight { margin-top:12px; }
+        /* ── Section container ───────────────────────── */
+        .sec { margin-top:22px; }
         .sec__title {
-          font-size:14px; font-weight:700; color:#12132a;
-          margin:0 0 8px; padding-bottom:5px;
+          font-size:15px; font-weight:700; color:#12132a;
+          margin:0 0 10px; padding-bottom:6px;
           border-bottom:2px solid #3D72FC;
+          display:flex; align-items:center; gap:8px;
         }
-        .sec__text { font-size:12.5px; color:#555; line-height:1.55; margin:0 0 8px; }
-        .sec__text--sm { font-size:11.5px; color:#777; }
-        .sec__text--intro { font-size:11.5px; color:#555; line-height:1.5; margin:0; }
+        .sec__text { font-size:13px; color:#555; line-height:1.65; margin:0 0 10px; }
+        .sec__text--sm { font-size:12px; color:#777; }
 
-        /* One-liner offering description */
-        .offering-desc { margin:0 0 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-        /* ── Two-column layout ───────────────────────── */
+        /* ── Two-column layout for sections 2 & 3 ───── */
         .two-col-sections {
-          display:grid !important; grid-template-columns:1fr 1fr !important; gap:16px; margin-top:0; align-items:start;
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:20px;
+          margin-top:0;
+          align-items:start;
         }
-        .sec--col { margin-top:12px; }
+        .sec--col { margin-top:22px; }
+
+        /* ── Intro pills ─────────────────────────────── */
+        .intro-pills { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+        .pill {
+          padding:3px 11px; border-radius:20px;
+          background:#eef2ff; border:1px solid #c7d4fd;
+          font-size:11px; font-weight:600; color:#3D72FC;
+        }
 
         /* ── Contact row ─────────────────────────────── */
-        .contact-row { font-size:11px; color:#888; margin-bottom:6px; line-height:1.5; }
+        .contact-row { font-size:11.5px; color:#888; margin-bottom:8px; line-height:1.6; }
 
         /* ── Use case blockquote ─────────────────────── */
         .use-case {
-          position:relative; margin:6px 0 0; padding:10px 14px 10px 36px;
+          position:relative; margin:8px 0 0; padding:12px 16px 12px 40px;
           background:#f8f9ff; border:1px solid #dce4fd; border-left:4px solid #3D72FC;
           border-radius:0 10px 10px 0;
         }
         .use-case__icon {
-          position:absolute; left:10px; top:6px;
-          font-size:24px; color:#c7d4fd; font-family:Georgia,serif; line-height:1;
+          position:absolute; left:12px; top:8px;
+          font-size:28px; color:#c7d4fd; font-family:Georgia,serif; line-height:1;
         }
-        .use-case p { margin:0; font-size:11.5px; color:#444; line-height:1.6; font-style:italic; }
+        .use-case p { margin:0; font-size:12px; color:#444; line-height:1.7; font-style:italic; }
 
-        /* ── Summary overview table ──────────────────── */
-        .sum-overview {
-          width:100%; border-collapse:collapse;
-          border:1px solid #e4e6ec; border-radius:10px; overflow:hidden;
+        /* ── Connectivity parameter table ────────────── */
+        .param-block { margin-bottom:16px; border:1px solid #e4e6ec; border-radius:10px; overflow:hidden; }
+        .param-block__hdr {
+          display:flex; align-items:center; gap:12px;
+          padding:8px 14px; background:#f7f8fc; border-bottom:1px solid #e4e6ec;
         }
-        .sum-overview th {
-          padding:6px 10px; background:#f7f8fc;
-          font-size:9.5px; font-weight:700; color:#888;
-          text-transform:uppercase; letter-spacing:0.5px;
-          text-align:left; border-bottom:1px solid #e4e6ec;
-        }
-        .sum-overview th.ra { text-align:right; }
-        .sum-overview td {
-          padding:7px 10px; font-size:11.5px; color:#444;
-          border-bottom:1px solid #f0f0f0; vertical-align:middle;
-        }
-        .sum-overview td:not(:first-child) { text-align:right; }
-        .sum-overview tr.even td { background:#fafbfd; }
-        .sum-overview tr:last-child td { border-bottom:none; }
+        .param-block__name { font-size:12px; font-weight:600; color:#333; }
+        .param-tbl { width:100%; border-collapse:collapse; }
+        .param-tbl tr.even { background:#fafbfd; }
+        .param-tbl__lbl { padding:7px 14px; font-size:11.5px; color:#777; width:46%; }
+        .param-tbl__val { padding:7px 14px; font-size:11.5px; font-weight:600; color:#333; }
 
-        /* ── Offering columns — equal height ─────────── */
-        .offering-cols {
-          display:grid !important; grid-template-columns:1fr 1.8fr !important; gap:14px; align-items:stretch;
-        }
-        .offering-col { display:flex; flex-direction:column; }
-        .offering-col__label { font-size:12.5px; font-weight:700; color:#12132a; margin:0 0 4px; }
-
-        /* ── PoC box ─────────────────────────────────── */
-        .poc-box {
-          flex:1; border:2px solid #3D72FC; border-radius:12px;
-          padding:12px 14px; background:#f8f9ff;
-          display:flex; flex-direction:column;
-        }
-        .poc-box__badge {
-          display:inline-flex; padding:2px 10px; margin-bottom:8px;
-          background:linear-gradient(135deg,#3D72FC,#5CB0E9); color:#fff;
-          border-radius:20px; font-size:10px; font-weight:700;
-          align-self:flex-start;
-        }
-        .poc-note { margin-top:auto; padding-top:8px; font-size:10.5px; color:#777; font-style:italic; }
-
-        /* ── PoC table — 2 columns ───────────────────── */
-        .sum-overview--poc th:first-child { width:62%; }
-        .sum-overview--poc th:nth-child(2) { width:38%; }
-
-        /* ── Deploy box ──────────────────────────────── */
-        .deploy-box {
-          flex:1; border:2px solid #22c55e; border-radius:12px;
-          padding:12px 14px; background:#f6fff9;
-          display:flex; flex-direction:column;
-        }
-        .deploy-badge {
-          display:inline-flex; padding:2px 10px; margin-bottom:8px;
-          background:linear-gradient(135deg,#16a34a,#22c55e); color:#fff;
-          border-radius:20px; font-size:10px; font-weight:700;
-          align-self:flex-start;
-        }
-
-        /* ── Deploy table — 3 columns ────────────────── */
-        .sum-overview--deploy th:first-child  { width:38%; }
-        .sum-overview--deploy th:nth-child(2) { width:31%; }
-        .sum-overview--deploy th:nth-child(3) { width:31%; }
-
-        /* ── Contract value row ──────────────────────── */
-        .cv-row td { border-top:2px solid #3D72FC !important; border-bottom:none; }
-        .cv-val { font-size:13px !important; color:#3D72FC !important; }
-        .cv-sub { font-size:10px; color:#aaa; font-weight:normal; margin-left:4px; }
-        .discount-note { font-size:10px; color:#888; margin-top:6px; font-style:italic; }
-
-        /* ── Badge ───────────────────────────────────── */
-        .badge {
-          display:inline-flex; padding:4px 12px; border-radius:16px;
-          background:linear-gradient(135deg,#3D72FC,#5CB0E9); color:#fff;
-          font-size:11px; font-weight:700; white-space:nowrap; flex-shrink:0;
-        }
-        .badge--sm { padding:3px 10px; font-size:10px; }
-        .badge--hub { background:linear-gradient(135deg,#2ECC71,#1aad5e); }
-
-        /* ── Link ref ─────────────────────────────────── */
-        .link-ref { color:#3D72FC; font-style:normal; }
-
-        /* ── Terms ───────────────────────────────────── */
-        .terms { background:#fafbfd; border:1px solid #eef0f4; border-radius:10px; padding:12px 18px; }
-        .terms ul { margin:0 0 10px; padding:0 0 0 16px; }
-        .terms li { font-size:11.5px; color:#666; line-height:1.75; }
-        .gdpr-note {
-          margin-top:0; padding:10px 14px;
-          background:#fff8f0; border:1px solid #fde8c8; border-left:3px solid #f59e0b;
-          border-radius:0 8px 8px 0; font-size:11px; color:#78350f; line-height:1.65;
-        }
-
-        /* ── Footer ──────────────────────────────────── */
-        .ftr { display:flex !important; flex-direction:row !important; justify-content:space-between; padding-top:6px; font-size:10.5px; color:#bbb; }
-        .ftr__left  { display:flex; flex-direction:column; gap:2px; }
-        .ftr__left strong { color:#555; font-size:11.5px; }
-        .ftr__right { text-align:right !important; display:flex; flex-direction:column; gap:2px; }
-        .footer-tier { font-weight:700; color:#3D72FC; }
-
-        /* ── Site offer tables ───────────────────────── */
+        /* ── Site offer table ────────────────────────── */
         .site { margin-bottom:20px; border:1px solid #e4e6ec; border-radius:12px; overflow:hidden; page-break-inside:avoid; }
         .site--hub { border-color:#a7f3c0; margin-bottom:24px; }
         .site__hdr { display:flex; align-items:center; gap:14px; padding:12px 18px; background:#f7f8fc; border-bottom:1px solid #e4e6ec; }
         .site__hdr--hub { background:#f0fdf5; border-bottom-color:#a7f3c0; }
+        .badge--hub { background:linear-gradient(135deg,#2ECC71,#1aad5e); }
         .tfoot-row--hub td { background:#f0fdf5; border-top-color:#2ECC71 !important; }
         .site__info { display:flex; flex-direction:column; gap:2px; }
         .site__name { font-size:14px; font-weight:700; color:#12132a; }
@@ -1013,13 +928,180 @@ export default function PdfOfferPage() {
         .mono { font-variant-numeric:tabular-nums; }
         .dot  { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; vertical-align:middle; }
 
-        .total-banner {
-          display:flex; justify-content:space-between; align-items:center;
-          padding:12px 20px; background:linear-gradient(135deg,#eef2ff,#e8edff);
-          border:2px solid #3D72FC; border-radius:12px; margin-top:8px;
-          font-size:13px; font-weight:700; color:#12132a;
+/* ── Offering two-column layout ──────────────── */
+.offering-cols {
+  grid-template-columns: 1fr 3fr;  /* was 2fr 3fr */
+  gap: 18px;
+  margin-top: 0;
+  align-items: start;
+}
+// .offering-col { display: flex; flex-direction: column; }
+.offering-col__label {
+  font-size: 13px; font-weight: 700; color: #12132a; margin: 0 0 6px;
+}
+
+/* ── PoC box ─────────────────────────────────── */
+.poc-box {
+  border: 2px solid #3D72FC;
+  border-radius: 12px;
+  padding: 16px 18px;
+  background: #f8f9ff;
+}
+.poc-box__badge {
+  display: inline-flex; padding: 3px 12px; margin-bottom: 10px;
+  background: linear-gradient(135deg, #3D72FC, #5CB0E9); color: #fff;
+  border-radius: 20px; font-size: 11px; font-weight: 700;
+}
+.poc-note { margin-top: 10px; font-size: 11px; color: #777; font-style: italic; }
+
+/* ── Deploy box ──────────────────────────────── */
+.deploy-box {
+  border: 2px solid #22c55e;
+  border-radius: 12px;
+  padding: 16px 18px;
+  background: #f6fff9;
+  flex: 1;
+}
+.deploy-badge {
+  display: inline-flex; padding: 3px 12px; margin-bottom: 10px;
+  background: linear-gradient(135deg, #16a34a, #22c55e); color: #fff;
+  border-radius: 20px; font-size: 11px; font-weight: 700;
+}
+
+/* ── Shared table base ───────────────────────── */
+.sum-overview {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #e4e6ec;
+  border-radius: 10px;
+  overflow: hidden;
+  table-layout: fixed;
+}
+.sum-overview th {
+  padding: 7px 10px;
+  background: #f7f8fc;
+  font-size: 10px;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: left;
+  border-bottom: 1px solid #e4e6ec;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sum-overview th.ra { text-align: right; }
+.sum-overview td {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #444;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sum-overview td:not(:first-child) { text-align: right; }
+.sum-overview tr.even td { background: #fafbfd; }
+.sum-overview tr:last-child td { border-bottom: none; }
+
+/* ── PoC table — 2 columns ───────────────────── */
+.sum-overview--poc th:first-child { width: 62%; }
+.sum-overview--poc th:nth-child(2) { width: 38%; }
+
+/* ── Deploy table — 3 columns ────────────────── */
+.sum-overview--deploy th:first-child  { width: 36%; }
+.sum-overview--deploy th:nth-child(2) { width: 32%; }
+.sum-overview--deploy th:nth-child(3) { width: 32%; }
+
+/* ── Contract value row ──────────────────────── */
+.cv-row td { border-top: 2px solid #3D72FC !important; border-bottom: none; }
+.cv-val { font-size: 15px !important; color: #3D72FC !important; }
+.cv-sub { font-size: 10px; color: #aaa; font-weight: normal; margin-left: 4px; }
+.discount-note { font-size: 11px; color: #888; margin-top: 8px; font-style: italic; }
+
+/* ── Responsive ──────────────────────────────── */
+@media (max-width: 768px) {
+  .offering-cols { grid-template-columns: 1fr; }
+}
+        /* ── Badge ───────────────────────────────────── */
+        .badge {
+          display:inline-flex; padding:4px 12px; border-radius:16px;
+          background:linear-gradient(135deg,#3D72FC,#5CB0E9); color:#fff;
+          font-size:11px; font-weight:700; white-space:nowrap; flex-shrink:0;
         }
-        .total-banner__val { font-size:18px; color:#3D72FC; font-weight:800; }
+        .badge--sm { padding:3px 10px; font-size:10px; }
+
+        /* ── Link ref ─────────────────────────────────── */
+        .link-ref { color:#3D72FC; font-style:normal; }
+
+        /* ── Terms ───────────────────────────────────── */
+        .terms { background:#fafbfd; border:1px solid #eef0f4; border-radius:10px; padding:12px 18px; }
+        .terms ul { margin:0 0 10px; padding:0 0 0 16px; }
+        .terms li { font-size:11.5px; color:#666; line-height:1.75; }
+        .gdpr-note {
+          margin-top:0; padding:10px 14px;
+          background:#fff8f0; border:1px solid #fde8c8; border-left:3px solid #f59e0b;
+          border-radius:0 8px 8px 0; font-size:11px; color:#78350f; line-height:1.65;
+        }
+
+        /* ── Footer ──────────────────────────────────── */
+        .ftr { display:flex; justify-content:space-between; padding-top:6px; font-size:10.5px; color:#bbb; }
+        .ftr__left  { display:flex; flex-direction:column; gap:2px; }
+        .ftr__left strong { color:#555; font-size:11.5px; }
+        .ftr__right { text-align:right; display:flex; flex-direction:column; gap:2px; }
+
+        /* ── Responsive ──────────────────────────────── */
+        @media(max-width:920px) {
+          .paper { padding:28px 20px; }
+          .hdr { flex-direction:column; align-items:flex-start; gap:10px; }
+          .hdr__meta { text-align:left; }
+          .ftr { flex-direction:column; gap:10px; }
+          .ftr__right { text-align:left; }
+          .pp__bar { flex-direction:column; gap:10px; align-items:stretch; }
+          .pp__bar-r { justify-content:center; flex-wrap:wrap; }
+          .two-col-sections { grid-template-columns:1fr; }
+        }
+        @media(max-width:700px) {
+          .offering-cols { grid-template-columns:1fr; }
+          .two-col-sections { grid-template-columns:1fr; }
+        }
+
+        /* ── DocHeader / DocFooter wrapper strips ────── */
+        .doc-header-wrap { margin:0; }
+        .doc-footer-wrap { margin:0; }
+        .footer-tier { font-weight:700; color:#3D72FC; }
+
+        /* ── Annex page break ────────────────────────── */
+        .annex-break {
+          height:0; margin:32px 0 0;
+          border-top:3px dashed #c7d4fd;
+          position:relative;
+        }
+        .annex-break::after {
+          content:"— Annex begins on next page —";
+          position:absolute; top:-11px; left:50%; transform:translateX(-50%);
+          background:#fff; padding:0 14px;
+          font-size:10px; font-weight:600; color:#aab; letter-spacing:0.8px; text-transform:uppercase;
+        }
+
+        /* ── Offering two-column layout ──────────────── */
+        .offering-cols {
+          display:grid; grid-template-columns:1.6fr 2fr; gap:18px; margin-top:0;
+        }
+        .offering-col { display:flex; flex-direction:column; }
+        .offering-col__label {
+          font-size:13px; font-weight:700; color:#12132a; margin:0 0 6px;
+        }
+        .deploy-box {
+          border:2px solid #22c55e; border-radius:12px;
+          padding:16px 20px; background:#f6fff9; flex:1;
+        }
+        .deploy-badge {
+          display:inline-flex; padding:3px 12px; margin-bottom:10px;
+          background:linear-gradient(135deg,#16a34a,#22c55e); color:#fff;
+          border-radius:20px; font-size:11px; font-weight:700;
+        }
 
         /* ── Bill of Materials ───────────────────────── */
         .bom-group { margin-bottom:20px; }
@@ -1029,34 +1111,12 @@ export default function PdfOfferPage() {
           margin-bottom:8px; padding-bottom:5px;
           border-bottom:1px solid #e4e6ec;
         }
-        .bom-dot { display:inline-block; width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+        .bom-dot {
+          display:inline-block; width:10px; height:10px;
+          border-radius:50%; flex-shrink:0;
+        }
         .bom-tbl th { font-size:10px; }
         .bom-tbl td { font-size:11.5px; }
-
-        /* ── Annex page break ────────────────────────── */
-        .annex-break {
-          height:0; margin:28px 0 0;
-          border-top:3px dashed #c7d4fd; position:relative;
-        }
-        .annex-break::after {
-          content:"— Annex begins on next page —";
-          position:absolute; top:-11px; left:50%; transform:translateX(-50%);
-          background:#fff; padding:0 14px;
-          font-size:10px; font-weight:600; color:#aab; letter-spacing:0.8px; text-transform:uppercase;
-        }
-
-        /* ── Responsive (screen only, not print) ─────── */
-        @media screen and (max-width:920px) {
-          .paper { padding:22px 18px; }
-          .hdr--with-tc { flex-direction:column !important; gap:12px; }
-          .hdr__tc-box { max-width:100% !important; }
-          .ftr { flex-direction:column !important; gap:10px; }
-          .ftr__right { text-align:left !important; }
-          .pp__bar { flex-direction:column; gap:10px; align-items:stretch; }
-          .pp__bar-r { justify-content:center; flex-wrap:wrap; }
-          .two-col-sections { grid-template-columns:1fr !important; }
-          .offering-cols { grid-template-columns:1fr !important; }
-        }
 
         /* ── Print ───────────────────────────────────── */
         @media print {
@@ -1066,80 +1126,51 @@ export default function PdfOfferPage() {
           .paper {
             box-shadow:none !important; border:none !important;
             width:100% !important; max-width:100% !important;
-            padding:12px 18px !important;
-            font-size:11px !important; line-height:1.4 !important;
+            padding:14px 20px !important;
+            font-size:11.5px !important;
+            line-height:1.45 !important;
           }
-
-          /* ── CRITICAL: preserve all multi-column layouts in print ── */
-          .hdr--with-tc {
-            display:flex !important; flex-direction:row !important;
-            justify-content:space-between !important; align-items:flex-start !important;
-            gap:20px !important;
-          }
-          .hdr__left-block { flex-shrink:0 !important; }
-          .hdr__tc-box { flex:1 !important; max-width:420px !important; display:block !important; }
-          .two-col-sections {
-            display:grid !important; grid-template-columns:1fr 1fr !important;
-            gap:12px !important; align-items:start !important;
-          }
-          .offering-cols {
-            display:grid !important; grid-template-columns:1fr 1.8fr !important;
-            gap:10px !important; align-items:stretch !important;
-          }
-          .offering-col { display:flex !important; flex-direction:column !important; }
-          .poc-box { display:flex !important; flex-direction:column !important; }
-          .deploy-box { display:flex !important; flex-direction:column !important; }
-          .ftr {
-            display:flex !important; flex-direction:row !important;
-            justify-content:space-between !important;
-          }
-          .ftr__right { text-align:right !important; }
-          .ftr__left { display:flex !important; flex-direction:column !important; }
-          .total-banner { display:flex !important; justify-content:space-between !important; }
-          .site__hdr { display:flex !important; align-items:center !important; }
-          .site__info { display:flex !important; flex-direction:column !important; }
-          .bom-group__hdr { display:flex !important; align-items:center !important; }
-
-          /* ── Size reductions ── */
-          .doc-title { font-size:19px !important; margin:10px 0 2px !important; }
-          .doc-sub { font-size:11px !important; }
-          .sec--tight { margin-top:8px !important; }
+          .doc-title { font-size:20px !important; margin:12px 0 3px !important; }
+          .doc-sub { font-size:11.5px !important; }
           .sec { margin-top:14px !important; }
-          .sec__title { font-size:12px !important; margin-bottom:6px !important; padding-bottom:4px !important; }
-          .sec__text--intro { font-size:10.5px !important; }
-          .sum-overview td { padding:5px 8px !important; font-size:10.5px !important; }
-          .sum-overview th { padding:5px 8px !important; font-size:9px !important; }
-          .poc-box, .deploy-box { padding:10px 12px !important; }
-          .poc-box__badge, .deploy-badge { padding:2px 8px !important; font-size:9px !important; margin-bottom:6px !important; }
+          .sec__title { font-size:12.5px !important; margin-bottom:7px !important; padding-bottom:4px !important; }
+          .sec__text { font-size:11px !important; margin-bottom:7px !important; }
+          .sec__text--sm { font-size:10.5px !important; }
+          .intro-pills { gap:4px !important; margin-top:7px !important; }
+          .pill { font-size:10px !important; padding:2px 9px !important; }
+          .two-col-sections { gap:14px !important; margin-top:0 !important; }
+          .sec--col { margin-top:14px !important; }
+          .use-case { padding:9px 14px 9px 36px !important; }
+          .use-case p { font-size:11px !important; }
+          .contact-row { font-size:10.5px !important; margin-bottom:6px !important; }
+          .sum-overview td { padding:6px 12px !important; font-size:11px !important; }
+          .sum-overview th { padding:6px 12px !important; font-size:9.5px !important; }
+          .offering-cols { gap:14px !important; }
+          .poc-box, .deploy-box { padding:12px 16px !important; }
+          .poc-box__badge, .deploy-badge { padding:2px 10px !important; font-size:10px !important; margin-bottom:7px !important; }
           .poc-note { font-size:10px !important; }
-          .hdr__tc-box { padding:6px 10px !important; }
-          .hdr__tc-title { font-size:9px !important; }
-          .hdr__tc-list li { font-size:9px !important; }
-          .ftr { font-size:9px !important; padding-top:3px !important; }
-          .ftr__left strong { font-size:10px !important; }
-          .rule--gradient { margin:10px 0 !important; }
-          .annex-break { margin:20px 0 0 !important; border-top:1px solid #ddd !important; }
+          .offering-col__label { font-size:11.5px !important; margin-bottom:4px !important; }
+          .terms { padding:9px 14px !important; }
+          .terms li { font-size:10.5px !important; line-height:1.6 !important; }
+          .terms ul { margin-bottom:7px !important; padding-left:14px !important; }
+          .gdpr-note { font-size:10px !important; padding:8px 12px !important; }
+          .ftr { font-size:9.5px !important; padding-top:4px !important; }
+          .ftr__left strong { font-size:10.5px !important; }
+          .rule--gradient { margin:12px 0 !important; }
+          .annex-break { margin:24px 0 0 !important; border-top:1px solid #ddd !important; }
           .annex-break::after { display:none !important; }
-          .hdr__brand { font-size:17px !important; }
-          .tbl th { padding:6px 9px !important; font-size:9px !important; }
-          .tbl td { padding:7px 9px !important; font-size:10.5px !important; }
-          .site { margin-bottom:12px !important; }
-          .site__hdr { padding:8px 12px !important; }
-          .site__name { font-size:11.5px !important; }
-          .site__type { font-size:9.5px !important; }
-          .total-banner { padding:8px 14px !important; font-size:11px !important; }
-          .total-banner__val { font-size:15px !important; }
-          .cv-val { font-size:12px !important; }
-          .bom-group { margin-bottom:12px !important; }
-          .bom-group__hdr { font-size:11px !important; margin-bottom:5px !important; }
-          .terms { padding:8px 12px !important; }
-          .terms li { font-size:10px !important; line-height:1.55 !important; }
-          .terms ul { margin-bottom:6px !important; padding-left:12px !important; }
-          .gdpr-note { font-size:9.5px !important; padding:7px 10px !important; }
-          .two-col-sections { gap:12px !important; }
-          .contact-row { font-size:10px !important; }
-          .use-case { padding:8px 12px 8px 32px !important; }
-          .use-case p { font-size:10.5px !important; }
+          .hdr__brand { font-size:18px !important; }
+          .tbl th { padding:7px 10px !important; font-size:9px !important; }
+          .tbl td { padding:8px 10px !important; font-size:11px !important; }
+          .site { margin-bottom:14px !important; }
+          .site__hdr { padding:9px 14px !important; }
+          .site__name { font-size:12.5px !important; }
+          .site__type { font-size:10px !important; }
+          .total-banner { padding:9px 14px !important; font-size:12px !important; }
+          .total-banner__val { font-size:16px !important; }
+          .cv-val { font-size:15px !important; }
+          .bom-group { margin-bottom:14px !important; }
+          .bom-group__hdr { font-size:11.5px !important; margin-bottom:6px !important; }
         }
       `}</style>
     </div>
