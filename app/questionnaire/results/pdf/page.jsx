@@ -6,7 +6,7 @@ import { getAllSites } from "@/lib/multiSiteStorage";
 import { getRecommendations, formatEuro } from "@/lib/recommendation";
 import Image from "next/image";
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+/* ── helpers ──────────────────────────────────────────────────────────────── */
 function getLabel(ans) {
   if (!ans) return "—";
   if (typeof ans === "string") return ans;
@@ -15,68 +15,124 @@ function getLabel(ans) {
   return "—";
 }
 
-// ── Module-level shared components ────────────────────────────────────────
-function DocHeader({ today, refId }) {
+/* ── tiny style constants ─────────────────────────────────────────────────── */
+const BLUE   = "#3D72FC";
+const GRAD   = "linear-gradient(90deg,#3D72FC,#5CB0E9,#6669D8)";
+const FONT   = "'Segoe UI',-apple-system,Arial,Helvetica,sans-serif";
+
+const thBase  = { padding:"7px 10px", textAlign:"left", fontSize:9.5, fontWeight:700, color:"#999", textTransform:"uppercase", letterSpacing:"0.6px", background:"#fafbfd", borderBottom:"2px solid #eef0f4" };
+const thR     = { ...thBase, textAlign:"right" };
+const tdBase  = { padding:"8px 10px", borderBottom:"1px solid #f0f1f5", color:"#333", fontSize:11.5, verticalAlign:"middle" };
+const tdR     = { ...tdBase, textAlign:"right", fontVariantNumeric:"tabular-nums" };
+const tdEven  = { ...tdBase, background:"#fafbfd" };
+const tdEvenR = { ...tdEven, textAlign:"right", fontVariantNumeric:"tabular-nums" };
+const dotS    = { display:"inline-block", width:8, height:8, borderRadius:"50%", marginRight:6, verticalAlign:"middle" };
+const badgeS  = { display:"inline-block", padding:"2px 9px", borderRadius:14, background:"linear-gradient(135deg,#3D72FC,#5CB0E9)", color:"#fff", fontSize:9.5, fontWeight:700 };
+
+const secTitleStyle = {
+  fontSize:13, fontWeight:700, color:"#12132a",
+  margin:"0 0 7px", paddingBottom:4,
+  borderBottom:`2px solid ${BLUE}`,
+};
+const gradBar = { height:3, background:GRAD, borderRadius:2, margin:"10px 0" };
+
+/* ── reusable sub-components (all inline styles — no CSS classes) ─────────── */
+
+function GradBar({ mt = 10, mb = 10 }) {
+  return <div style={{ height:3, background:GRAD, borderRadius:2, marginTop:mt, marginBottom:mb }} />;
+}
+
+function PageHeader({ today, refId, withTc }) {
   return (
-    <div className="doc-header-wrap">
-      <header className="hdr">
-        <div className="hdr__logo">
-          <Image src="/assets/images/icon/icon.png" alt="StarGrid" width={34} height={34} />
-          <div>
-            <div className="hdr__brand">STARGRID</div>
-            <div className="hdr__tagline">Industrial Connectivity Solutions</div>
-          </div>
-        </div>
-        <div className="hdr__meta">
-          <div className="hdr__date">{today}</div>
-          <div className="hdr__ref">Ref: {refId}</div>
-        </div>
-      </header>
-      <div className="rule rule--gradient" />
+    <div>
+      <table style={{ width:"100%", borderCollapse:"collapse" }}>
+        <tbody><tr>
+          {/* logo + date */}
+          <td style={{ verticalAlign:"top", width:"38%", paddingRight:16 }}>
+            <table style={{ borderCollapse:"collapse" }}><tbody><tr>
+              <td style={{ paddingRight:10, verticalAlign:"middle" }}>
+                <Image src="/assets/images/icon/icon.png" alt="StarGrid" width={30} height={30} />
+              </td>
+              <td style={{ verticalAlign:"middle" }}>
+                <div style={{ fontSize:18, fontWeight:800, letterSpacing:"1.5px", color:"#12132a" }}>STARGRID</div>
+                <div style={{ fontSize:9.5, color:"#999", letterSpacing:"0.4px" }}>Industrial Connectivity Solutions</div>
+              </td>
+            </tr></tbody></table>
+            <div style={{ marginTop:5 }}>
+              <div style={{ fontSize:11, fontWeight:600, color:"#333" }}>{today}</div>
+              <div style={{ fontSize:10, color:"#bbb", marginTop:1 }}>Ref: {refId}</div>
+            </div>
+          </td>
+
+          {/* T&C box — only on page 1 */}
+          {withTc && (
+            <td style={{ verticalAlign:"top", width:"62%" }}>
+              <div style={{ border:"1px solid #d1e0fe", borderLeft:"3px solid #3D72FC", background:"#f0f5ff", borderRadius:"0 7px 7px 0", padding:"7px 11px" }}>
+                <div style={{ fontSize:9.5, fontWeight:700, color:"#1e3a8a", marginBottom:4, lineHeight:1.4 }}>
+                  Terms &amp; Conditions — This proposal is governed by the StarGrid Standard Agreement. Key terms:
+                </div>
+                <ul style={{ margin:0, padding:"0 0 0 13px", listStyle:"disc" }}>
+                  {[
+                    "All prices are in EUR and exclude applicable VAT/taxes.",
+                    `This offer is valid for 30 days from the date of issue.`,
+                    "Setup fees are one-time charges payable upon contract signing.",
+                    "Monthly fees are billed in advance on the 1st of each month.",
+                    "All commercial data are valid upon personal approval by StarGrid.",
+                  ].map((t,i)=>(
+                    <li key={i} style={{ fontSize:9.5, color:"#374151", lineHeight:1.5 }}>{t}</li>
+                  ))}
+                </ul>
+              </div>
+            </td>
+          )}
+        </tr></tbody>
+      </table>
+      <GradBar mt={10} mb={0} />
     </div>
   );
 }
 
-function DocFooter({ today, refId, right }) {
+function PageFooter({ today, refId, tier }) {
   return (
-    <div className="doc-footer-wrap">
-      <div className="rule rule--gradient" style={{ marginTop: 20 }} />
-      <footer className="ftr">
-        <div className="ftr__left">
-          <strong>StarGrid Europe BV</strong>
-          <span>Zeestraat 70, 2318 AG The Hague, Netherlands</span>
-          <span>al@cellsat.one · www.stargrid.one</span>
-        </div>
-        <div className="ftr__right">
-          <span>Prepared {today}</span>
-          <span>Reference: {refId}</span>
-          {right && <span className="footer-tier">{right}</span>}
-          <span>Confidential — For intended recipient only</span>
-        </div>
-      </footer>
+    <div>
+      <GradBar mt={14} mb={6} />
+      <table style={{ width:"100%", borderCollapse:"collapse" }}>
+        <tbody><tr>
+          <td style={{ verticalAlign:"top", fontSize:10, color:"#bbb" }}>
+            <div style={{ fontWeight:700, color:"#555", fontSize:11 }}>StarGrid Europe BV</div>
+            <div>Zeestraat 70, 2318 AG The Hague, Netherlands</div>
+            <div>al@cellsat.one · www.stargrid.one</div>
+          </td>
+          <td style={{ verticalAlign:"top", textAlign:"right", fontSize:10, color:"#bbb" }}>
+            <div>Prepared {today}</div>
+            <div>Reference: {refId}</div>
+            {tier && <div style={{ fontWeight:700, color:BLUE }}>{tier}</div>}
+            <div>Confidential — For intended recipient only</div>
+          </td>
+        </tr></tbody>
+      </table>
     </div>
   );
 }
 
 function BomTable({ rows, emptyMsg }) {
-  if (!rows.length) return <p className="sec__text sec__text--sm" style={{ fontStyle: "italic" }}>{emptyMsg}</p>;
+  if (!rows.length) return <p style={{ fontStyle:"italic", fontSize:11, color:"#777", margin:"4px 0" }}>{emptyMsg}</p>;
   return (
-    <table className="tbl bom-tbl">
-      <thead>
-        <tr>
-          <th>Site</th><th>Component</th><th>Hardware</th><th>Airtime Plan</th>
-          <th className="ra">Setup (€)</th><th className="ra">Monthly (€)</th>
-        </tr>
-      </thead>
+    <table style={{ width:"100%", borderCollapse:"collapse" }}>
+      <thead><tr>
+        {["Site","Component","Hardware","Airtime Plan","Setup (€)","Monthly (€)"].map((h,i)=>(
+          <th key={i} style={i>=4 ? thR : thBase}>{h}</th>
+        ))}
+      </tr></thead>
       <tbody>
-        {rows.map((c, i) => (
+        {rows.map((c,i)=>(
           <tr key={i}>
-            <td><span className="badge badge--sm">Site {c.siteNum}</span></td>
-            <td><span className="dot" style={{ background: c.color }} />{c.type}</td>
-            <td>{c.hardware || "—"}</td>
-            <td>{c.airtime  || "—"}</td>
-            <td className="ra mono">{formatEuro(c.network_setup_fee)}</td>
-            <td className="ra mono">{formatEuro(c.network_monthly_fee)}</td>
+            <td style={tdBase}><span style={badgeS}>Site {c.siteNum}</span></td>
+            <td style={tdBase}><span style={{...dotS, background:c.color}}/>{c.type}</td>
+            <td style={tdBase}>{c.hardware||"—"}</td>
+            <td style={tdBase}>{c.airtime||"—"}</td>
+            <td style={tdR}>{formatEuro(c.network_setup_fee)}</td>
+            <td style={tdR}>{formatEuro(c.network_monthly_fee)}</td>
           </tr>
         ))}
       </tbody>
@@ -84,90 +140,42 @@ function BomTable({ rows, emptyMsg }) {
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────
-export default function PdfOfferPage() {
-  const router = useRouter();
-  const [data, setData]           = useState(null);
-  const [sites, setSites]         = useState([]);
-  const [contact, setContact]     = useState({});
-  const [isOperator, setIsOperator] = useState(false);
-  const [msServiceTier, setMsServiceTier] = useState("care");
-  const [loading, setLoading]     = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [generated, setGenerated]   = useState(false);
-  const [sending, setSending]       = useState(false);
-  const [sendStatus, setSendStatus] = useState(null);
-  const offerRef = useRef(null);
+/* ── PDF builder — renders TWO separate hidden divs, one per logical page ─── */
+/*    This guarantees page-1 is always exactly one PDF page                    */
+async function buildPdf(page1El, annexEl) {
+  const html2canvas = (await import("html2canvas")).default;
+  const { jsPDF }   = await import("jspdf");
 
-  useEffect(() => {
-    const storedContact  = JSON.parse(localStorage.getItem("questionnaire_contact") || "{}");
-    const storedOperator = JSON.parse(localStorage.getItem("isNetworkOperator") || "false");
-    const storedTier     = localStorage.getItem("msServiceTier") || "care";
-    setContact(storedContact);
-    setIsOperator(storedOperator);
-    setMsServiceTier(storedTier);
+  const SCALE = 2;
+  const PW = 210, PH = 297, M = 10;
+  const CW = PW - M*2, CH = PH - M*2;
 
-    const fetchData = async () => {
-      const allSites = getAllSites();
-      if (allSites.length === 0) { setLoading(false); return; }
-      setSites(allSites);
-      try {
-        const result = await getRecommendations(allSites);
-        setData(result);
-      } catch (err) {
-        console.error("Recommendation error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+  let pageNum = 0;
 
-  // ── Shared PDF generation logic ──────────────────────────────────────────
-  const generatePdfFromElement = async (el) => {
-    const html2canvas = (await import("html2canvas")).default;
-    const { jsPDF }   = await import("jspdf");
-
+  async function appendElement(el) {
     const canvas = await html2canvas(el, {
-      backgroundColor: "#ffffff",
-      scale: 1.5,
+      backgroundColor:"#ffffff",
+      scale: SCALE,
       useCORS: true,
       logging: false,
-      windowWidth: 860,
-      // Ignore print media queries so html2canvas captures screen layout
-      onclone: (clonedDoc) => {
-        // Force all grid/flex containers to use their screen layout
-        const style = clonedDoc.createElement("style");
-        style.textContent = `
-          * { print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; }
-          .two-col-sections { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 16px !important; }
-          .offering-cols { display: grid !important; grid-template-columns: 1fr 1.8fr !important; gap: 14px !important; }
-          .hdr--with-tc { display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: flex-start !important; gap: 20px !important; }
-          .hdr__tc-box { max-width: 420px !important; flex: 1 !important; }
-          .ftr { display: flex !important; flex-direction: row !important; justify-content: space-between !important; }
-          .ftr__right { text-align: right !important; }
-          .pp__bar { display: none !important; }
-        `;
-        clonedDoc.head.appendChild(style);
-      },
+      windowWidth: el.offsetWidth,
+      width: el.offsetWidth,
     });
 
-    const pageW = 210, pageH = 297, margin = 10;
-    const contentW = pageW - margin * 2;
-    const contentH = pageH - margin * 2;
     const imgAspect  = canvas.height / canvas.width;
-    const scaledImgH = contentW * imgAspect;
-
-    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const totalPages = Math.ceil(scaledImgH / contentH);
+    const scaledH    = CW * imgAspect;
+    const totalPages = Math.ceil(scaledH / CH);
 
     for (let p = 0; p < totalPages; p++) {
-      if (p > 0) pdf.addPage();
-      const srcY        = (p * contentH / scaledImgH) * canvas.height;
-      const srcH        = (contentH / scaledImgH) * canvas.height;
-      const isLast      = p === totalPages - 1;
-      const actualSrcH  = isLast ? canvas.height - srcY : srcH;
-      const actualDestH = isLast ? (actualSrcH / canvas.height) * scaledImgH : contentH;
+      if (pageNum > 0) pdf.addPage();
+      pageNum++;
+
+      const srcY       = (p * CH / scaledH) * canvas.height;
+      const sliceH     = (CH / scaledH) * canvas.height;
+      const isLast     = p === totalPages - 1;
+      const actualSrcH  = isLast ? canvas.height - srcY : sliceH;
+      const actualDestH = isLast ? (actualSrcH / canvas.height) * scaledH : CH;
 
       const pc = document.createElement("canvas");
       pc.width  = canvas.width;
@@ -177,602 +185,571 @@ export default function PdfOfferPage() {
       ctx.fillRect(0, 0, pc.width, pc.height);
       ctx.drawImage(canvas, 0, srcY, canvas.width, actualSrcH, 0, 0, canvas.width, actualSrcH);
 
-      const pageImg = pc.toDataURL("image/jpeg", 0.78);
-      pdf.addImage(pageImg, "JPEG", margin, margin, contentW, actualDestH);
+      pdf.addImage(pc.toDataURL("image/jpeg", 0.85), "JPEG", M, M, CW, actualDestH);
       pdf.setFontSize(8);
-      pdf.setTextColor(180, 180, 180);
-      pdf.text(`Page ${p + 1} of ${totalPages}`, pageW / 2, pageH - 5, { align: "center" });
-      pdf.text("StarGrid — Confidential", margin, pageH - 5);
+      pdf.setTextColor(180,180,180);
+      pdf.text("StarGrid — Confidential", M, PH-5);
     }
+  }
 
-    return pdf;
+  await appendElement(page1El);
+  await appendElement(annexEl);
+
+  return pdf;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  MAIN COMPONENT                                                             */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+export default function PdfOfferPage() {
+  const router = useRouter();
+  const [data, setData]             = useState(null);
+  const [sites, setSites]           = useState([]);
+  const [contact, setContact]       = useState({});
+  const [isOperator, setIsOperator] = useState(false);
+  const [msServiceTier, setMsServiceTier] = useState("care");
+  const [loading, setLoading]       = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [generated, setGenerated]   = useState(false);
+  const [sending, setSending]       = useState(false);
+  const [sendStatus, setSendStatus] = useState(null);
+
+  /* Two separate refs — one for page 1, one for annex */
+  const page1Ref = useRef(null);
+  const annexRef = useRef(null);
+
+  useEffect(() => {
+    const storedContact  = JSON.parse(localStorage.getItem("questionnaire_contact") || "{}");
+    const storedOperator = JSON.parse(localStorage.getItem("isNetworkOperator") || "false");
+    const storedTier     = localStorage.getItem("msServiceTier") || "care";
+    setContact(storedContact);
+    setIsOperator(storedOperator);
+    setMsServiceTier(storedTier);
+
+    (async () => {
+      const allSites = getAllSites();
+      if (!allSites.length) { setLoading(false); return; }
+      setSites(allSites);
+      try { setData(await getRecommendations(allSites)); }
+      catch(e) { console.error(e); }
+      finally   { setLoading(false); }
+    })();
+  }, []);
+
+  /* Derived values — computed only when data is ready */
+  const derived = (() => {
+    if (!data) return null;
+    const { sitePackages, allTotals, totalSites } = data;
+
+    const pocSetupFee = isOperator ? 11500 : 2900;
+    const pocLabel    = isOperator ? "Network Operator PoC" : "Enterprise PoC";
+
+    const MS_TIERS = [
+      { min:1000, assist:0.03, care:0.10 },
+      { min:500,  assist:0.04, care:0.12 },
+      { min:100,  assist:0.05, care:0.14 },
+      { min:50,   assist:0.06, care:0.16 },
+      { min:10,   assist:0.07, care:0.20 },
+      { min:1,    assist:0.08, care:0.20 },
+    ];
+    const row    = MS_TIERS.find(t => totalSites >= t.min) || MS_TIERS[MS_TIERS.length-1];
+    const msRate = row[msServiceTier] ?? row.care;
+
+    const compMsSvc = c => /router|stargrid\s*box/i.test(c.type)
+      ? c.network_setup_fee * msRate : c.managed_service_monthly;
+
+    const EH_SETUP   = 1149;
+    const EH_MONTHLY = 33;
+    const ehMs       = EH_SETUP * msRate;
+
+    const totalBillMs  = sitePackages.reduce((s,sp)=>s+sp.package.components.filter(c=>/router|stargrid\s*box/i.test(c.type)).reduce((a,c)=>a+c.network_setup_fee*msRate,0),0);
+    const rSvc1        = sitePackages.reduce((s,sp)=>s+sp.package.components.filter(c=>/router|stargrid\s*box/i.test(c.type)).reduce((a,c)=>a+c.network_setup_fee*msRate,0),0);
+    const rSvc2        = sitePackages.reduce((s,sp)=>s+sp.package.components.filter(c=>/router|stargrid\s*box/i.test(c.type)).reduce((a,c)=>a+c.network_monthly_fee,0),0);
+    const rSvc3        = sitePackages.reduce((s,sp)=>s+sp.package.components.filter(c=>/router|stargrid\s*box/i.test(c.type)).reduce((a,c)=>a+c.managed_service_monthly,0),0);
+
+    const adjSetup    = allTotals.network_setup_fee + EH_SETUP;
+    const adjMonthly  = allTotals.network_monthly_fee + EH_MONTHLY;
+    const adjMs       = totalBillMs + ehMs;
+    const adjContract = adjSetup + (adjMonthly + adjMs) * allTotals.contract_months;
+
+    let cellularCount=0, satelliteCount=0, fixedCount=0;
+    sitePackages.forEach((sp,idx)=>{
+      const ans=(sites[idx]||{}).answers||{};
+      [ans[11],ans[12]].forEach(conn=>{
+        const v=(getLabel(conn)||"").toLowerCase();
+        if(v.includes("cellu")||v.includes("lte")||v.includes("4g")||v.includes("5g")) cellularCount++;
+        else if(v.includes("sat")||v.includes("leo")||v.includes("geo")) satelliteCount++;
+        else if(v!=="—"&&!v.includes("none")) fixedCount++;
+      });
+    });
+
+    const serviceTypes=[...new Set(sitePackages.map(sp=>sp.package.servicesLabel).filter(Boolean))].join(" / ")||"—";
+
+    const bom={cellular:[],satellite:[],boxes:[],managed:[]};
+    sitePackages.forEach(sp=>{
+      sp.package.components.forEach(c=>{
+        const t=(c.type||"").toLowerCase(), h=(c.hardware||"").toLowerCase();
+        const entry={...c,siteNum:sp.site_number};
+        if(t.includes("cellu")||t.includes("lte")||t.includes("4g")||t.includes("5g")||h.includes("lte")||h.includes("cellular")) bom.cellular.push(entry);
+        else if(t.includes("sat")||t.includes("leo")||t.includes("geo")||t.includes("starlink")||t.includes("iridium")||t.includes("skylo")||t.includes("viasat")||t.includes("oneweb")||h.includes("satell")) bom.satellite.push(entry);
+        else bom.boxes.push(entry);
+      });
+      if(sp.package.totals.managed_service_monthly>0)
+        bom.managed.push({siteNum:sp.site_number,label:sp.package.servicesLabel||"Managed Service",fee:sp.package.totals.managed_service_monthly});
+    });
+
+    return { sitePackages, allTotals, totalSites, pocSetupFee, pocLabel, msRate, compMsSvc,
+             EH_SETUP, EH_MONTHLY, ehMs, rSvc1, rSvc2, rSvc3,
+             adjSetup, adjMonthly, adjMs, adjContract,
+             cellularCount, satelliteCount, fixedCount, serviceTypes, bom };
+  })();
+
+  const today = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"});
+  const refId = `SG-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+
+  /* ── PDF actions ── */
+  const getPdf = async () => {
+    const p1 = page1Ref.current, ax = annexRef.current;
+    if (!p1 || !ax) return null;
+    return buildPdf(p1, ax);
   };
 
   const handleDownload = async () => {
     setGenerating(true);
     try {
-      const el = offerRef.current;
-      if (!el) return;
-      const pdf = await generatePdfFromElement(el);
-      pdf.save("StarGrid-Connectivity-Offer.pdf");
-      setGenerated(true);
-    } catch (err) {
-      console.error("PDF error:", err);
+      const pdf = await getPdf();
+      if (pdf) { pdf.save("StarGrid-Connectivity-Offer.pdf"); setGenerated(true); }
+    } catch(e) {
+      console.error(e);
       alert("PDF generation requires html2canvas & jspdf.\nnpm install html2canvas jspdf");
-    } finally {
-      setGenerating(false);
-    }
+    } finally { setGenerating(false); }
   };
 
   const handleSendEmail = async () => {
-    setSending(true);
-    setSendStatus(null);
+    setSending(true); setSendStatus(null);
     try {
-      const el = offerRef.current;
-      if (!el) return;
-      const pdf = await generatePdfFromElement(el);
+      const pdf = await getPdf();
+      if (!pdf) { setSendStatus("err"); return; }
       const pdfBase64 = pdf.output("datauristring").split(",")[1];
 
-      const contractValue = data?.allTotals
-        ? new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 })
-            .format(data.allTotals.contract_value)
+      const contractValue = derived?.allTotals
+        ? new Intl.NumberFormat("de-DE",{style:"currency",currency:"EUR",maximumFractionDigits:0})
+            .format(derived.allTotals.contract_value)
         : null;
 
-      const res = await fetch("/api/send-proposal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch("/api/send-proposal",{
+        method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          pdfBase64,
-          companyName:   contact.companyName   || "",
-          contactName:   contact.fullName      || "",
-          contactEmail:  contact.email         || "",
-          refId,
-          date:          today,
-          totalSites,
+          pdfBase64, companyName:contact.companyName||"",
+          contactName:contact.fullName||"", contactEmail:contact.email||"",
+          refId, date:today,
+          totalSites: derived?.totalSites,
           contractValue,
         }),
       });
-
       const result = await res.json();
-      if (result.success) {
-        setSendStatus("ok");
-      } else {
-        console.error("Email error:", result.error);
-        setSendStatus("err");
-      }
-    } catch (err) {
-      console.error("Send email error:", err);
-      setSendStatus("err");
-    } finally {
-      setSending(false);
-    }
+      setSendStatus(result.success ? "ok" : "err");
+      if (!result.success) console.error(result.error);
+    } catch(e) { console.error(e); setSendStatus("err"); }
+    finally { setSending(false); }
   };
 
+  /* ── Loading / empty states ── */
   if (loading) return (
     <div style={centerStyle}>
-      <div style={spinnerStyle} />
-      <p style={{ color: "#666", marginTop: 16 }}>Preparing offer document…</p>
-      <style jsx>{`@keyframes sp { to { transform:rotate(360deg); } }`}</style>
+      <div style={spinnerStyle}/>
+      <p style={{color:"#666",marginTop:16}}>Preparing offer document…</p>
+      <style jsx>{`@keyframes sp{to{transform:rotate(360deg);}}`}</style>
     </div>
   );
-
-  if (!data || data.sitePackages.length === 0) return (
+  if (!data||!derived||data.sitePackages.length===0) return (
     <div style={centerStyle}>
-      <h2 style={{ color: "#333", fontSize: 24 }}>No Site Data Found</h2>
-      <p style={{ color: "#888" }}>Complete the questionnaire to generate an offer.</p>
-      <button onClick={() => router.push("/questionnaire")} style={primaryBtnStyle}>Start Questionnaire →</button>
+      <h2 style={{color:"#333",fontSize:24}}>No Site Data Found</h2>
+      <p style={{color:"#888"}}>Complete the questionnaire to generate an offer.</p>
+      <button onClick={()=>router.push("/questionnaire")} style={primaryBtnStyle}>Start Questionnaire →</button>
     </div>
   );
 
-  const { sitePackages, pocTotals, allTotals, totalSites } = data;
-  const pocSetupFee = isOperator ? 11500 : 2900;
-  const pocLabel    = isOperator ? "Network Operator PoC" : "Enterprise PoC";
+  const {
+    sitePackages, allTotals, totalSites,
+    pocSetupFee, pocLabel, compMsSvc,
+    EH_SETUP, EH_MONTHLY, ehMs,
+    rSvc1, rSvc2, rSvc3,
+    adjSetup, adjMonthly, adjMs, adjContract,
+    cellularCount, satelliteCount, fixedCount, serviceTypes, bom,
+  } = derived;
 
-  const MS_TIERS = [
-    { min: 1000, assist: 0.03, care: 0.10 },
-    { min: 500,  assist: 0.04, care: 0.12 },
-    { min: 100,  assist: 0.05, care: 0.14 },
-    { min: 50,   assist: 0.06, care: 0.16 },
-    { min: 10,   assist: 0.07, care: 0.20 },
-    { min: 1,    assist: 0.08, care: 0.20 },
-  ];
-  const msRate = (() => {
-    const row = MS_TIERS.find(t => totalSites >= t.min) || MS_TIERS[MS_TIERS.length - 1];
-    return row[msServiceTier] ?? row.care;
-  })();
-  const compMsSvc = (c) => /router|stargrid\s*box/i.test(c.type) ? c.network_setup_fee * msRate : c.managed_service_monthly;
+  /* ── paper styles shared by both sections ── */
+  const paperStyle = {
+    width: 820,
+    background:"#ffffff",
+    fontFamily: FONT,
+    color:"#1e1e2e",
+    fontSize:12,
+    lineHeight:1.45,
+    boxSizing:"border-box",
+    padding:"32px 48px",
+  };
 
-  const EH_SETUP = 1149;
-  const EH_MONTHLY = 33;
-  const ehManagedSvc = EH_SETUP * msRate;
-
-  const totalBillableMsSvc = sitePackages.reduce((sum, sp) => {
-    return sum + sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type))
-      .reduce((s, c) => s + c.network_setup_fee * msRate, 0);
-  }, 0);
-
-  const totalRouterManagedSvc = sitePackages.reduce((sum, sp) => {
-    const billable = sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type));
-    return sum + billable.reduce((s, c) => s + c.network_setup_fee * msRate, 0);
-  }, 0);
-
-  const totalRouterManagedSvc2 = sitePackages.reduce((sum, sp) => {
-    const billable = sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type));
-    return sum + billable.reduce((s, c) => s + c.network_monthly_fee, 0);
-  }, 0);
-
-  const totalRouterManagedSvc3 = sitePackages.reduce((sum, sp) => {
-    const billable = sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type));
-    return sum + billable.reduce((s, c) => s + c.managed_service_monthly, 0);
-  }, 0);
-
-  const pocBillableMsSvc = sitePackages.slice(0, Math.min(2, totalSites)).reduce((sum, sp) => {
-    return sum + sp.package.components.filter(c => /router|stargrid\s*box/i.test(c.type))
-      .reduce((s, c) => s + c.network_setup_fee * msRate, 0);
-  }, 0);
-  const adjAllSetup      = allTotals.network_setup_fee + EH_SETUP;
-  const adjAllMonthly    = allTotals.network_monthly_fee + EH_MONTHLY;
-  const adjAllManagedSvc = totalBillableMsSvc + ehManagedSvc;
-  const adjContractValue = adjAllSetup + (adjAllMonthly + adjAllManagedSvc) * allTotals.contract_months;
-  const adjPocSetup      = pocSetupFee;
-  const adjPocMonthly    = 0;
-  const adjPocManagedSvc = 0;
-
-  const today = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
-  const refId = `SG-${Date.now().toString(36).toUpperCase().slice(-6)}`;
-
-  let cellularCount = 0, satelliteCount = 0, fixedCount = 0;
-  sitePackages.forEach((sp, idx) => {
-    const site = sites[idx] || {};
-    const ans  = site.answers || {};
-    [ans[11], ans[12]].forEach(conn => {
-      const v = (getLabel(conn) || "").toLowerCase();
-      if (v.includes("cellu") || v.includes("lte") || v.includes("4g") || v.includes("5g")) cellularCount++;
-      else if (v.includes("sat") || v.includes("leo") || v.includes("geo")) satelliteCount++;
-      else if (v !== "—" && !v.includes("none")) fixedCount++;
-    });
-  });
-  const serviceTypes = [...new Set(sitePackages.map(sp => sp.package.servicesLabel).filter(Boolean))].join(" / ") || "—";
-
-  const bom = { cellular: [], satellite: [], boxes: [], managed: [] };
-  sitePackages.forEach((sp) => {
-    sp.package.components.forEach(c => {
-      const t = (c.type || "").toLowerCase();
-      const h = (c.hardware || "").toLowerCase();
-      const entry = { ...c, siteName: sp.site_name, siteNum: sp.site_number };
-      if (t.includes("cellu") || t.includes("lte") || t.includes("4g") || t.includes("5g") || h.includes("lte") || h.includes("cellular")) {
-        bom.cellular.push(entry);
-      } else if (t.includes("sat") || t.includes("leo") || t.includes("geo") || t.includes("starlink") || t.includes("iridium") || t.includes("skylo") || t.includes("viasat") || t.includes("oneweb") || h.includes("satell")) {
-        bom.satellite.push(entry);
-      } else {
-        bom.boxes.push(entry);
-      }
-    });
-    if (sp.package.totals.managed_service_monthly > 0) {
-      bom.managed.push({
-        siteNum:  sp.site_number,
-        siteName: sp.site_name,
-        label:    sp.package.servicesLabel || "Managed Service",
-        fee:      sp.package.totals.managed_service_monthly,
-      });
-    }
-  });
-
-  const sectionNum = (n) => contact.additionalNotes ? n : n - 1;
+  /* ── Overview table row helper ── */
+  const ORow = ({label, val, valColor="#333", i}) => (
+    <tr>
+      <td style={{...(i%2?tdEven:tdBase), fontWeight:600, color:"#444"}}>{label}</td>
+      <td style={{...(i%2?tdEvenR:tdR), fontWeight:700, color:valColor, textTransform:"capitalize"}}>{val}</td>
+    </tr>
+  );
 
   return (
-    <div className="pp">
-      {/* Sticky toolbar */}
-      <div className="pp__bar">
-        <button onClick={() => router.push("/questionnaire/results")} className="pp__back">← Back to Results</button>
-        <div className="pp__bar-r">
-          {generating && <span className="pp__status">Generating PDF…</span>}
-          {sending    && <span className="pp__status">Sending email…</span>}
-          {generated  && <span className="pp__status pp__status--ok">✓ PDF Downloaded</span>}
-          {sendStatus === "ok"  && <span className="pp__status pp__status--ok">✓ Email Sent</span>}
-          {sendStatus === "err" && <span className="pp__status pp__status--err">✗ Send Failed</span>}
-          <button onClick={handleSendEmail} disabled={sending || generating} className="pp__send">
-            {sending ? "Sending…" : "✉ Send via Email"}
+    <div style={{minHeight:"100vh",background:"#e8ecf1"}}>
+
+      {/* ── Toolbar ── */}
+      <div style={{position:"sticky",top:0,zIndex:100,display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 24px",background:"#fff",borderBottom:"1px solid #ddd",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}} className="no-print">
+        <button onClick={()=>router.push("/questionnaire/results")} style={{padding:"9px 18px",background:"#f5f5f5",border:"1px solid #ddd",borderRadius:8,color:"#444",fontSize:14,fontWeight:500,cursor:"pointer"}}>
+          ← Back to Results
+        </button>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          {generating&&<span style={{fontSize:13,color:"#999"}}>Generating PDF…</span>}
+          {sending&&<span style={{fontSize:13,color:"#999"}}>Sending email…</span>}
+          {generated&&<span style={{fontSize:13,color:"#22c55e",fontWeight:600}}>✓ PDF Downloaded</span>}
+          {sendStatus==="ok"&&<span style={{fontSize:13,color:"#22c55e",fontWeight:600}}>✓ Email Sent</span>}
+          {sendStatus==="err"&&<span style={{fontSize:13,color:"#ef4444",fontWeight:600}}>✗ Send Failed</span>}
+          <button onClick={handleSendEmail} disabled={sending||generating}
+            style={{padding:"11px 22px",background:"linear-gradient(135deg,#12b981,#059669)",color:"#fff",border:"none",borderRadius:10,fontSize:14,fontWeight:600,cursor:"pointer",opacity:(sending||generating)?0.55:1}}>
+            {sending?"Sending…":"✉ Send via Email"}
           </button>
-          <button onClick={handleDownload} disabled={generating} className="pp__dl">
-            {generating ? "Generating…" : "↓ Download PDF"}
+          <button onClick={handleDownload} disabled={generating}
+            style={{padding:"11px 26px",background:"linear-gradient(135deg,#3D72FC,#5CB0E9)",color:"#fff",border:"none",borderRadius:10,fontSize:14,fontWeight:600,cursor:"pointer",opacity:generating?0.55:1}}>
+            {generating?"Generating…":"↓ Download PDF"}
           </button>
-          <button onClick={() => window.print()} className="pp__print">Print</button>
+          <button onClick={()=>window.print()}
+            style={{padding:"9px 18px",background:"#f5f5f5",border:"1px solid #ddd",borderRadius:8,color:"#444",fontSize:14,cursor:"pointer"}}>
+            Print
+          </button>
         </div>
       </div>
 
-      <div className="pp__paper-wrap">
-        <div ref={offerRef} className="paper">
+      {/* ── Visual wrapper (screen preview) ── */}
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"36px 16px 72px",gap:32}}>
 
-          {/* ════════════════════════════════════════════════════════════════
-              PAGE 1 — Connectivity Plan & Proposal
-          ════════════════════════════════════════════════════════════════ */}
+        {/* ════════════════════════════════════════════════════════════════
+            SECTION A — PAGE 1  (ref: page1Ref)
+            Everything before the annex, captured as exactly 1 PDF page
+        ════════════════════════════════════════════════════════════════ */}
+        <div ref={page1Ref} style={{...paperStyle, boxShadow:"0 1px 3px rgba(0,0,0,0.08),0 8px 40px rgba(0,0,0,0.06)", borderRadius:3}}>
 
-          {/* ── Header with T&C box in top-right ─────────────────────── */}
-          <div className="doc-header-wrap">
-            <header className="hdr hdr--with-tc">
-              <div className="hdr__left-block">
-                <div className="hdr__logo">
-                  <Image src="/assets/images/icon/icon.png" alt="StarGrid" width={34} height={34} />
-                  <div>
-                    <div className="hdr__brand">STARGRID</div>
-                    <div className="hdr__tagline">Industrial Connectivity Solutions</div>
-                  </div>
-                </div>
-                <div className="hdr__meta" style={{ marginTop: 6 }}>
-                  <div className="hdr__date">{today}</div>
-                  <div className="hdr__ref">Ref: {refId}</div>
-                </div>
-              </div>
-              {/* Terms & Conditions — top right per annotation */}
-              <div className="hdr__tc-box">
-                <div className="hdr__tc-title">Terms &amp; Conditions — This proposal is governed by the StarGrid Standard Agreement. Key terms:</div>
-                <ul className="hdr__tc-list">
-                  <li>All prices are in EUR and exclude applicable VAT/taxes.</li>
-                  <li>This offer is valid for <strong>30 days</strong> from the date of issue.</li>
-                  <li>Setup fees are one-time charges payable upon contract signing.</li>
-                  <li>Monthly fees are billed in advance on the 1st of each month.</li>
-                  <li>All commercial data are valid upon personal approval by StarGrid.</li>
-                </ul>
-              </div>
-            </header>
-            <div className="rule rule--gradient" />
-          </div>
+          <PageHeader today={today} refId={refId} withTc />
 
-          <h1 className="doc-title">Connectivity Plan &amp; Proposal</h1>
-          <p className="doc-sub">
-            {totalSites} Site{totalSites !== 1 ? "s" : ""} — Personalised Plan
-            {contact.companyName ? ` for ${contact.companyName}` : ""}
+          <h1 style={{fontSize:20,fontWeight:700,color:"#12132a",margin:"10px 0 2px"}}>Connectivity Plan &amp; Proposal</h1>
+          <p style={{fontSize:11.5,color:"#777",margin:"0 0 2px"}}>
+            {totalSites} Site{totalSites!==1?"s":""} — Personalised Plan{contact.companyName?` for ${contact.companyName}`:""}
           </p>
 
-          {/* ── 1. Introduction ─────────────────────────────────────────── */}
-          <section className="sec sec--tight">
-            <h2 className="sec__title">1. Introduction</h2>
-            <p className="sec__text sec__text--intro">
+          {/* 1. Introduction */}
+          <div style={{marginTop:10}}>
+            <div style={secTitleStyle}>1. Introduction</div>
+            <p style={{fontSize:11,color:"#555",lineHeight:1.5,margin:0}}>
               StarGrid delivers fully managed hybrid connectivity solutions combining cellular (4G/5G),
               satellite (LEO/GEO), and fixed-line networks into a single intelligent platform. Our edge
               devices automatically select the optimal available network, guaranteeing zero-touch,
               always-on connectivity for industrial, offshore, and remote operations worldwide.
             </p>
-            {/* Pills REMOVED per annotation */}
-          </section>
-
-          {/* ── 2 & 3. Client Use Case + StarGrid Solution — side by side ── */}
-          <div className="two-col-sections">
-
-            {contact.additionalNotes ? (
-              <section className="sec sec--col sec--tight">
-                <h2 className="sec__title">2. Client Use Case</h2>
-                {contact.fullName && (
-                  <div className="contact-row">
-                    <span><strong>{contact.fullName}</strong></span>
-                    {contact.jobTitle && <span> · {contact.jobTitle}</span>}
-                    {contact.email   && <><br /><span>{contact.email}</span></>}
-                    {contact.phone   && <span> · {contact.phone}</span>}
-                  </div>
-                )}
-                <blockquote className="use-case">
-                  <span className="use-case__icon">"</span>
-                  <p>{contact.additionalNotes}</p>
-                </blockquote>
-              </section>
-            ) : (
-              <div className="sec sec--col sec--tight" />
-            )}
-
-            <section className="sec sec--col sec--tight">
-              <h2 className="sec__title">{contact.additionalNotes ? "3." : "2."} StarGrid Solution</h2>
-              <table className="sum-overview">
-                <tbody>
-                  <tr>
-                    <td style={{ fontWeight:600, color:"#444" }}>Sites Configured</td>
-                    <td className="ra mono" style={{ fontWeight:700 }}>{totalSites}</td>
-                  </tr>
-                  <tr className="even">
-                    <td style={{ fontWeight:600, color:"#444" }}>Central Enterprise Hub</td>
-                    <td className="ra" style={{ fontWeight:700, color:"#2ECC71" }}>1 × Large</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight:600, color:"#444" }}>Cellular Connections</td>
-                    <td className="ra mono" style={{ fontWeight:700 }}>{cellularCount || "—"}</td>
-                  </tr>
-                  <tr className="even">
-                    <td style={{ fontWeight:600, color:"#444" }}>Satellite Connections</td>
-                    <td className="ra mono" style={{ fontWeight:700 }}>{satelliteCount || "—"}</td>
-                  </tr>
-                  {fixedCount > 0 && (
-                    <tr>
-                      <td style={{ fontWeight:600, color:"#444" }}>Fixed / Other</td>
-                      <td className="ra mono" style={{ fontWeight:700 }}>{fixedCount}</td>
-                    </tr>
-                  )}
-                  <tr className={fixedCount > 0 ? "even" : ""}>
-                    <td style={{ fontWeight:600, color:"#444" }}>Managed Service</td>
-                    <td className="ra" style={{ fontWeight:700, color:"#3D72FC" }}>{serviceTypes}</td>
-                  </tr>
-                  <tr className={fixedCount > 0 ? "" : "even"}>
-                    <td style={{ fontWeight:600, color:"#444" }}>Service Tier</td>
-                    <td className="ra" style={{ fontWeight:700, color:"#3D72FC", textTransform:"capitalize" }}>{msServiceTier}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </section>
-
           </div>
 
-          {/* ── 3/4. Offering ────────────────────────────────────────────── */}
-          <section className="sec sec--tight">
-            <h2 className="sec__title">{contact.additionalNotes ? "4." : "3."} Offering</h2>
-            {/* Subtitle line REMOVED per annotation */}
-            <div className="offering-cols">
+          {/* 2 + 3 — side by side via TABLE */}
+          <table style={{width:"100%",borderCollapse:"collapse",marginTop:10}}>
+            <tbody><tr>
+              {/* Client Use Case */}
+              <td style={{verticalAlign:"top",width:"46%",paddingRight:14}}>
+                {contact.additionalNotes ? (
+                  <div>
+                    <div style={secTitleStyle}>2. Client Use Case</div>
+                    {contact.fullName&&(
+                      <div style={{fontSize:10.5,color:"#888",marginBottom:5,lineHeight:1.5}}>
+                        <strong>{contact.fullName}</strong>
+                        {contact.jobTitle&&<span> · {contact.jobTitle}</span>}
+                        {contact.email&&<><br/><span>{contact.email}</span></>}
+                        {contact.phone&&<span> · {contact.phone}</span>}
+                      </div>
+                    )}
+                    <div style={{position:"relative",padding:"9px 12px 9px 34px",background:"#f8f9ff",border:"1px solid #dce4fd",borderLeft:"4px solid #3D72FC",borderRadius:"0 9px 9px 0"}}>
+                      <span style={{position:"absolute",left:9,top:5,fontSize:22,color:"#c7d4fd",fontFamily:"Georgia,serif",lineHeight:1}}>"</span>
+                      <p style={{margin:0,fontSize:11,color:"#444",lineHeight:1.55,fontStyle:"italic"}}>{contact.additionalNotes}</p>
+                    </div>
+                  </div>
+                ) : <div style={{height:4}}/>}
+              </td>
 
-              {/* Left — PoC */}
-              <div className="offering-col">
-                <div className="poc-box">
-                  <div className="poc-box__badge">{pocLabel}</div>
-                  <p className="offering-col__label">Proof of Concept</p>
-                  <p className="sec__text sec__text--sm offering-desc">Validate performance on {Math.min(2, totalSites)} site{Math.min(2, totalSites) !== 1 ? "s" : ""} before full rollout.</p>
-                  <table className="sum-overview sum-overview--poc">
-                    <thead>
-                      <tr>
-                        <th>Fee Item</th>
-                        <th className="ra">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>Network Setup</td>
-                        <td className="ra mono"><strong>{formatEuro(adjPocSetup)}</strong></td>
-                      </tr>
-                      <tr className="even">
-                        <td>Monthly Connectivity</td>
-                        <td className="ra mono"><strong>{formatEuro(adjPocMonthly)}</strong></td>
-                      </tr>
-                      <tr>
-                        <td>Monthly Managed Service</td>
-                        <td className="ra mono"><strong>{formatEuro(adjPocManagedSvc)}</strong></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <p className="poc-note">
-                    {isOperator
-                      ? "Network Operator pricing applies."
-                      : "Enterprise pricing. Includes hardware, installation, 30-day SLA."}
-                  </p>
+              {/* StarGrid Solution */}
+              <td style={{verticalAlign:"top",width:"54%"}}>
+                <div style={secTitleStyle}>{contact.additionalNotes?"3.":"2."} StarGrid Solution</div>
+                <table style={{width:"100%",borderCollapse:"collapse",border:"1px solid #e4e6ec",borderRadius:8,overflow:"hidden"}}>
+                  <tbody>
+                    {[
+                      ["Sites Configured",    totalSites,         "#333"],
+                      ["Central Enterprise Hub","1 × Large",      "#2ECC71"],
+                      ["Cellular Connections", cellularCount||"—","#333"],
+                      ["Satellite Connections",satelliteCount||"—","#333"],
+                      ...(fixedCount>0?[["Fixed / Other",fixedCount,"#333"]]:[]),
+                      ["Managed Service",      serviceTypes,      BLUE],
+                      ["Service Tier",         msServiceTier,     BLUE],
+                    ].map(([label,val,col],i)=>(
+                      <ORow key={i} label={label} val={val} valColor={col} i={i}/>
+                    ))}
+                  </tbody>
+                </table>
+              </td>
+            </tr></tbody>
+          </table>
+
+          {/* Offering — PoC + Full Deployment side by side via TABLE */}
+          <div style={{marginTop:10}}>
+            <div style={secTitleStyle}>{contact.additionalNotes?"4.":"3."} Offering</div>
+            <table style={{width:"100%",borderCollapse:"collapse"}}>
+              <tbody><tr>
+
+                {/* PoC */}
+                <td style={{verticalAlign:"top",width:"34%",paddingRight:12}}>
+                  <div style={{border:"2px solid #3D72FC",borderRadius:10,padding:"10px 12px",background:"#f8f9ff",height:"100%",boxSizing:"border-box"}}>
+                    <div style={{display:"inline-block",padding:"2px 9px",marginBottom:7,background:"linear-gradient(135deg,#3D72FC,#5CB0E9)",color:"#fff",borderRadius:18,fontSize:9.5,fontWeight:700}}>
+                      {pocLabel}
+                    </div>
+                    <div style={{fontSize:12,fontWeight:700,color:"#12132a",margin:"0 0 3px"}}>Proof of Concept</div>
+                    <p style={{fontSize:11,color:"#777",margin:"0 0 7px"}}>
+                      Validate on {Math.min(2,totalSites)} site{Math.min(2,totalSites)!==1?"s":""} before full rollout.
+                    </p>
+                    <table style={{width:"100%",borderCollapse:"collapse",border:"1px solid #e4e6ec",borderRadius:7,overflow:"hidden"}}>
+                      <thead><tr>
+                        <th style={{...thBase,fontSize:9,padding:"5px 8px"}}>Fee Item</th>
+                        <th style={{...thR,  fontSize:9,padding:"5px 8px"}}>Amount</th>
+                      </tr></thead>
+                      <tbody>
+                        {[["Network Setup",pocSetupFee],["Monthly Connectivity",0],["Monthly Managed Svc",0]].map(([l,v],i)=>(
+                          <tr key={i}>
+                            <td style={{...(i%2?tdEven:tdBase),fontSize:11,padding:"5px 8px"}}>{l}</td>
+                            <td style={{...(i%2?tdEvenR:tdR),fontWeight:700,fontSize:11,padding:"5px 8px"}}>{formatEuro(v)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <p style={{marginTop:7,fontSize:10,color:"#777",fontStyle:"italic"}}>
+                      {isOperator?"Network Operator pricing applies.":"Enterprise pricing. Includes hardware, installation, 30-day SLA."}
+                    </p>
+                  </div>
+                </td>
+
+                {/* Full Deployment */}
+                <td style={{verticalAlign:"top",width:"66%"}}>
+                  <div style={{border:"2px solid #22c55e",borderRadius:10,padding:"10px 12px",background:"#f6fff9",boxSizing:"border-box"}}>
+                    <div style={{display:"inline-block",padding:"2px 9px",marginBottom:7,background:"linear-gradient(135deg,#16a34a,#22c55e)",color:"#fff",borderRadius:18,fontSize:9.5,fontWeight:700}}>
+                      Full Deployment
+                    </div>
+                    <div style={{fontSize:12,fontWeight:700,color:"#12132a",margin:"0 0 3px"}}>All {totalSites} Site{totalSites!==1?"s":""}</div>
+                    <p style={{fontSize:11,color:"#777",margin:"0 0 7px"}}>Complete rollout with full managed service coverage.</p>
+                    <table style={{width:"100%",borderCollapse:"collapse",border:"1px solid #e4e6ec",borderRadius:7,overflow:"hidden"}}>
+                      <thead><tr>
+                        <th style={{...thBase,fontSize:9,padding:"5px 8px",width:"37%"}}>Fee Items</th>
+                        <th style={{...thR,  fontSize:9,padding:"5px 8px",width:"31.5%"}}>StarGrid &amp; Connectivity</th>
+                        <th style={{...thR,  fontSize:9,padding:"5px 8px",width:"31.5%"}}>StarGrid Only</th>
+                      </tr></thead>
+                      <tbody>
+                        {[
+                          ["Total Network Setup",           adjSetup,   rSvc1, true],
+                          ["Total Monthly Connectivity",    adjMonthly, rSvc2, false],
+                          ["Total Monthly Managed Service", adjMs,      rSvc3, true],
+                        ].map(([label,v1,v2,even],i)=>(
+                          <tr key={i}>
+                            <td style={{...(even?tdEven:tdBase),fontSize:11,padding:"5px 8px"}}>{label}</td>
+                            <td style={{...(even?tdEvenR:tdR),fontWeight:700,fontSize:11,padding:"5px 8px"}}>{formatEuro(v1)}</td>
+                            <td style={{...(even?tdEvenR:tdR),fontWeight:700,fontSize:11,padding:"5px 8px"}}>{formatEuro(v2)}</td>
+                          </tr>
+                        ))}
+                        {/* Contract value row */}
+                        <tr>
+                          <td style={{...tdBase,fontSize:11,padding:"5px 8px",borderTop:"2px solid #3D72FC",borderBottom:"none"}}>
+                            <strong>Total Contract Value</strong>
+                            <small style={{fontSize:9.5,color:"#aaa",fontWeight:"normal",marginLeft:3}}>/ {allTotals.contract_months} mo</small>
+                          </td>
+                          <td style={{...tdR,fontSize:12.5,color:BLUE,fontWeight:800,padding:"5px 8px",borderTop:"2px solid #3D72FC",borderBottom:"none"}}>{formatEuro(adjContract)}</td>
+                          <td style={{...tdR,fontSize:12.5,color:BLUE,fontWeight:800,padding:"5px 8px",borderTop:"2px solid #3D72FC",borderBottom:"none"}}>{formatEuro(rSvc1+rSvc2+rSvc3)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    {allTotals.setup_discount_pct>0&&(
+                      <p style={{fontSize:10,color:"#888",marginTop:5,fontStyle:"italic"}}>* {(allTotals.setup_discount_pct*100).toFixed(0)}% bulk discount applied.</p>
+                    )}
+                  </div>
+                </td>
+
+              </tr></tbody>
+            </table>
+          </div>
+
+          <PageFooter today={today} refId={refId} />
+        </div>
+
+
+        {/* ════════════════════════════════════════════════════════════════
+            SECTION B — ANNEX  (ref: annexRef)
+            Captured separately → appended after page 1 in PDF
+        ════════════════════════════════════════════════════════════════ */}
+        <div ref={annexRef} style={{...paperStyle, boxShadow:"0 1px 3px rgba(0,0,0,0.08),0 8px 40px rgba(0,0,0,0.06)", borderRadius:3}}>
+
+          <PageHeader today={today} refId={refId} withTc={false} />
+
+          <h1 style={{fontSize:20,fontWeight:700,color:"#12132a",margin:"10px 0 2px"}}>Annex: Connectivity Plan &amp; Proposal</h1>
+          <p style={{fontSize:11.5,color:"#777",margin:"0 0 4px"}}>Technical &amp; Financial Breakdown — {totalSites} Site{totalSites!==1?"s":""}</p>
+
+          {/* Annex 1 */}
+          <div style={{marginTop:14}}>
+            <div style={secTitleStyle}>1. Connectivity Solution Offer</div>
+            <p style={{fontSize:11,color:"#777",margin:"0 0 10px"}}>Full overview of financial details per site — setup costs, monthly network fees, and StarGrid Managed Service fee.</p>
+
+            {/* Enterprise Hub */}
+            <div style={{marginBottom:18,border:"1px solid #a7f3c0",borderRadius:10,overflow:"hidden"}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 16px",background:"#f0fdf5",borderBottom:"1px solid #a7f3c0"}}>
+                <span style={{display:"inline-block",padding:"3px 10px",borderRadius:14,background:"linear-gradient(135deg,#2ECC71,#1aad5e)",color:"#fff",fontSize:10.5,fontWeight:700,whiteSpace:"nowrap"}}>Central Hub</span>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700,color:"#12132a"}}>Enterprise Hub</div>
+                  <div style={{fontSize:10.5,color:"#777"}}>Central connectivity node — all {totalSites} site{totalSites!==1?"s":""} connected</div>
                 </div>
               </div>
-
-              {/* Right — Full Deployment */}
-              <div className="offering-col">
-                <div className="deploy-box">
-                  <div className="deploy-badge">Full Deployment</div>
-                  <p className="offering-col__label">All {totalSites} Site{totalSites !== 1 ? "s" : ""}</p>
-                  <p className="sec__text sec__text--sm offering-desc">Complete rollout with full managed service coverage.</p>
-                  <table className="sum-overview sum-overview--deploy">
-                    <thead>
-                      <tr>
-                        <th>Fee Items</th>
-                        <th className="ra">StarGrid &amp; Connectivity</th>
-                        <th className="ra">StarGrid Only</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="even">
-                        <td>Total Network Setup</td>
-                        <td className="ra mono"><strong>{formatEuro(adjAllSetup)}</strong></td>
-                        <td className="ra mono"><strong>{formatEuro(totalRouterManagedSvc)}</strong></td>
-                      </tr>
-                      <tr>
-                        <td>Total Monthly Connectivity</td>
-                        <td className="ra mono"><strong>{formatEuro(adjAllMonthly)}</strong></td>
-                        <td className="ra mono"><strong>{formatEuro(totalRouterManagedSvc2)}</strong></td>
-                      </tr>
-                      <tr className="even">
-                        <td>Total Monthly Managed Service</td>
-                        <td className="ra mono"><strong>{formatEuro(adjAllManagedSvc)}</strong></td>
-                        <td className="ra mono"><strong>{formatEuro(totalRouterManagedSvc3)}</strong></td>
-                      </tr>
-                      <tr className="cv-row">
-                        <td><strong>Total Contract Value</strong><small className="cv-sub"> / {allTotals.contract_months} mo</small></td>
-                        <td className="ra mono cv-val"><strong>{formatEuro(adjContractValue)}</strong></td>
-                        <td className="ra mono cv-val"><strong>{formatEuro(totalRouterManagedSvc + totalRouterManagedSvc2 + totalRouterManagedSvc3)}</strong></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  {allTotals.setup_discount_pct > 0 && (
-                    <p className="discount-note">* {(allTotals.setup_discount_pct * 100).toFixed(0)}% bulk discount applied.</p>
-                  )}
-                </div>
-              </div>
-
-            </div>
-          </section>
-
-          {/* ── Footer between tables and page number (per annotation) ── */}
-          <DocFooter today={today} refId={refId} />
-
-          {/* ════════════════════════════════════════════════════════════════
-              ANNEX — page 2+
-          ════════════════════════════════════════════════════════════════ */}
-          <div className="annex-break" />
-          <DocHeader today={today} refId={refId} />
-
-          <h1 className="doc-title">Annex: Connectivity Plan &amp; Proposal</h1>
-          <p className="doc-sub">Technical &amp; Financial Breakdown — {totalSites} Site{totalSites !== 1 ? "s" : ""}</p>
-
-          {/* ── Annex 1. Connectivity Solution Offer ────────────────────── */}
-          <section className="sec">
-            <h2 className="sec__title">1. Connectivity Solution Offer</h2>
-            <p className="sec__text sec__text--sm">
-              Full overview of financial details per site — setup costs, monthly network fees, and StarGrid Managed Service fee.
-            </p>
-
-            <div className="site site--hub">
-              <div className="site__hdr site__hdr--hub">
-                <span className="badge badge--hub">Central Hub</span>
-                <div className="site__info">
-                  <span className="site__name">Enterprise Hub</span>
-                  <span className="site__type">Central connectivity node — all {totalSites} site{totalSites !== 1 ? "s" : ""} connected</span>
-                </div>
-              </div>
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    <th>Component</th><th>Hardware</th><th>Airtime Plan</th>
-                    <th className="ra">Setup Fee</th><th className="ra">Monthly Fee</th><th className="ra">Managed Svc</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td><span className="dot" style={{ background:"#2ECC71" }} />Enterprise Hub</td>
-                    <td>Large</td>
-                    <td>—</td>
-                    <td className="ra mono">{formatEuro(EH_SETUP)}</td>
-                    <td className="ra mono">{formatEuro(EH_MONTHLY)}</td>
-                    <td className="ra mono">{formatEuro(ehManagedSvc)}</td>
-                  </tr>
-                </tbody>
-                <tfoot>
-                  <tr className="tfoot-row tfoot-row--hub">
-                    <td colSpan={3}><strong>Enterprise Hub Total</strong></td>
-                    <td className="ra mono"><strong>{formatEuro(EH_SETUP)}</strong></td>
-                    <td className="ra mono"><strong>{formatEuro(EH_MONTHLY)}</strong></td>
-                    <td className="ra mono"><strong>{formatEuro(ehManagedSvc)}</strong></td>
-                  </tr>
-                </tfoot>
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead><tr>
+                  {["Component","Hardware","Airtime Plan","Setup Fee","Monthly Fee","Managed Svc"].map((h,i)=>(
+                    <th key={i} style={i>=3?thR:thBase}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody><tr>
+                  <td style={tdBase}><span style={{...dotS,background:"#2ECC71"}}/>Enterprise Hub</td>
+                  <td style={tdBase}>Large</td><td style={tdBase}>—</td>
+                  <td style={tdR}>{formatEuro(EH_SETUP)}</td>
+                  <td style={tdR}>{formatEuro(EH_MONTHLY)}</td>
+                  <td style={tdR}>{formatEuro(ehMs)}</td>
+                </tr></tbody>
+                <tfoot><tr style={{background:"#f0fdf5"}}>
+                  <td colSpan={3} style={{...tdBase,borderTop:"2px solid #2ECC71",borderBottom:"none"}}><strong>Enterprise Hub Total</strong></td>
+                  {[EH_SETUP,EH_MONTHLY,ehMs].map((v,i)=>(
+                    <td key={i} style={{...tdR,borderTop:"2px solid #2ECC71",borderBottom:"none"}}><strong>{formatEuro(v)}</strong></td>
+                  ))}
+                </tr></tfoot>
               </table>
             </div>
 
-            {sitePackages.map((sp, idx) => {
-              const { site_name, site_number, package: pkg } = sp;
-              const site     = sites[idx] || {};
-              const siteType = site?.answers?.[22]?.label || "Fixed Site";
-              const siteName = site?.name || site_name;
-              const siteMsSvc = pkg.components.reduce((s, c) => s + compMsSvc(c), 0);
+            {/* Per-site */}
+            {sitePackages.map((sp,idx)=>{
+              const {site_number,package:pkg}=sp;
+              const site     = sites[idx]||{};
+              const siteType = site?.answers?.[22]?.label||"Fixed Site";
+              const siteName = site?.name||sp.site_name;
+              const siteMsSvc= pkg.components.reduce((s,c)=>s+compMsSvc(c),0);
               return (
-                <div key={sp.site_id || idx} className="site">
-                  <div className="site__hdr">
-                    <span className="badge">Site {site_number}</span>
-                    <div className="site__info">
-                      <span className="site__name">{siteName}</span>
-                      <span className="site__type">{siteType} — {pkg.servicesLabel}</span>
-                      {site?.location?.address && <span className="site__loc">{site.location.address}</span>}
+                <div key={sp.site_id||idx} style={{marginBottom:16,border:"1px solid #e4e6ec",borderRadius:10,overflow:"hidden"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 16px",background:"#f7f8fc",borderBottom:"1px solid #e4e6ec"}}>
+                    <span style={{display:"inline-block",padding:"3px 10px",borderRadius:14,background:"linear-gradient(135deg,#3D72FC,#5CB0E9)",color:"#fff",fontSize:10.5,fontWeight:700,whiteSpace:"nowrap"}}>Site {site_number}</span>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:700,color:"#12132a"}}>{siteName}</div>
+                      <div style={{fontSize:10.5,color:"#777"}}>{siteType} — {pkg.servicesLabel}</div>
+                      {site?.location?.address&&<div style={{fontSize:10,color:"#aaa"}}>{site.location.address}</div>}
                     </div>
                   </div>
-                  <table className="tbl">
-                    <thead>
-                      <tr>
-                        <th>Component</th><th>Hardware</th><th>Airtime Plan</th>
-                        <th className="ra">Setup Fee</th><th className="ra">Monthly Fee</th><th className="ra">Managed Svc</th>
-                      </tr>
-                    </thead>
+                  <table style={{width:"100%",borderCollapse:"collapse"}}>
+                    <thead><tr>
+                      {["Component","Hardware","Airtime Plan","Setup Fee","Monthly Fee","Managed Svc"].map((h,i)=>(
+                        <th key={i} style={i>=3?thR:thBase}>{h}</th>
+                      ))}
+                    </tr></thead>
                     <tbody>
-                      {pkg.components.map((c, ci) => (
+                      {pkg.components.map((c,ci)=>(
                         <tr key={ci}>
-                          <td><span className="dot" style={{ background: c.color }} />{c.type}</td>
-                          <td>{c.hardware}</td>
-                          <td>{c.airtime}</td>
-                          <td className="ra mono">{formatEuro(c.network_setup_fee)}</td>
-                          <td className="ra mono">{formatEuro(c.network_monthly_fee)}</td>
-                          <td className="ra mono">{formatEuro(compMsSvc(c))}</td>
+                          <td style={tdBase}><span style={{...dotS,background:c.color}}/>{c.type}</td>
+                          <td style={tdBase}>{c.hardware}</td>
+                          <td style={tdBase}>{c.airtime}</td>
+                          <td style={tdR}>{formatEuro(c.network_setup_fee)}</td>
+                          <td style={tdR}>{formatEuro(c.network_monthly_fee)}</td>
+                          <td style={tdR}>{formatEuro(compMsSvc(c))}</td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot>
-                      <tr className="tfoot-row">
-                        <td colSpan={3}><strong>Site {site_number} Subtotal</strong></td>
-                        <td className="ra mono"><strong>{formatEuro(pkg.totals.network_setup_fee)}</strong></td>
-                        <td className="ra mono"><strong>{formatEuro(pkg.totals.network_monthly_fee)}</strong></td>
-                        <td className="ra mono"><strong>{formatEuro(siteMsSvc)}</strong></td>
-                      </tr>
-                    </tfoot>
+                    <tfoot><tr style={{background:"#eef2ff"}}>
+                      <td colSpan={3} style={{...tdBase,borderTop:"2px solid #3D72FC",borderBottom:"none"}}><strong>Site {site_number} Subtotal</strong></td>
+                      {[pkg.totals.network_setup_fee,pkg.totals.network_monthly_fee,siteMsSvc].map((v,i)=>(
+                        <td key={i} style={{...tdR,borderTop:"2px solid #3D72FC",borderBottom:"none"}}><strong>{formatEuro(v)}</strong></td>
+                      ))}
+                    </tr></tfoot>
                   </table>
                 </div>
               );
             })}
 
-            <div className="total-banner">
-              <span>Total Contract Value ({allTotals.contract_months} months)</span>
-              <span className="total-banner__val">{formatEuro(adjContractValue)}</span>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 18px",background:"linear-gradient(135deg,#eef2ff,#e8edff)",border:"2px solid #3D72FC",borderRadius:10,marginTop:6}}>
+              <span style={{fontSize:12.5,fontWeight:700,color:"#12132a"}}>Total Contract Value ({allTotals.contract_months} months)</span>
+              <span style={{fontSize:17,color:BLUE,fontWeight:800,fontVariantNumeric:"tabular-nums"}}>{formatEuro(adjContract)}</span>
             </div>
-          </section>
+          </div>
 
-          {/* ── Annex 2. Bill of Materials ──────────────────────────────── */}
-          <section className="sec">
-            <h2 className="sec__title">2. Bill of Materials</h2>
-            <p className="sec__text sec__text--sm">Full list of components purchased across all sites.</p>
-
-            <div className="bom-group">
-              <div className="bom-group__hdr">
-                <span className="bom-dot" style={{ background:"#3D72FC" }} />
-                Cellular Components
-              </div>
-              <BomTable rows={bom.cellular} emptyMsg="No cellular components in this configuration." />
-            </div>
-
-            <div className="bom-group">
-              <div className="bom-group__hdr">
-                <span className="bom-dot" style={{ background:"#5CB0E9" }} />
-                Satellite Components
-              </div>
-              <BomTable rows={bom.satellite} emptyMsg="No satellite components in this configuration." />
-            </div>
-
-            {bom.boxes.length > 0 && (
-              <div className="bom-group">
-                <div className="bom-group__hdr">
-                  <span className="bom-dot" style={{ background:"#6669D8" }} />
-                  StarGrid Boxes &amp; Other Components
+          {/* Annex 2 — BOM */}
+          <div style={{marginTop:18}}>
+            <div style={secTitleStyle}>2. Bill of Materials</div>
+            <p style={{fontSize:11,color:"#777",margin:"0 0 10px"}}>Full list of components purchased across all sites.</p>
+            {[
+              {color:"#3D72FC",label:"Cellular Components",       rows:bom.cellular,  empty:"No cellular components in this configuration."},
+              {color:"#5CB0E9",label:"Satellite Components",      rows:bom.satellite, empty:"No satellite components in this configuration."},
+              ...(bom.boxes.length>0?[{color:"#6669D8",label:"StarGrid Boxes & Other Components",rows:bom.boxes,empty:""}]:[]),
+            ].map(({color,label,rows,empty},gi)=>(
+              <div key={gi} style={{marginBottom:16}}>
+                <div style={{display:"flex",alignItems:"center",gap:9,fontSize:12,fontWeight:700,color:"#12132a",marginBottom:7,paddingBottom:4,borderBottom:"1px solid #e4e6ec"}}>
+                  <span style={{display:"inline-block",width:9,height:9,borderRadius:"50%",background:color,flexShrink:0}}/>
+                  {label}
                 </div>
-                <BomTable rows={bom.boxes} emptyMsg="" />
+                <BomTable rows={rows} emptyMsg={empty}/>
               </div>
-            )}
-
-            {bom.managed.length > 0 && (
-              <div className="bom-group">
-                <div className="bom-group__hdr">
-                  <span className="bom-dot" style={{ background:"#22c55e" }} />
+            ))}
+            {bom.managed.length>0&&(
+              <div style={{marginBottom:16}}>
+                <div style={{display:"flex",alignItems:"center",gap:9,fontSize:12,fontWeight:700,color:"#12132a",marginBottom:7,paddingBottom:4,borderBottom:"1px solid #e4e6ec"}}>
+                  <span style={{display:"inline-block",width:9,height:9,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/>
                   Managed Services
                 </div>
-                <table className="tbl bom-tbl">
-                  <thead>
-                    <tr><th>Site</th><th>Service Tier</th><th className="ra">Monthly Fee</th></tr>
-                  </thead>
+                <table style={{width:"100%",borderCollapse:"collapse"}}>
+                  <thead><tr>
+                    <th style={thBase}>Site</th><th style={thBase}>Service Tier</th><th style={thR}>Monthly Fee</th>
+                  </tr></thead>
                   <tbody>
-                    {bom.managed.map((m, i) => (
+                    {bom.managed.map((m,i)=>(
                       <tr key={i}>
-                        <td><span className="badge badge--sm">Site {m.siteNum}</span></td>
-                        <td>{m.label}</td>
-                        <td className="ra mono">{formatEuro(m.fee)}</td>
+                        <td style={tdBase}><span style={badgeS}>Site {m.siteNum}</span></td>
+                        <td style={tdBase}>{m.label}</td>
+                        <td style={tdR}>{formatEuro(m.fee)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
-          </section>
+          </div>
 
-          {/* ── Annex 3. Terms & Conditions (full) ─────────────────────── */}
-          <section className="sec">
-            <h2 className="sec__title">3. Terms &amp; Conditions</h2>
-            <p className="sec__text sec__text--sm" style={{ marginBottom: 8 }}>
+          {/* Annex 3 — T&C */}
+          <div style={{marginTop:18}}>
+            <div style={secTitleStyle}>3. Terms &amp; Conditions</div>
+            <p style={{fontSize:11,color:"#777",margin:"0 0 7px"}}>
               This proposal is governed by the <strong>StarGrid Standard Agreement</strong> (available at{" "}
-              <span className="link-ref">www.stargrid.one/legal</span>). Key terms:
+              <span style={{color:BLUE}}>www.stargrid.one/legal</span>). Key terms:
             </p>
-            <div className="terms">
-              <ul>
-                <li>All prices are in EUR and exclude applicable VAT/taxes.</li>
-                <li>This offer is valid for <strong>30 days</strong> from the date of issue.</li>
-                <li>Setup fees are one-time charges payable upon contract signing.</li>
-                <li>Monthly fees are billed in advance on the 1st of each month.</li>
-                <li>Managed service includes 24/7 monitoring, firmware updates, and SLA-based support.</li>
-                <li>Contract duration as stated above; early termination fees may apply per the StarGrid Standard Agreement.</li>
-                <li>Hardware remains StarGrid property until full setup fee is received.</li>
-                <li>SLA credits apply as defined in the StarGrid Standard Agreement, Section 4.</li>
-                <li>All commercial data are valid upon personal approval by StarGrid.</li>
+            <div style={{background:"#fafbfd",border:"1px solid #eef0f4",borderRadius:9,padding:"11px 16px"}}>
+              <ul style={{margin:"0 0 9px",padding:"0 0 0 15px"}}>
+                {[
+                  "All prices are in EUR and exclude applicable VAT/taxes.",
+                  "This offer is valid for 30 days from the date of issue.",
+                  "Setup fees are one-time charges payable upon contract signing.",
+                  "Monthly fees are billed in advance on the 1st of each month.",
+                  "Managed service includes 24/7 monitoring, firmware updates, and SLA-based support.",
+                  "Contract duration as stated above; early termination fees may apply per the StarGrid Standard Agreement.",
+                  "Hardware remains StarGrid property until full setup fee is received.",
+                  "SLA credits apply as defined in the StarGrid Standard Agreement, Section 4.",
+                  "All commercial data are valid upon personal approval by StarGrid.",
+                ].map((t,i)=><li key={i} style={{fontSize:11,color:"#666",lineHeight:1.7}}>{t}</li>)}
               </ul>
-              {/* GDPR Disclaimer moved here — last page per annotation */}
-              <div className="gdpr-note">
+              <div style={{padding:"9px 13px",background:"#fff8f0",border:"1px solid #fde8c8",borderLeft:"3px solid #f59e0b",borderRadius:"0 7px 7px 0",fontSize:10.5,color:"#78350f",lineHeight:1.6}}>
                 <strong>Data &amp; Privacy Disclaimer —</strong> We process personal data in accordance with the General Data
                 Protection Regulation (GDPR). All data is collected and used solely for legitimate purposes, kept secure,
                 and retained only as long as necessary. While we take appropriate measures to ensure data accuracy and
@@ -780,372 +757,24 @@ export default function PdfOfferPage() {
                 their personal data, as well as other rights as provided under GDPR.
               </div>
             </div>
-          </section>
+          </div>
 
-          <DocFooter today={today} refId={refId} right={isOperator ? "Network Operator" : "Enterprise"} />
-
+          <PageFooter today={today} refId={refId} tier={isOperator?"Network Operator":"Enterprise"} />
         </div>
-      </div>
-      <style jsx>{`
-        /* ── Chrome ─────────────────────────────────── */
-        .pp { min-height:100vh; background:#e8ecf1; }
-        .pp__bar {
-          position:sticky; top:0; z-index:100;
-          display:flex; justify-content:space-between; align-items:center;
-          padding:12px 24px; background:#fff;
-          border-bottom:1px solid #ddd; box-shadow:0 1px 4px rgba(0,0,0,0.06);
-        }
-        .pp__bar-r { display:flex; align-items:center; gap:12px; }
-        .pp__back  { padding:9px 18px; background:#f5f5f5; border:1px solid #ddd; border-radius:8px; color:#444; font-size:14px; font-weight:500; cursor:pointer; }
-        .pp__back:hover { background:#eee; }
-        .pp__dl    { padding:11px 26px; background:linear-gradient(135deg,#3D72FC,#5CB0E9); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; }
-        .pp__dl:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 14px rgba(61,114,252,0.3); }
-        .pp__dl:disabled { opacity:0.55; cursor:wait; }
-        .pp__send  { padding:11px 22px; background:linear-gradient(135deg,#12b981,#059669); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; }
-        .pp__send:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 14px rgba(16,185,129,0.35); }
-        .pp__send:disabled { opacity:0.55; cursor:wait; }
-        .pp__status--err { color:#ef4444; font-weight:600; }
-        .pp__print { padding:9px 18px; background:#f5f5f5; border:1px solid #ddd; border-radius:8px; color:#444; font-size:14px; cursor:pointer; }
-        .pp__print:hover { background:#eee; }
-        .pp__status { font-size:13px; color:#999; }
-        .pp__status--ok { color:#22c55e; font-weight:600; }
 
-        .pp__paper-wrap { display:flex; justify-content:center; padding:36px 16px 72px; }
+      </div>{/* end paper-wrap */}
 
-        /* ── Paper ──────────────────────────────────── */
-        .paper {
-          width:860px; max-width:100%; background:#ffffff;
-          border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.08),0 8px 40px rgba(0,0,0,0.06);
-          padding:36px 52px;
-          font-family:'Segoe UI',-apple-system,Arial,Helvetica,sans-serif;
-          color:#1e1e2e; font-size:12.5px; line-height:1.45;
-        }
-
-        /* ── Header with T&C box ─────────────────────── */
-        .hdr--with-tc {
-          display:flex !important; flex-direction:row !important;
-          justify-content:space-between; align-items:flex-start; gap:20px;
-        }
-        .hdr__left-block { display:flex; flex-direction:column; gap:0; flex-shrink:0; }
-        .hdr__logo { display:flex; align-items:center; gap:12px; }
-        .hdr__brand { font-size:20px; font-weight:800; letter-spacing:1.5px; color:#12132a; }
-        .hdr__tagline { font-size:10.5px; color:#999; letter-spacing:0.4px; margin-top:1px; }
-        .hdr__meta { text-align:left; margin-top:6px; }
-        .hdr__date { font-size:12px; font-weight:600; color:#333; }
-        .hdr__ref  { font-size:10.5px; color:#bbb; margin-top:2px; }
-
-        /* T&C box in header */
-        .hdr__tc-box {
-          flex:1; max-width:420px;
-          border:1px solid #d1e0fe; border-left:3px solid #3D72FC;
-          background:#f0f5ff; border-radius:0 8px 8px 0;
-          padding:8px 12px;
-        }
-        .hdr__tc-title {
-          font-size:10px; font-weight:700; color:#1e3a8a;
-          margin-bottom:5px; line-height:1.4;
-        }
-        .hdr__tc-list {
-          margin:0; padding:0 0 0 14px;
-          list-style:disc;
-        }
-        .hdr__tc-list li {
-          font-size:10px; color:#374151; line-height:1.55;
-        }
-
-        .rule { height:1px; background:#e0e0e0; margin:12px 0; }
-        .rule--gradient { height:3px; background:linear-gradient(90deg,#3D72FC,#5CB0E9,#6669D8); border-radius:2px; }
-
-        .doc-title { font-size:22px; font-weight:700; color:#12132a; margin:12px 0 3px; }
-        .doc-sub   { font-size:12px; color:#777; margin:0 0 4px; }
-
-        /* ── Tight sections for page 1 ───────────────── */
-        .sec { margin-top:18px; }
-        .sec--tight { margin-top:12px; }
-        .sec__title {
-          font-size:14px; font-weight:700; color:#12132a;
-          margin:0 0 8px; padding-bottom:5px;
-          border-bottom:2px solid #3D72FC;
-        }
-        .sec__text { font-size:12.5px; color:#555; line-height:1.55; margin:0 0 8px; }
-        .sec__text--sm { font-size:11.5px; color:#777; }
-        .sec__text--intro { font-size:11.5px; color:#555; line-height:1.5; margin:0; }
-
-        /* One-liner offering description */
-        .offering-desc { margin:0 0 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-        /* ── Two-column layout ───────────────────────── */
-        .two-col-sections {
-          display:grid !important; grid-template-columns:1fr 1fr !important; gap:16px; margin-top:0; align-items:start;
-        }
-        .sec--col { margin-top:12px; }
-
-        /* ── Contact row ─────────────────────────────── */
-        .contact-row { font-size:11px; color:#888; margin-bottom:6px; line-height:1.5; }
-
-        /* ── Use case blockquote ─────────────────────── */
-        .use-case {
-          position:relative; margin:6px 0 0; padding:10px 14px 10px 36px;
-          background:#f8f9ff; border:1px solid #dce4fd; border-left:4px solid #3D72FC;
-          border-radius:0 10px 10px 0;
-        }
-        .use-case__icon {
-          position:absolute; left:10px; top:6px;
-          font-size:24px; color:#c7d4fd; font-family:Georgia,serif; line-height:1;
-        }
-        .use-case p { margin:0; font-size:11.5px; color:#444; line-height:1.6; font-style:italic; }
-
-        /* ── Summary overview table ──────────────────── */
-        .sum-overview {
-          width:100%; border-collapse:collapse;
-          border:1px solid #e4e6ec; border-radius:10px; overflow:hidden;
-        }
-        .sum-overview th {
-          padding:6px 10px; background:#f7f8fc;
-          font-size:9.5px; font-weight:700; color:#888;
-          text-transform:uppercase; letter-spacing:0.5px;
-          text-align:left; border-bottom:1px solid #e4e6ec;
-        }
-        .sum-overview th.ra { text-align:right; }
-        .sum-overview td {
-          padding:7px 10px; font-size:11.5px; color:#444;
-          border-bottom:1px solid #f0f0f0; vertical-align:middle;
-        }
-        .sum-overview td:not(:first-child) { text-align:right; }
-        .sum-overview tr.even td { background:#fafbfd; }
-        .sum-overview tr:last-child td { border-bottom:none; }
-
-        /* ── Offering columns — equal height ─────────── */
-        .offering-cols {
-          display:grid !important; grid-template-columns:1fr 1.8fr !important; gap:14px; align-items:stretch;
-        }
-        .offering-col { display:flex; flex-direction:column; }
-        .offering-col__label { font-size:12.5px; font-weight:700; color:#12132a; margin:0 0 4px; }
-
-        /* ── PoC box ─────────────────────────────────── */
-        .poc-box {
-          flex:1; border:2px solid #3D72FC; border-radius:12px;
-          padding:12px 14px; background:#f8f9ff;
-          display:flex; flex-direction:column;
-        }
-        .poc-box__badge {
-          display:inline-flex; padding:2px 10px; margin-bottom:8px;
-          background:linear-gradient(135deg,#3D72FC,#5CB0E9); color:#fff;
-          border-radius:20px; font-size:10px; font-weight:700;
-          align-self:flex-start;
-        }
-        .poc-note { margin-top:auto; padding-top:8px; font-size:10.5px; color:#777; font-style:italic; }
-
-        /* ── PoC table — 2 columns ───────────────────── */
-        .sum-overview--poc th:first-child { width:62%; }
-        .sum-overview--poc th:nth-child(2) { width:38%; }
-
-        /* ── Deploy box ──────────────────────────────── */
-        .deploy-box {
-          flex:1; border:2px solid #22c55e; border-radius:12px;
-          padding:12px 14px; background:#f6fff9;
-          display:flex; flex-direction:column;
-        }
-        .deploy-badge {
-          display:inline-flex; padding:2px 10px; margin-bottom:8px;
-          background:linear-gradient(135deg,#16a34a,#22c55e); color:#fff;
-          border-radius:20px; font-size:10px; font-weight:700;
-          align-self:flex-start;
-        }
-
-        /* ── Deploy table — 3 columns ────────────────── */
-        .sum-overview--deploy th:first-child  { width:38%; }
-        .sum-overview--deploy th:nth-child(2) { width:31%; }
-        .sum-overview--deploy th:nth-child(3) { width:31%; }
-
-        /* ── Contract value row ──────────────────────── */
-        .cv-row td { border-top:2px solid #3D72FC !important; border-bottom:none; }
-        .cv-val { font-size:13px !important; color:#3D72FC !important; }
-        .cv-sub { font-size:10px; color:#aaa; font-weight:normal; margin-left:4px; }
-        .discount-note { font-size:10px; color:#888; margin-top:6px; font-style:italic; }
-
-        /* ── Badge ───────────────────────────────────── */
-        .badge {
-          display:inline-flex; padding:4px 12px; border-radius:16px;
-          background:linear-gradient(135deg,#3D72FC,#5CB0E9); color:#fff;
-          font-size:11px; font-weight:700; white-space:nowrap; flex-shrink:0;
-        }
-        .badge--sm { padding:3px 10px; font-size:10px; }
-        .badge--hub { background:linear-gradient(135deg,#2ECC71,#1aad5e); }
-
-        /* ── Link ref ─────────────────────────────────── */
-        .link-ref { color:#3D72FC; font-style:normal; }
-
-        /* ── Terms ───────────────────────────────────── */
-        .terms { background:#fafbfd; border:1px solid #eef0f4; border-radius:10px; padding:12px 18px; }
-        .terms ul { margin:0 0 10px; padding:0 0 0 16px; }
-        .terms li { font-size:11.5px; color:#666; line-height:1.75; }
-        .gdpr-note {
-          margin-top:0; padding:10px 14px;
-          background:#fff8f0; border:1px solid #fde8c8; border-left:3px solid #f59e0b;
-          border-radius:0 8px 8px 0; font-size:11px; color:#78350f; line-height:1.65;
-        }
-
-        /* ── Footer ──────────────────────────────────── */
-        .ftr { display:flex !important; flex-direction:row !important; justify-content:space-between; padding-top:6px; font-size:10.5px; color:#bbb; }
-        .ftr__left  { display:flex; flex-direction:column; gap:2px; }
-        .ftr__left strong { color:#555; font-size:11.5px; }
-        .ftr__right { text-align:right !important; display:flex; flex-direction:column; gap:2px; }
-        .footer-tier { font-weight:700; color:#3D72FC; }
-
-        /* ── Site offer tables ───────────────────────── */
-        .site { margin-bottom:20px; border:1px solid #e4e6ec; border-radius:12px; overflow:hidden; page-break-inside:avoid; }
-        .site--hub { border-color:#a7f3c0; margin-bottom:24px; }
-        .site__hdr { display:flex; align-items:center; gap:14px; padding:12px 18px; background:#f7f8fc; border-bottom:1px solid #e4e6ec; }
-        .site__hdr--hub { background:#f0fdf5; border-bottom-color:#a7f3c0; }
-        .tfoot-row--hub td { background:#f0fdf5; border-top-color:#2ECC71 !important; }
-        .site__info { display:flex; flex-direction:column; gap:2px; }
-        .site__name { font-size:14px; font-weight:700; color:#12132a; }
-        .site__type { font-size:11px; color:#777; }
-        .site__loc  { font-size:10px; color:#aaa; }
-
-        .tbl { width:100%; border-collapse:collapse; }
-        .tbl th { padding:9px 12px; text-align:left; font-size:10px; font-weight:700; color:#999; text-transform:uppercase; letter-spacing:0.7px; background:#fafbfd; border-bottom:2px solid #eef0f4; }
-        .tbl td { padding:10px 12px; border-bottom:1px solid #f0f1f5; color:#333; font-size:12px; }
-        .tfoot-row { background:#eef2ff !important; }
-        .tfoot-row td { border-top:2px solid #3D72FC; border-bottom:none; padding:10px 12px; }
-        .ra   { text-align:right; }
-        .mono { font-variant-numeric:tabular-nums; }
-        .dot  { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; vertical-align:middle; }
-
-        .total-banner {
-          display:flex; justify-content:space-between; align-items:center;
-          padding:12px 20px; background:linear-gradient(135deg,#eef2ff,#e8edff);
-          border:2px solid #3D72FC; border-radius:12px; margin-top:8px;
-          font-size:13px; font-weight:700; color:#12132a;
-        }
-        .total-banner__val { font-size:18px; color:#3D72FC; font-weight:800; }
-
-        /* ── Bill of Materials ───────────────────────── */
-        .bom-group { margin-bottom:20px; }
-        .bom-group__hdr {
-          display:flex; align-items:center; gap:10px;
-          font-size:12.5px; font-weight:700; color:#12132a;
-          margin-bottom:8px; padding-bottom:5px;
-          border-bottom:1px solid #e4e6ec;
-        }
-        .bom-dot { display:inline-block; width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-        .bom-tbl th { font-size:10px; }
-        .bom-tbl td { font-size:11.5px; }
-
-        /* ── Annex page break ────────────────────────── */
-        .annex-break {
-          height:0; margin:28px 0 0;
-          border-top:3px dashed #c7d4fd; position:relative;
-        }
-        .annex-break::after {
-          content:"— Annex begins on next page —";
-          position:absolute; top:-11px; left:50%; transform:translateX(-50%);
-          background:#fff; padding:0 14px;
-          font-size:10px; font-weight:600; color:#aab; letter-spacing:0.8px; text-transform:uppercase;
-        }
-
-        /* ── Responsive (screen only, not print) ─────── */
-        @media screen and (max-width:920px) {
-          .paper { padding:22px 18px; }
-          .hdr--with-tc { flex-direction:column !important; gap:12px; }
-          .hdr__tc-box { max-width:100% !important; }
-          .ftr { flex-direction:column !important; gap:10px; }
-          .ftr__right { text-align:left !important; }
-          .pp__bar { flex-direction:column; gap:10px; align-items:stretch; }
-          .pp__bar-r { justify-content:center; flex-wrap:wrap; }
-          .two-col-sections { grid-template-columns:1fr !important; }
-          .offering-cols { grid-template-columns:1fr !important; }
-        }
-
-        /* ── Print ───────────────────────────────────── */
+      <style jsx global>{`
         @media print {
-          .pp__bar { display:none !important; }
-          .pp { background:#fff !important; }
-          .pp__paper-wrap { padding:0 !important; }
-          .paper {
-            box-shadow:none !important; border:none !important;
-            width:100% !important; max-width:100% !important;
-            padding:12px 18px !important;
-            font-size:11px !important; line-height:1.4 !important;
-          }
-
-          /* ── CRITICAL: preserve all multi-column layouts in print ── */
-          .hdr--with-tc {
-            display:flex !important; flex-direction:row !important;
-            justify-content:space-between !important; align-items:flex-start !important;
-            gap:20px !important;
-          }
-          .hdr__left-block { flex-shrink:0 !important; }
-          .hdr__tc-box { flex:1 !important; max-width:420px !important; display:block !important; }
-          .two-col-sections {
-            display:grid !important; grid-template-columns:1fr 1fr !important;
-            gap:12px !important; align-items:start !important;
-          }
-          .offering-cols {
-            display:grid !important; grid-template-columns:1fr 1.8fr !important;
-            gap:10px !important; align-items:stretch !important;
-          }
-          .offering-col { display:flex !important; flex-direction:column !important; }
-          .poc-box { display:flex !important; flex-direction:column !important; }
-          .deploy-box { display:flex !important; flex-direction:column !important; }
-          .ftr {
-            display:flex !important; flex-direction:row !important;
-            justify-content:space-between !important;
-          }
-          .ftr__right { text-align:right !important; }
-          .ftr__left { display:flex !important; flex-direction:column !important; }
-          .total-banner { display:flex !important; justify-content:space-between !important; }
-          .site__hdr { display:flex !important; align-items:center !important; }
-          .site__info { display:flex !important; flex-direction:column !important; }
-          .bom-group__hdr { display:flex !important; align-items:center !important; }
-
-          /* ── Size reductions ── */
-          .doc-title { font-size:19px !important; margin:10px 0 2px !important; }
-          .doc-sub { font-size:11px !important; }
-          .sec--tight { margin-top:8px !important; }
-          .sec { margin-top:14px !important; }
-          .sec__title { font-size:12px !important; margin-bottom:6px !important; padding-bottom:4px !important; }
-          .sec__text--intro { font-size:10.5px !important; }
-          .sum-overview td { padding:5px 8px !important; font-size:10.5px !important; }
-          .sum-overview th { padding:5px 8px !important; font-size:9px !important; }
-          .poc-box, .deploy-box { padding:10px 12px !important; }
-          .poc-box__badge, .deploy-badge { padding:2px 8px !important; font-size:9px !important; margin-bottom:6px !important; }
-          .poc-note { font-size:10px !important; }
-          .hdr__tc-box { padding:6px 10px !important; }
-          .hdr__tc-title { font-size:9px !important; }
-          .hdr__tc-list li { font-size:9px !important; }
-          .ftr { font-size:9px !important; padding-top:3px !important; }
-          .ftr__left strong { font-size:10px !important; }
-          .rule--gradient { margin:10px 0 !important; }
-          .annex-break { margin:20px 0 0 !important; border-top:1px solid #ddd !important; }
-          .annex-break::after { display:none !important; }
-          .hdr__brand { font-size:17px !important; }
-          .tbl th { padding:6px 9px !important; font-size:9px !important; }
-          .tbl td { padding:7px 9px !important; font-size:10.5px !important; }
-          .site { margin-bottom:12px !important; }
-          .site__hdr { padding:8px 12px !important; }
-          .site__name { font-size:11.5px !important; }
-          .site__type { font-size:9.5px !important; }
-          .total-banner { padding:8px 14px !important; font-size:11px !important; }
-          .total-banner__val { font-size:15px !important; }
-          .cv-val { font-size:12px !important; }
-          .bom-group { margin-bottom:12px !important; }
-          .bom-group__hdr { font-size:11px !important; margin-bottom:5px !important; }
-          .terms { padding:8px 12px !important; }
-          .terms li { font-size:10px !important; line-height:1.55 !important; }
-          .terms ul { margin-bottom:6px !important; padding-left:12px !important; }
-          .gdpr-note { font-size:9.5px !important; padding:7px 10px !important; }
-          .two-col-sections { gap:12px !important; }
-          .contact-row { font-size:10px !important; }
-          .use-case { padding:8px 12px 8px 32px !important; }
-          .use-case p { font-size:10.5px !important; }
+          .no-print { display: none !important; }
+          body { background: #fff !important; margin: 0 !important; }
         }
       `}</style>
     </div>
   );
 }
 
-const centerStyle    = { minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"#e8ecf1", gap:12 };
-const spinnerStyle   = { width:40, height:40, border:"4px solid #ddd", borderTopColor:"#3D72FC", borderRadius:"50%", animation:"sp .8s linear infinite" };
+/* ── static styles ─────────────────────────────────────────────────────────── */
+const centerStyle     = { minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"#e8ecf1", gap:12 };
+const spinnerStyle    = { width:40, height:40, border:"4px solid #ddd", borderTopColor:"#3D72FC", borderRadius:"50%", animation:"sp .8s linear infinite" };
 const primaryBtnStyle = { padding:"14px 28px", background:"linear-gradient(135deg,#3D72FC,#5CB0E9)", color:"#fff", border:"none", borderRadius:10, fontSize:15, fontWeight:600, cursor:"pointer", marginTop:8 };
