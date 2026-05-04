@@ -300,7 +300,7 @@ export default function DynamicResultsPage() {
         <tr className="pt__tr--hl">
           <td className="pt__label pt__label--hl">Contract Value ({allTotals.contract_months}mo)</td>
           <td className="pt__val pt__val--big">{formatEuro(adjContractValue)}</td>
-          <td className="pt__val pt__val--big">{formatEuro(totalRouterManagedSvc + totalRouterManagedSvc2 + totalRouterManagedSvc3)}</td>
+          <td className="pt__val pt__val--big">{formatEuro(36 * (totalRouterManagedSvc + totalRouterManagedSvc2 + totalRouterManagedSvc3))}</td>
         </tr>
       </tbody>
     </table>
