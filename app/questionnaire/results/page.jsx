@@ -75,24 +75,33 @@ export default function DynamicResultsPage() {
     : 'care';
   const pocSetupFee = isNetworkOperator ? 11500 : 2900;
 
-  // Managed service tier table
-  const MS_TIERS = [
-    { min: 1000, assist: 0.03, care: 0.10 },
-    { min: 500,  assist: 0.04, care: 0.12 },
-    { min: 100,  assist: 0.05, care: 0.14 },
-    { min: 50,   assist: 0.06, care: 0.16 },
-    { min: 10,   assist: 0.07, care: 0.20 },
-    { min: 1,    assist: 0.08, care: 0.20 },
-  ];
-  const msRate = (() => {
-    const row = MS_TIERS.find(t => totalSites >= t.min) || MS_TIERS[MS_TIERS.length - 1];
-    return row[msServiceTier] ?? row.care;
-  })();
+// Managed service tier table
+const MS_TIERS = [
+  { max: 10,   assist: 0.08, care: 0.20 },
+  { max: 50,   assist: 0.07, care: 0.16 },
+  { max: 100,  assist: 0.06, care: 0.14 },
+  { max: 500,  assist: 0.05, care: 0.12 },
+  { max: 1000, assist: 0.04, care: 0.10 },
+];
+
+const msRate = (() => {
+  const row =
+    MS_TIERS.find(t => totalSites <= t.max) ||
+    MS_TIERS[MS_TIERS.length - 1];
+
+  return row[msServiceTier] ?? row.care;
+})();
 
   // Enterprise Hub hardcoded component (single central hub for all sites)
   const EH_SETUP = 1149;
   const EH_MONTHLY = 33;
   const ehManagedSvc = EH_SETUP * msRate;
+
+
+  // Core hardcoded component (single core node for all sites)
+  const CORE_SETUP = 0;
+  const CORE_MONTHLY = isNetworkOperator ? 490 : 33;
+  const coreManagedSvc = CORE_MONTHLY * 0.20;
 
   // Adjusted totals: include EH + router managed svc across all sites
   const totalRouterManagedSvc = sitePackages.reduce((sum, sp) => {
@@ -166,6 +175,41 @@ export default function DynamicResultsPage() {
                     <td className="r num">{formatEuro(EH_SETUP)}</td>
                     <td className="r num">{formatEuro(EH_MONTHLY)}</td>
                     <td className="r num">{formatEuro(ehManagedSvc)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+
+                {/* Enterprise Hub — central node */}
+        <div className="sc sc--hub">
+          <div className="sc__hdr" onClick={() => toggle('hub')}>
+            <div className="sc__title">
+              <span className="sb sb--hub">Core Hub</span>
+              <h2>Core</h2>
+              <span className="sc__sub">Central connectivity node · All {totalSites} site{totalSites !== 1 ? "s" : ""} connected</span>
+            </div>
+            <div className="sc__tots">
+              <div className="ti"><span className="tl">Network Setup Fee</span><span className="tv">{formatEuro(CORE_SETUP)}</span></div>
+              <div className="ti"><span className="tl">Network Monthly Fee</span><span className="tv">{formatEuro(CORE_MONTHLY)}</span></div>
+              <div className="ti"><span className="tl">Managed Service Monthly</span><span className="tv">{formatEuro(coreManagedSvc)}</span></div>
+            </div>
+            <button className="eb">{expandedSite === 'hub' ? "▼" : "▶"}</button>
+          </div>
+          {expandedSite === 'hub' && (
+            <div className="sc__body">
+              <table className="ct">
+                <thead><tr><th>Component</th><th>Hardware</th><th>Airtime Plan</th><th className="r">Network Setup Fee</th><th className="r">Network Monthly Fee</th><th className="r">Managed Service Monthly</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><span className="cb" style={{ background:"#2ECC71" }}>Enterprise Hub</span></td>
+                    <td>Large</td>
+                    <td>—</td>
+                    <td className="r num">{formatEuro(CORE_SETUP)}</td>
+                    <td className="r num">{formatEuro(CORE_MONTHLY)}</td>
+                    <td className="r num">{formatEuro(coreManagedSvc)}</td>
                   </tr>
                 </tbody>
               </table>
