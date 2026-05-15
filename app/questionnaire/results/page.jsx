@@ -123,9 +123,9 @@ const msRate = (() => {
   }, 0);
 
 
-  const adjAllSetup    = allTotals.network_setup_fee + EH_SETUP;
-  const adjAllMonthly  = allTotals.network_monthly_fee + EH_MONTHLY;
-  const adjAllManagedSvc = totalRouterManagedSvc + ehManagedSvc;
+  const adjAllSetup    = allTotals.network_setup_fee + EH_SETUP + CORE_SETUP;
+  const adjAllMonthly  = allTotals.network_monthly_fee + EH_MONTHLY + CORE_MONTHLY;
+  const adjAllManagedSvc = totalRouterManagedSvc + ehManagedSvc +  coreManagedSvc;
   const adjContractValue = adjAllSetup + (adjAllMonthly + adjAllManagedSvc) * allTotals.contract_months;
 
   const pocSites = sitePackages.slice(0, Math.min(2, totalSites));

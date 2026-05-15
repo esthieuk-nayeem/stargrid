@@ -278,9 +278,9 @@ const msRate = (() => {
     const rSvc2        = sitePackages.reduce((s,sp)=>s+sp.package.components.filter(c=>/router|stargrid\s*box/i.test(c.type)).reduce((a,c)=>a+c.network_monthly_fee,0),0);
     const rSvc3        = sitePackages.reduce((s,sp)=>s+sp.package.components.filter(c=>/router|stargrid\s*box/i.test(c.type)).reduce((a,c)=>a+c.managed_service_monthly,0),0);
 
-    const adjSetup    = allTotals.network_setup_fee + EH_SETUP;
-    const adjMonthly  = allTotals.network_monthly_fee + EH_MONTHLY;
-    const adjMs       = totalBillMs + ehMs;
+    const adjSetup    = allTotals.network_setup_fee + EH_SETUP + CORE_SETUP;
+    const adjMonthly  = allTotals.network_monthly_fee + EH_MONTHLY + CORE_MONTHLY;
+    const adjMs       = totalBillMs + ehMs + coreManagedSvc;
     const adjContract = adjSetup + (adjMonthly + adjMs) * allTotals.contract_months;
 
     let cellularCount=0, satelliteCount=0, fixedCount=0;
