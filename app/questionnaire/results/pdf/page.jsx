@@ -244,23 +244,34 @@ export default function PdfOfferPage() {
     const pocSetupFee = isOperator ? 11500 : 2900;
     const pocLabel    = isOperator ? "Network Operator PoC" : "Enterprise PoC";
 
-    const MS_TIERS = [
-      { min:1000, assist:0.03, care:0.10 },
-      { min:500,  assist:0.04, care:0.12 },
-      { min:100,  assist:0.05, care:0.14 },
-      { min:50,   assist:0.06, care:0.16 },
-      { min:10,   assist:0.07, care:0.20 },
-      { min:1,    assist:0.08, care:0.20 },
-    ];
-    const row    = MS_TIERS.find(t => totalSites >= t.min) || MS_TIERS[MS_TIERS.length-1];
-    const msRate = row[msServiceTier] ?? row.care;
+// Managed service tier table
+const MS_TIERS = [
+  { max: 10,   assist: 0.08, care: 0.20 },
+  { max: 50,   assist: 0.07, care: 0.16 },
+  { max: 100,  assist: 0.06, care: 0.14 },
+  { max: 500,  assist: 0.05, care: 0.12 },
+  { max: 1000, assist: 0.04, care: 0.10 },
+];
 
+const msRate = (() => {
+  const row =
+    MS_TIERS.find(t => totalSites <= t.max) ||
+    MS_TIERS[MS_TIERS.length - 1];
+
+  return row[msServiceTier] ?? row.care;
+})();
     const compMsSvc = c => /router|stargrid\s*box/i.test(c.type)
       ? c.network_setup_fee * msRate : c.managed_service_monthly;
 
     const EH_SETUP   = 1149;
     const EH_MONTHLY = 33;
     const ehMs       = EH_SETUP * msRate;
+
+
+        // Core hardcoded component (single core node for all sites)
+    const CORE_SETUP = 0;
+    const CORE_MONTHLY = isOperator ? 490 : 33;
+    const coreManagedSvc = CORE_MONTHLY * 0.20;
 
     const totalBillMs  = sitePackages.reduce((s,sp)=>s+sp.package.components.filter(c=>/router|stargrid\s*box/i.test(c.type)).reduce((a,c)=>a+c.network_setup_fee*msRate,0),0);
     const rSvc1        = sitePackages.reduce((s,sp)=>s+sp.package.components.filter(c=>/router|stargrid\s*box/i.test(c.type)).reduce((a,c)=>a+c.network_setup_fee*msRate,0),0);
@@ -299,7 +310,7 @@ export default function PdfOfferPage() {
     });
 
     return { sitePackages, allTotals, totalSites, pocSetupFee, pocLabel, msRate, compMsSvc,
-             EH_SETUP, EH_MONTHLY, ehMs, rSvc1, rSvc2, rSvc3,
+             EH_SETUP, EH_MONTHLY, ehMs, rSvc1, rSvc2, rSvc3, CORE_SETUP, CORE_MONTHLY, coreManagedSvc,
              adjSetup, adjMonthly, adjMs, adjContract,
              cellularCount, satelliteCount, fixedCount, serviceTypes, bom };
   })();
@@ -373,7 +384,7 @@ export default function PdfOfferPage() {
   const {
     sitePackages, allTotals, totalSites,
     pocSetupFee, pocLabel, compMsSvc,
-    EH_SETUP, EH_MONTHLY, ehMs,
+    EH_SETUP, EH_MONTHLY, ehMs, CORE_SETUP, CORE_MONTHLY, coreManagedSvc,
     rSvc1, rSvc2, rSvc3,
     adjSetup, adjMonthly, adjMs, adjContract,
     cellularCount, satelliteCount, fixedCount, serviceTypes, bom,
@@ -629,6 +640,40 @@ export default function PdfOfferPage() {
                 <tfoot><tr style={{background:"#f0fdf5"}}>
                   <td colSpan={3} style={{...tdBase,borderTop:"2px solid #2ECC71",borderBottom:"none"}}><strong>Enterprise Hub Total</strong></td>
                   {[EH_SETUP,EH_MONTHLY,ehMs].map((v,i)=>(
+                    <td key={i} style={{...tdR,borderTop:"2px solid #2ECC71",borderBottom:"none"}}><strong>{formatEuro(v)}</strong></td>
+                  ))}
+                </tr></tfoot>
+              </table>
+            </div>
+
+
+
+
+                        {/* Core Hub */}
+            <div style={{marginBottom:18,border:"1px solid #a7f3c0",borderRadius:10,overflow:"hidden"}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 16px",background:"#f0fdf5",borderBottom:"1px solid #a7f3c0"}}>
+                <span style={{display:"inline-block",padding:"3px 10px",borderRadius:14,background:"linear-gradient(135deg,#2ECC71,#1aad5e)",color:"#fff",fontSize:10.5,fontWeight:700,whiteSpace:"nowrap"}}>Core Hub</span>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700,color:"#12132a"}}>Core</div>
+                  <div style={{fontSize:10.5,color:"#777"}}>Central connectivity node — all {totalSites} site{totalSites!==1?"s":""} connected</div>
+                </div>
+              </div>
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead><tr>
+                  {["Component","Hardware","Airtime Plan","Setup Fee","Monthly Fee","Managed Svc"].map((h,i)=>(
+                    <th key={i} style={i>=3?thR:thBase}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody><tr>
+                  <td style={tdBase}><span style={{...dotS,background:"#2ECC71"}}/>Core</td>
+                  <td style={tdBase}>Large</td><td style={tdBase}>—</td>
+                  <td style={tdR}>{formatEuro(CORE_SETUP)}</td>
+                  <td style={tdR}>{formatEuro(CORE_MONTHLY)}</td>
+                  <td style={tdR}>{formatEuro(coreManagedSvc)}</td>
+                </tr></tbody>
+                <tfoot><tr style={{background:"#f0fdf5"}}>
+                  <td colSpan={3} style={{...tdBase,borderTop:"2px solid #2ECC71",borderBottom:"none"}}><strong>Core Hub Total</strong></td>
+                  {[CORE_SETUP,CORE_MONTHLY,coreManagedSvc].map((v,i)=>(
                     <td key={i} style={{...tdR,borderTop:"2px solid #2ECC71",borderBottom:"none"}}><strong>{formatEuro(v)}</strong></td>
                   ))}
                 </tr></tfoot>

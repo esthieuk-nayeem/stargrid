@@ -91,7 +91,6 @@ const msRate = (() => {
 
   return row[msServiceTier] ?? row.care;
 })();
-
   // Enterprise Hub hardcoded component (single central hub for all sites)
   const EH_SETUP = 1149;
   const EH_MONTHLY = 33;
