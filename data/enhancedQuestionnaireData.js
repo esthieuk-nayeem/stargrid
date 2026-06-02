@@ -257,7 +257,7 @@ export const questionnaireData = [
       { label: "Cellular (4G/LTE/5G)", value: "cellular", score: { tech: "cellular", weight: 100 } },
       { label: "Satellite (GEO, MEO, LEO like Starlink)", value: "satellite", score: { tech: "satellite", weight: 100 } },
       { label: "Fiber", value: "fiber", score: { tech: "fiber", weight: 100 } },
-      { label: "Fixed Wireless", value: "fixed_wireless", score: { tech: "wireless", weight: 100 } },
+      { label: "Fixed", value: "fixed", score: { tech: "wireless", weight: 100 } },
       { label: "Other", value: "other", hasInput: true, score: { tech: "mixed", weight: 50 } }
     ],
     mappingField: "Connectivity_Technology",
@@ -320,7 +320,7 @@ export const questionnaireData = [
       { label: "Stable grid power", value: "grid_stable", score: { power: 100, reliability: 95 } },
       { label: "Unreliable grid power", value: "grid_unreliable", score: { power: 60, reliability: 70 } },
       { label: "Generator only", value: "generator", score: { power: 70, reliability: 75 } },
-      { label: "Solar/wind hybrid", value: "solar_wind", score: { power: 50, reliability: 60 } },
+      { label: "Solar/wind/grid hybrid", value: "solar_wind", score: { power: 50, reliability: 60 } },
       { label: "No power - system must generate its own", value: "none", score: { power: 30, reliability: 50 } },
       { label: "Other", value: "other", hasInput: true, score: { power: 65, reliability: 70 } }
     ],
@@ -334,6 +334,7 @@ export const questionnaireData = [
     question: "If power is unreliable or absent, what is the required system uptime (autonomy) during outages?",
     type: "single",
     options: [
+      { label: "1 hours", value: "1", score: { autonomy: 50 } },
       { label: "8 hours", value: "8", score: { autonomy: 60 } },
       { label: "24 hours", value: "24", score: { autonomy: 80 } },
       { label: "7 days", value: "168", score: { autonomy: 100 } }
@@ -395,8 +396,10 @@ export const questionnaireData = [
       { label: "Total Cost of Ownership (TCO)", value: "tco" },
       { label: "Upfront Cost (Capex)", value: "capex" },
       { label: "Operational Costs (Opex)", value: "opex" },
-      { label: "Deployment Speed", value: "speed" },
-      { label: "Maximum Reliability", value: "reliability" },
+      { label: "Deployment Setup Time", value: "speed" },
+      { label: "Reliability", value: "reliability" },
+      { label: "Effortless Deployment", value: "reliability" },
+      { label: "Security", value: "Security" },
       // { label: "Other", value: "other", hasInput: true }
     ],
     scaleLabels: ["Low", "Medium Low", "Medium", "Medium High", "High"],

@@ -98,9 +98,9 @@ const msRate = (() => {
 
 
   // Core hardcoded component (single core node for all sites)
-  const CORE_SETUP = 0;
+  const CORE_SETUP = 10649;
   const CORE_MONTHLY = isNetworkOperator ? 490 : 33;
-  const coreManagedSvc = CORE_MONTHLY * 0.20;
+  const coreManagedSvc = CORE_SETUP * 0.20;
 
   // Adjusted totals: include EH + router managed svc across all sites
   const totalRouterManagedSvc = sitePackages.reduce((sum, sp) => {
@@ -143,7 +143,7 @@ const msRate = (() => {
 
       <div className="rp__inner">
         <div className="rp__hdr">
-          <h1>Your Stargrid Connectivity Plans</h1>
+          <h1>Your Stargrid Connectivity Plan</h1>
           <p>{totalSites} site{totalSites !== 1 ? "s" : ""} configured</p>
         </div>
 
@@ -186,7 +186,7 @@ const msRate = (() => {
         <div className="sc sc--hub">
           <div className="sc__hdr" onClick={() => toggle('hub')}>
             <div className="sc__title">
-              <span className="sb sb--hub">Core Hub</span>
+              <span className="sb sb--hub">Core</span>
               <h2>Core</h2>
               <span className="sc__sub">Central connectivity node · All {totalSites} site{totalSites !== 1 ? "s" : ""} connected</span>
             </div>

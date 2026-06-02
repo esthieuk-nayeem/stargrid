@@ -269,9 +269,9 @@ const msRate = (() => {
 
 
         // Core hardcoded component (single core node for all sites)
-    const CORE_SETUP = 0;
+    const CORE_SETUP = 10649;
     const CORE_MONTHLY = isOperator ? 490 : 33;
-    const coreManagedSvc = CORE_MONTHLY * 0.20;
+    const coreManagedSvc = CORE_SETUP * 0.20;
 
     const totalBillMs  = sitePackages.reduce((s,sp)=>s+sp.package.components.filter(c=>/router|stargrid\s*box/i.test(c.type)).reduce((a,c)=>a+c.network_setup_fee*msRate,0),0);
     const rSvc1        = sitePackages.reduce((s,sp)=>s+sp.package.components.filter(c=>/router|stargrid\s*box/i.test(c.type)).reduce((a,c)=>a+c.network_setup_fee*msRate,0),0);
