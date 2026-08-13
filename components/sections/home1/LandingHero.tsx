@@ -11,6 +11,8 @@ const logos = [
   { src: "/assets/images/logos/Iridium.svg",                   alt: "Iridium",    w: 130, h: 44 },
   { src: "/assets/images/logos/ViaSAT_BIG.png",                alt: "Viasat",     w: 140, h: 44 },
   { src: "/assets/images/logos/Telefonica Logo.png",           alt: "Telefónica", w: 148, h: 52 },
+    { src: "/assets/images/logos/amazon_leo.png",           alt: "Telefónica", w: 148, h: 52 },
+      { src: "/assets/images/logos/Open_cosmos.png",           alt: "Telefónica", w: 148, h: 52 },
 ];
 
 // Duplicate for seamless infinite scroll loop
