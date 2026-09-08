@@ -23,6 +23,10 @@ const NUMERIC_COLS = new Set([
   "Network_Setup_Fee",
   "Network_Monthly_Fee",
   "Teliphonica_Charge_per_MB",
+  "Monthly_%_Fee",
+  "Number_of_Lines",
+  "Downtime_Monthly_s",
+  "Recovery_Time_Seconds",
 ]);
 
 const BOOLEAN_COLS = new Set(["Site_Fixed", "Site_Moving", "Site_Portable"]);
@@ -74,15 +78,129 @@ const FIELD_HINTS = {
   Static_IP_Available: "Whether a static public IP is available",
   Public_IP: "Whether a public IP is included",
   Notes: "Any free-form notes about this product",
+  "Monthly_%_Fee": "Recurring fee expressed as a percentage, if applicable",
+  Number_of_Lines: "Number of lines/connections included in this product",
+  Downtime_Monthly_s: "Expected monthly downtime in seconds",
+  Recovery_Time_Seconds: "Time to recover service after an outage, in seconds",
+  Product_Name: "The commercial name of this specific product/plan",
+  Supported_Role: "The role this product plays in a site's connectivity setup: a Primary link, a Secondary/backup link, or an Enterprise-grade dedicated link",
+  Power_Profile: "Power consumption of the hardware, in kWh",
+  View_Name: "Internal display/grouping name used for this product in reports or views",
 };
+
+// Dropdown option sets, taken directly from the Stargrid field-definitions sheet.
+const CATEGORY_DROPDOWNS = {
+  Product_Category: ["Airtime", "Hardware", "Maritime", "Fix", "Cell", "Sat", "Router"],
+  Connectivity_Technology: [
+    "Cellular",
+    "Satellite",
+    "4G",
+    "5G",
+    "LTE",
+    "Satellite Narrowband",
+    "Sat Broadband",
+    "Other",
+  ],
+  Supported_Role: ["Primary", "Secondary", "Enterprise"],
+};
+
+// Multi-select field(s): stored back into the (text) column as a comma-separated string.
+const MULTISELECT_FIELDS = {
+  Environment_Suitability: ["Aviation", "Landmobile", "Maritime", "Harsh", "Light"],
+};
+
+// Small unit badges shown next to a field's label in the Add Product form.
+const FIELD_UNITS = {
+  Monthly_Data_GB: "GB",
+  Latency_Class_ms: "ms",
+  Max_Throughput_Mbps: "Mbps",
+  Availability_SLA_Percent: "%",
+  Failover_Time_Seconds: "sec",
+  Download_Mbit_s: "Mbit/s",
+  Upload_Mbit_s: "Mbit/s",
+  Network_Setup_Fee: "EUR",
+  Network_Monthly_Fee: "EUR / mo",
+  Teliphonica_Charge_per_MB: "EUR / MB",
+  "Monthly_%_Fee": "%",
+  Number_of_Lines: "lines",
+  Downtime_Monthly_s: "sec",
+  Recovery_Time_Seconds: "sec",
+  Power_Profile: "kWh",
+};
+
+// Columns that are handled as one combined "deployment sites" control rather
+// than three separate rows inside the Site & Deployment tab.
+const SITE_TOGGLE_FIELDS = [
+  { key: "Site_Fixed", label: "Fixed" },
+  { key: "Site_Moving", label: "Moving" },
+  { key: "Site_Portable", label: "Portable" },
+];
+const SITE_TOGGLE_KEYS = new Set(SITE_TOGGLE_FIELDS.map((f) => f.key));
+
+// Grouping of fields into categories for the "Add Product" form, based on the
+// Stargrid field-definitions sheet ("Product", "costs", "volume",
+// "performance", "Site"). Computed once at module scope since PRODUCT_COLUMNS
+// is static. Anything not covered by a named category still shows up, under
+// "Additional Info" — nothing from the data model is ever hidden.
+const RAW_FIELD_CATEGORIES = [
+  {
+    title: "Product",
+    description: "Who provides it, what it's called, and what kind of connection it is.",
+    fields: ["Provider", "Product_Name", "Product_Category", "Connectivity_Technology", "Region"],
+  },
+  {
+    title: "Costs",
+    description: "One-off and recurring pricing for this product.",
+    fields: ["Network_Setup_Fee", "Network_Monthly_Fee", "Teliphonica_Charge_per_MB", "Monthly_%_Fee"],
+  },
+  {
+    title: "Volume",
+    description: "Data allowance and line/throughput capacity included.",
+    fields: ["Number_of_Lines", "Monthly_Data_GB", "Download_Mbit_s", "Upload_Mbit_s"],
+  },
+  {
+    title: "Performance",
+    description: "Speed, reliability, outages, and recovery characteristics.",
+    fields: [
+      "Latency_Class_ms",
+      "Max_Throughput_Mbps",
+      "Availability_SLA_Percent",
+      "Downtime_Monthly_s",
+      "Recovery_Time_Seconds",
+      "Failover_Time_Seconds",
+      "Power_Profile",
+    ],
+  },
+  {
+    title: "Site & Deployment",
+    description: "The role this product plays and where it can physically be used.",
+    fields: ["Supported_Role", "Environment_Suitability", "Site_Fixed", "Site_Moving", "Site_Portable"],
+  },
+];
+
+const CATEGORIZED_FIELD_SET = new Set(RAW_FIELD_CATEGORIES.flatMap((c) => c.fields));
+const OTHER_COLUMNS = PRODUCT_COLUMNS.filter((c) => !CATEGORIZED_FIELD_SET.has(c));
+
+const ADD_FORM_CATEGORIES = [
+  ...RAW_FIELD_CATEGORIES.map((cat) => ({
+    ...cat,
+    fields: cat.fields.filter((f) => PRODUCT_COLUMNS.includes(f)),
+  })).filter((cat) => cat.fields.length > 0),
+  ...(OTHER_COLUMNS.length > 0
+    ? [{ title: "Additional Info", description: "Other fields that don't fall into a category above.", fields: OTHER_COLUMNS }]
+    : []),
+];
+
+function isEmptyValue(v) {
+  return v === "" || v === null || v === undefined;
+}
 
 // Unscoped global CSS so that native <option> elements (rendered outside the
 // styled-jsx DOM tree) inherit dark backgrounds and white text.
 const GLOBAL_DROPDOWN_CSS = `
   .pm__filter select option,
   .pm__td select option,
-  .pm__field select option,
-  .pm__addform-grid select option {
+  .pm__field select option {
     background-color: #1a1f35 !important;
     color: #ffffff !important;
     padding: 10px 14px;
@@ -90,15 +208,13 @@ const GLOBAL_DROPDOWN_CSS = `
   }
   .pm__filter select option:checked,
   .pm__td select option:checked,
-  .pm__field select option:checked,
-  .pm__addform-grid select option:checked {
+  .pm__field select option:checked {
     background: #3D72FC !important;
     color: #ffffff !important;
   }
   .pm__filter select option:hover,
   .pm__td select option:hover,
-  .pm__field select option:hover,
-  .pm__addform-grid select option:hover {
+  .pm__field select option:hover {
     background-color: #2a3050 !important;
   }
   input:-webkit-autofill,
@@ -125,6 +241,7 @@ export default function ProductManagerPage() {
   const [editValues, setEditValues] = useState({});
   const [showAddForm, setShowAddForm] = useState(false);
   const [newRow, setNewRow] = useState({ ...EMPTY_FORM });
+  const [activeCategory, setActiveCategory] = useState(ADD_FORM_CATEGORIES[0]?.title || null);
 
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [bulkResult, setBulkResult] = useState(null);
@@ -223,13 +340,27 @@ export default function ProductManagerPage() {
     setEditValues((prev) => ({ ...prev, [col]: value }));
   }
 
+  function updateNewField(col, value) {
+    setNewRow((prev) => ({ ...prev, [col]: value }));
+  }
+
+  function openAddForm() {
+    setNewRow({ ...EMPTY_FORM });
+    setActiveCategory(ADD_FORM_CATEGORIES[0]?.title || null);
+    setShowAddForm(true);
+  }
+
+  function closeAddForm() {
+    setShowAddForm(false);
+    setNewRow({ ...EMPTY_FORM });
+  }
+
   async function saveNewRow() {
     try {
       setSaving(true);
       const created = await createProduct(newRow);
       setProducts((prev) => [...prev, created]);
-      setNewRow({ ...EMPTY_FORM });
-      setShowAddForm(false);
+      closeAddForm();
     } catch (err) {
       alert("Create failed: " + err.message);
     } finally {
@@ -325,6 +456,9 @@ export default function ProductManagerPage() {
       </div>
     );
 
+  const requiredMissing = Array.from(REQUIRED_FIELDS).filter((f) => isEmptyValue(newRow[f]));
+  const activeCategoryDef = ADD_FORM_CATEGORIES.find((c) => c.title === activeCategory) || ADD_FORM_CATEGORIES[0];
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: GLOBAL_DROPDOWN_CSS }} />
@@ -349,8 +483,8 @@ export default function ProductManagerPage() {
                 onChange={handleFileUpload}
                 style={{ display: "none" }}
               />
-              <button className="btn-add" onClick={() => setShowAddForm((s) => !s)}>
-                {showAddForm ? "X Cancel" : "+ Add Product"}
+              <button className="btn-add" onClick={() => (showAddForm ? closeAddForm() : openAddForm())}>
+                {showAddForm ? "Cancel" : "+ Add Product"}
               </button>
             </div>
           </div>
@@ -444,36 +578,82 @@ export default function ProductManagerPage() {
 
           {showAddForm && (
             <div className="pm__addform">
-              <h3>New product</h3>
-              <p className="pm__addform-hint">
-                Fill in the fields below. Required fields are marked with <span className="pm__field-req">*</span>. Hover any field for guidance.
-              </p>
-              <div className="pm__addform-grid">
-                {PRODUCT_COLUMNS.map((col) => {
-                  const isReq = REQUIRED_FIELDS.has(col);
-                  const hint = FIELD_HINTS[col];
-                  return (
-                    <div key={col} className="pm__field">
-                      <label htmlFor={"new-" + col} className="pm__field-label">
-                        {prettifyLabel(col)}
-                        {isReq && <span className="pm__field-req">*</span>}
-                      </label>
-                      <CellEditor
-                        col={col}
-                        value={newRow[col]}
-                        onChange={(v) => setNewRow((prev) => ({ ...prev, [col]: v }))}
-                        inputId={"new-" + (col) + ""}
-                      />
-                      {hint && <small className="pm__field-hint">{hint}</small>}
-                    </div>
-                  );
-                })}
+              <div className="pm__addform-top">
+                <div>
+                  <h3>New product</h3>
+                  <p className="pm__addform-sub">
+                    {requiredMissing.length > 0
+                      ? `${requiredMissing.length} required field${requiredMissing.length === 1 ? "" : "s"} left to fill in`
+                      : "All required fields are filled in"}
+                  </p>
+                </div>
               </div>
+
+              <div className="pm__addform-body">
+                <div className="pm__addform-tabs">
+                  {ADD_FORM_CATEGORIES.map((cat) => {
+                    const requiredInCat = cat.fields.filter((f) => REQUIRED_FIELDS.has(f));
+                    const missingInCat = requiredInCat.filter((f) => isEmptyValue(newRow[f]));
+                    const isActive = activeCategory === cat.title;
+                    return (
+                      <button
+                        type="button"
+                        key={cat.title}
+                        className={"pm__tab" + (isActive ? " pm__tab--active" : "")}
+                        onClick={() => setActiveCategory(cat.title)}
+                      >
+                        <span className="pm__tab-label">{cat.title}</span>
+                        <span className="pm__tab-meta">
+                          {cat.fields.length} field{cat.fields.length === 1 ? "" : "s"}
+                          {missingInCat.length > 0 && <span className="pm__tab-dot" title="Missing a required field" />}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {activeCategoryDef && (
+                  <div className="pm__addform-content">
+                    <div className="pm__addform-content-hdr">
+                      <h4>{activeCategoryDef.title}</h4>
+                      <p>{activeCategoryDef.description}</p>
+                    </div>
+
+                    <div className="pm__addform-fields">
+                      {activeCategoryDef.title === "Site & Deployment" ? (
+                        <>
+                          {activeCategoryDef.fields
+                            .filter((col) => !SITE_TOGGLE_KEYS.has(col))
+                            .map((col) => (
+                              <AddFormField
+                                key={col}
+                                col={col}
+                                value={newRow[col]}
+                                onChange={(v) => updateNewField(col, v)}
+                              />
+                            ))}
+                          <SiteDeploymentGroup newRow={newRow} onFieldChange={updateNewField} />
+                        </>
+                      ) : (
+                        activeCategoryDef.fields.map((col) => (
+                          <AddFormField
+                            key={col}
+                            col={col}
+                            value={newRow[col]}
+                            onChange={(v) => updateNewField(col, v)}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="pm__addform-actions">
                 <button onClick={saveNewRow} disabled={saving} className="btn-add">
                   {saving ? "Saving..." : "Save Product"}
                 </button>
-                <button onClick={() => { setShowAddForm(false); setNewRow({ ...EMPTY_FORM }); }} className="btn-sec">
+                <button onClick={closeAddForm} className="btn-sec">
                   Cancel
                 </button>
               </div>
@@ -607,27 +787,68 @@ export default function ProductManagerPage() {
           .pm__filter-clear { align-self:end; padding:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.7); border-radius:8px; cursor:pointer; font-size:13px; }
           .pm__filter-clear:hover { background:rgba(255,255,255,0.1); }
 
-          .pm__addform { background:rgba(61,114,252,0.06); border:1px solid rgba(61,114,252,0.35); border-radius:16px; padding:24px; margin-bottom:24px; }
-          .pm__addform h3 { margin:0 0 8px; color:#fff; font-size:18px; }
-          .pm__addform-hint { margin:0 0 18px; color:rgba(255,255,255,0.55); font-size:13px; line-height:1.5; }
-          .pm__addform-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; }
+          /* ---- Add Product panel ---- */
+          .pm__addform { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:28px; margin-bottom:24px; }
+          .pm__addform-top { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
+          .pm__addform-top h3 { margin:0 0 4px; color:#fff; font-size:19px; font-weight:700; }
+          .pm__addform-sub { margin:0; font-size:13px; color:rgba(255,255,255,0.5); }
+
+          .pm__addform-body { display:flex; gap:28px; align-items:flex-start; }
+
+          .pm__addform-tabs { display:flex; flex-direction:column; gap:4px; width:200px; flex-shrink:0; }
+          .pm__tab { display:flex; flex-direction:column; align-items:flex-start; gap:3px; padding:10px 14px; border-radius:10px; border:none; border-left:3px solid transparent; background:transparent; text-align:left; cursor:pointer; }
+          .pm__tab:hover { background:rgba(255,255,255,0.04); }
+          .pm__tab--active { background:rgba(61,114,252,0.12); border-left-color:#3D72FC; }
+          .pm__tab-label { font-size:13px; font-weight:600; color:rgba(255,255,255,0.85); }
+          .pm__tab--active .pm__tab-label { color:#fff; }
+          .pm__tab-meta { font-size:11px; color:rgba(255,255,255,0.4); display:flex; align-items:center; gap:6px; }
+          .pm__tab-dot { width:6px; height:6px; border-radius:50%; background:#FA5674; display:inline-block; }
+
+          .pm__addform-content { flex:1; min-width:0; border-left:1px solid rgba(255,255,255,0.08); padding-left:28px; }
+          .pm__addform-content-hdr { margin-bottom:20px; }
+          .pm__addform-content-hdr h4 { margin:0 0 4px; font-size:15px; font-weight:700; color:#fff; }
+          .pm__addform-content-hdr p { margin:0; font-size:12px; color:rgba(255,255,255,0.45); }
+
+          .pm__addform-fields { display:flex; flex-direction:column; gap:20px; max-width:480px; }
 
           .pm__field { display:flex; flex-direction:column; gap:6px; }
-          .pm__field-label { font-size:11px; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:0.6px; font-weight:700; display:flex; align-items:center; gap:4px; }
+          .pm__field-label { font-size:12px; color:rgba(255,255,255,0.75); font-weight:600; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
           .pm__field-req { color:#FA5674; font-weight:700; }
-          .pm__field-hint { font-size:11px; color:rgba(255,255,255,0.45); line-height:1.4; font-weight:400; text-transform:none; letter-spacing:0; }
+          .pm__field-unit { font-size:10px; color:#5CB0E9; background:rgba(92,176,233,0.12); border:1px solid rgba(92,176,233,0.3); padding:1px 6px; border-radius:6px; font-weight:600; }
+          .pm__field-hint { font-size:11.5px; color:rgba(255,255,255,0.4); line-height:1.45; }
 
-          .pm__field select, .pm__field input,
-          .pm__addform-grid select, .pm__addform-grid input {
-            padding:9px 12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12);
-            border-radius:8px; color:#fff; font-size:13px; width:100%;
+          .pm__field select, .pm__field input {
+            padding:10px 12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12);
+            border-radius:9px; color:#fff; font-size:13.5px; width:100%;
             color-scheme: dark;
           }
-          .pm__field select:focus, .pm__field input:focus,
-          .pm__addform-grid select:focus, .pm__addform-grid input:focus {
-            outline:none; border-color:#3D72FC;
+          .pm__field select:focus, .pm__field input:focus {
+            outline:none; border-color:#3D72FC; background:rgba(255,255,255,0.07);
           }
-          .pm__addform-actions { display:flex; gap:10px; margin-top:18px; }
+
+          .pm__toggle { display:inline-flex; border:1px solid rgba(255,255,255,0.12); border-radius:9px; overflow:hidden; width:fit-content; }
+          .pm__toggle-btn { padding:8px 18px; background:rgba(255,255,255,0.03); border:none; color:rgba(255,255,255,0.55); font-size:13px; font-weight:600; cursor:pointer; }
+          .pm__toggle-btn + .pm__toggle-btn { border-left:1px solid rgba(255,255,255,0.12); }
+          .pm__toggle-btn--active-false { background:rgba(250,86,116,0.16); color:#FCA5A5; }
+          .pm__toggle-btn--active-true { background:rgba(34,197,94,0.16); color:#86efac; }
+
+          .pm__multiselect { display:flex; flex-wrap:wrap; gap:8px; }
+          .pm__chip { display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:20px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.65); font-size:12.5px; cursor:pointer; transition:all 0.15s; }
+          button.pm__chip { font:inherit; }
+          .pm__chip input { accent-color:#3D72FC; cursor:pointer; }
+          .pm__chip:hover { background:rgba(255,255,255,0.08); }
+          .pm__chip--active { background:rgba(61,114,252,0.18); border-color:#3D72FC; color:#fff; }
+
+          .pm__addform-actions { display:flex; gap:10px; margin-top:26px; padding-top:22px; border-top:1px solid rgba(255,255,255,0.08); }
+
+          @media (max-width:760px) {
+            .pm__addform-body { flex-direction:column; }
+            .pm__addform-tabs { flex-direction:row; overflow-x:auto; width:100%; gap:8px; padding-bottom:6px; }
+            .pm__tab { flex-direction:row; align-items:center; gap:8px; white-space:nowrap; border-left:none; border-bottom:3px solid transparent; border-radius:10px 10px 0 0; }
+            .pm__tab--active { border-left-color:transparent; border-bottom-color:#3D72FC; }
+            .pm__addform-content { border-left:none; padding-left:0; padding-top:20px; border-top:1px solid rgba(255,255,255,0.08); }
+            .pm__addform-fields { max-width:none; }
+          }
 
           .pm__tablewrap { overflow:auto; border-radius:16px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); }
           .pm__table { width:100%; border-collapse:collapse; font-size:13px; }
@@ -675,6 +896,152 @@ export default function ProductManagerPage() {
   );
 }
 
+// Renders one field row inside the Add Product form: a label (with unit
+// badge / required marker), the right input control for that field's type,
+// and a plain-English hint underneath explaining what it is.
+function AddFormField({ col, value, onChange }) {
+  const isReq = REQUIRED_FIELDS.has(col);
+  const hint = FIELD_HINTS[col];
+  const unit = FIELD_UNITS[col];
+  const inputId = "new-" + col;
+
+  return (
+    <div className="pm__field">
+      <label htmlFor={inputId} className="pm__field-label">
+        {prettifyLabel(col)}
+        {unit && <span className="pm__field-unit">{unit}</span>}
+        {isReq && <span className="pm__field-req">*</span>}
+      </label>
+      <AddFormFieldEditor col={col} value={value} onChange={onChange} inputId={inputId} />
+      {hint && <small className="pm__field-hint">{hint}</small>}
+    </div>
+  );
+}
+
+// Chooses the right control for the Add Product form based on field type:
+// a labeled dropdown for known categorical fields, chip multi-select for
+// Environment_Suitability, a segmented True/False toggle for booleans, a
+// number input for numeric fields, and plain text otherwise.
+function AddFormFieldEditor({ col, value, onChange, inputId }) {
+  const hint = FIELD_HINTS[col] || "";
+
+  if (MULTISELECT_FIELDS[col]) {
+    return <MultiSelectChips options={MULTISELECT_FIELDS[col]} value={value} onChange={onChange} />;
+  }
+
+  if (CATEGORY_DROPDOWNS[col]) {
+    return (
+      <select id={inputId} value={value ?? ""} title={hint} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Select {prettifyLabel(col)}...</option>
+        {CATEGORY_DROPDOWNS[col].map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+    );
+  }
+
+  if (BOOLEAN_COLS.has(col)) {
+    return <BooleanToggle value={value} onChange={onChange} />;
+  }
+
+  if (NUMERIC_COLS.has(col)) {
+    return (
+      <input
+        id={inputId}
+        type="number"
+        step="any"
+        value={value ?? ""}
+        title={hint}
+        onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)}
+      />
+    );
+  }
+
+  return <input id={inputId} type="text" value={value ?? ""} title={hint} onChange={(e) => onChange(e.target.value)} />;
+}
+
+// Segmented True/False control used for boolean fields in the Add Product form.
+function BooleanToggle({ value, onChange }) {
+  return (
+    <div className="pm__toggle" role="group">
+      <button
+        type="button"
+        className={"pm__toggle-btn" + (value === false ? " pm__toggle-btn--active-false" : "")}
+        onClick={() => onChange(false)}
+      >
+        False
+      </button>
+      <button
+        type="button"
+        className={"pm__toggle-btn" + (value === true ? " pm__toggle-btn--active-true" : "")}
+        onClick={() => onChange(true)}
+      >
+        True
+      </button>
+    </div>
+  );
+}
+
+// Chip-style multi-select. The selection is stored back into the underlying
+// (text) column as a comma-separated string, e.g. "Maritime, Harsh".
+function MultiSelectChips({ options, value, onChange }) {
+  const selected = useMemo(
+    () => (value ? String(value).split(",").map((v) => v.trim()).filter(Boolean) : []),
+    [value]
+  );
+
+  function toggle(opt) {
+    const next = selected.includes(opt)
+      ? selected.filter((v) => v !== opt)
+      : [...selected, opt];
+    onChange(next.join(", "));
+  }
+
+  return (
+    <div className="pm__multiselect">
+      {options.map((opt) => (
+        <label key={opt} className={"pm__chip" + (selected.includes(opt) ? " pm__chip--active" : "")}>
+          <input type="checkbox" checked={selected.includes(opt)} onChange={() => toggle(opt)} />
+          {opt}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+// Combines Site_Fixed / Site_Moving / Site_Portable into a single "which
+// deployment sites apply" control instead of three separate True/False rows.
+function SiteDeploymentGroup({ newRow, onFieldChange }) {
+  const items = SITE_TOGGLE_FIELDS.filter((i) => PRODUCT_COLUMNS.includes(i.key));
+  if (items.length === 0) return null;
+
+  return (
+    <div className="pm__field">
+      <label className="pm__field-label">Deployment sites</label>
+      <div className="pm__multiselect">
+        {items.map((i) => {
+          const active = !!newRow[i.key];
+          return (
+            <button
+              type="button"
+              key={i.key}
+              className={"pm__chip" + (active ? " pm__chip--active" : "")}
+              onClick={() => onFieldChange(i.key, !newRow[i.key])}
+            >
+              {i.label}
+            </button>
+          );
+        })}
+      </div>
+      <small className="pm__field-hint">
+        Where this product can physically be deployed — Fixed (building/site), Moving (vehicle/vessel),
+        Portable (carry-along kit). Select all that apply.
+      </small>
+    </div>
+  );
+}
+
+// Used for inline editing in the existing table — left exactly as it was.
 function CellEditor({ col, value, onChange, inputId }) {
   const hint = FIELD_HINTS[col] || "";
   if (BOOLEAN_COLS.has(col)) {
