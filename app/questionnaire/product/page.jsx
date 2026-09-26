@@ -27,6 +27,12 @@ const NUMERIC_COLS = new Set([
   "Number_of_Lines",
   "Downtime_Monthly_s",
   "Recovery_Time_Seconds",
+  "Incremental_Monthly_Fee",
+  "Incremental_Data_GB",
+  "CIR Download_Mbit_s",
+  "CIR Upload_Mbit_s",
+  "Service_Repair_Time",
+  "Min_Contract_Term",
 ]);
 
 const BOOLEAN_COLS = new Set(["Site_Fixed", "Site_Moving", "Site_Portable"]);
@@ -86,6 +92,12 @@ const FIELD_HINTS = {
   Supported_Role: "The role this product plays in a site's connectivity setup: a Primary link, a Secondary/backup link, or an Enterprise-grade dedicated link",
   Power_Profile: "Power consumption of the hardware, in kWh",
   View_Name: "Internal display/grouping name used for this product in reports or views",
+  Incremental_Monthly_Fee: "Extra recurring fee charged per additional increment (e.g. each extra data block) beyond the base allowance",
+  Incremental_Data_GB: "Size of each additional data top-up increment, in GB",
+  "CIR Download_Mbit_s": "Committed Information Rate for downloads — the guaranteed minimum download speed, in Mbit/s",
+  "CIR Upload_Mbit_s": "Committed Information Rate for uploads — the guaranteed minimum upload speed, in Mbit/s",
+  Service_Repair_Time: "Typical time to repair/restore full service after a fault, in hours",
+  Min_Contract_Term: "Minimum commitment period for this contract, in months",
 };
 
 // Dropdown option sets, taken directly from the Stargrid field-definitions sheet.
@@ -126,6 +138,12 @@ const FIELD_UNITS = {
   Downtime_Monthly_s: "sec",
   Recovery_Time_Seconds: "sec",
   Power_Profile: "kWh",
+  Incremental_Monthly_Fee: "EUR / mo",
+  Incremental_Data_GB: "GB",
+  "CIR Download_Mbit_s": "Mbit/s",
+  "CIR Upload_Mbit_s": "Mbit/s",
+  Service_Repair_Time: "hrs",
+  Min_Contract_Term: "months",
 };
 
 // Columns that are handled as one combined "deployment sites" control rather
@@ -139,9 +157,9 @@ const SITE_TOGGLE_KEYS = new Set(SITE_TOGGLE_FIELDS.map((f) => f.key));
 
 // Grouping of fields into categories for the "Add Product" form, based on the
 // Stargrid field-definitions sheet ("Product", "costs", "volume",
-// "performance", "Site"). Computed once at module scope since PRODUCT_COLUMNS
-// is static. Anything not covered by a named category still shows up, under
-// "Additional Info" — nothing from the data model is ever hidden.
+// "performance", "Site", "Support"). Computed once at module scope since
+// PRODUCT_COLUMNS is static. Anything not covered by a named category still
+// shows up, under "Additional Info" — nothing from the data model is hidden.
 const RAW_FIELD_CATEGORIES = [
   {
     title: "Product",
@@ -151,12 +169,26 @@ const RAW_FIELD_CATEGORIES = [
   {
     title: "Costs",
     description: "One-off and recurring pricing for this product.",
-    fields: ["Network_Setup_Fee", "Network_Monthly_Fee", "Teliphonica_Charge_per_MB", "Monthly_%_Fee"],
+    fields: [
+      "Network_Setup_Fee",
+      "Network_Monthly_Fee",
+      "Teliphonica_Charge_per_MB",
+      "Monthly_%_Fee",
+      "Incremental_Monthly_Fee",
+    ],
   },
   {
     title: "Volume",
     description: "Data allowance and line/throughput capacity included.",
-    fields: ["Number_of_Lines", "Monthly_Data_GB", "Download_Mbit_s", "Upload_Mbit_s"],
+    fields: [
+      "Number_of_Lines",
+      "Monthly_Data_GB",
+      "Download_Mbit_s",
+      "Upload_Mbit_s",
+      "Incremental_Data_GB",
+      "CIR Download_Mbit_s",
+      "CIR Upload_Mbit_s",
+    ],
   },
   {
     title: "Performance",
@@ -175,6 +207,11 @@ const RAW_FIELD_CATEGORIES = [
     title: "Site & Deployment",
     description: "The role this product plays and where it can physically be used.",
     fields: ["Supported_Role", "Environment_Suitability", "Site_Fixed", "Site_Moving", "Site_Portable"],
+  },
+  {
+    title: "Support",
+    description: "Service commitments once the product is up and running.",
+    fields: ["Service_Repair_Time", "Min_Contract_Term"],
   },
 ];
 
@@ -195,25 +232,176 @@ function isEmptyValue(v) {
   return v === "" || v === null || v === undefined;
 }
 
-// Unscoped global CSS so that native <option> elements (rendered outside the
-// styled-jsx DOM tree) inherit dark backgrounds and white text.
-const GLOBAL_DROPDOWN_CSS = `
-  .pm__filter select option,
+function prettifyLabel(col) {
+  return col.replaceAll("_", " ");
+}
+
+// Global (unscoped) CSS. Kept as one plain string and injected with a single
+// <style> tag so that every element gets these rules, including the ones
+// rendered by helper components below (AddFormField, CellEditor, etc.) —
+// styled-jsx's <style jsx> only auto-scopes elements written directly inside
+// the component that owns the tag, so splitting fields into sub-components
+// while keeping `<style jsx>` (not `global`) is what caused labels/inputs/
+// hints to fall back to unstyled browser defaults and look "congested".
+const GLOBAL_CSS = `
+  .pm { position:relative; min-height:100vh; background:#070c14; padding:48px 18px; overflow:hidden; }
+  .pm__blob1 { position:absolute; width:800px; height:800px; border-radius:50%; right:-250px; top:-180px; background:radial-gradient(circle,rgba(22,14,255,0.11) 0%,transparent 70%); pointer-events:none; z-index:0; }
+  .pm__blob2 { position:absolute; width:500px; height:500px; border-radius:50%; left:-150px; bottom:-140px; background:radial-gradient(circle,rgba(102,105,216,0.14) 0%,transparent 65%); pointer-events:none; z-index:0; }
+  .pm__inner { position:relative; z-index:1; max-width:1500px; margin:0 auto; }
+
+  .pm__hdr { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:32px; }
+  .pm__hdr h1 { font-size:30px; font-weight:700; color:#fff; margin:0 0 6px; }
+  .pm__hdr p { font-size:14px; color:rgba(255,255,255,0.5); margin:0; }
+  .pm__hdr-actions { display:flex; gap:10px; flex-wrap:wrap; }
+
+  .btn-tpl,.btn-up,.btn-add,.btn-sec { padding:11px 20px; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+  .btn-tpl { background:rgba(255,152,0,0.15); border:1px solid rgba(255,152,0,0.4); color:#FF9800; }
+  .btn-tpl:hover { background:rgba(255,152,0,0.25); }
+  .btn-up { background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.4); color:#22c55e; }
+  .btn-up:hover { background:rgba(34,197,94,0.25); }
+  .btn-add { background:linear-gradient(135deg,#3D72FC,#5CB0E9); color:#fff; }
+  .btn-add:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(61,114,252,0.4); }
+  .btn-sec { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.8); }
+  .btn-sec:hover { background:rgba(255,255,255,0.1); }
+
+  .pm__banner { padding:14px 22px; border-radius:12px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; font-weight:500; }
+  .pm__banner--ok { background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.35); color:#86efac; }
+  .pm__banner--err { background:rgba(250,86,116,0.12); border:1px solid rgba(250,86,116,0.35); color:#FCA5A5; }
+  .pm__banner-close { background:none; border:none; color:inherit; font-size:18px; cursor:pointer; padding:0 8px; }
+
+  .pm__filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:18px; border-radius:16px; margin-bottom:24px; }
+  .pm__filter { display:flex; flex-direction:column; gap:6px; }
+  .pm__filter label { font-size:11px; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:0.6px; font-weight:600; }
+  .pm__filter select, .pm__filter input, .pm__filter-search input {
+    padding:9px 12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12);
+    border-radius:8px; color:#fff; font-size:13px;
+    color-scheme: dark;
+  }
+  .pm__filter select:focus, .pm__filter input:focus, .pm__filter-search input:focus {
+    outline:none; border-color:#3D72FC;
+  }
+  .pm__filter-search { grid-column:1 / -1; }
+  .pm__range { display:flex; align-items:center; gap:6px; }
+  .pm__range input { width:100%; min-width:0; }
+  .pm__range span { color:rgba(255,255,255,0.4); }
+  .pm__filter-clear { align-self:end; padding:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.7); border-radius:8px; cursor:pointer; font-size:13px; }
+  .pm__filter-clear:hover { background:rgba(255,255,255,0.1); }
+
+  /* ---- Add Product panel ---- */
+  .pm__addform { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:32px; margin-bottom:24px; }
+  .pm__addform-top { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px; margin-bottom:26px; }
+  .pm__addform-top h3 { margin:0 0 4px; color:#fff; font-size:20px; font-weight:700; }
+  .pm__addform-sub { margin:0; font-size:13px; color:rgba(255,255,255,0.5); }
+
+  .pm__addform-body { display:flex; gap:32px; align-items:flex-start; }
+
+  .pm__addform-tabs { display:flex; flex-direction:column; gap:4px; width:200px; flex-shrink:0; }
+  .pm__tab { display:flex; flex-direction:column; align-items:flex-start; gap:3px; padding:11px 14px; border-radius:10px; border:none; border-left:3px solid transparent; background:transparent; text-align:left; cursor:pointer; }
+  .pm__tab:hover { background:rgba(255,255,255,0.04); }
+  .pm__tab--active { background:rgba(61,114,252,0.12); border-left-color:#3D72FC; }
+  .pm__tab-label { font-size:13px; font-weight:600; color:rgba(255,255,255,0.85); }
+  .pm__tab--active .pm__tab-label { color:#fff; }
+  .pm__tab-meta { font-size:11px; color:rgba(255,255,255,0.4); display:flex; align-items:center; gap:6px; }
+  .pm__tab-dot { width:6px; height:6px; border-radius:50%; background:#FA5674; display:inline-block; }
+
+  .pm__addform-content { flex:1; min-width:0; border-left:1px solid rgba(255,255,255,0.08); padding-left:32px; }
+  .pm__addform-content-hdr { margin-bottom:24px; }
+  .pm__addform-content-hdr h4 { margin:0 0 4px; font-size:16px; font-weight:700; color:#fff; }
+  .pm__addform-content-hdr p { margin:0; font-size:12.5px; color:rgba(255,255,255,0.45); }
+
+  .pm__addform-fields { display:flex; flex-direction:column; gap:26px; max-width:480px; }
+
+  .pm__field { display:flex; flex-direction:column; gap:7px; }
+  .pm__field-label { font-size:13px; color:rgba(255,255,255,0.8); font-weight:600; display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+  .pm__field-req { color:#FA5674; font-weight:700; }
+  .pm__field-unit { font-size:10px; color:#5CB0E9; background:rgba(92,176,233,0.12); border:1px solid rgba(92,176,233,0.3); padding:2px 7px; border-radius:6px; font-weight:600; }
+  .pm__field-hint { font-size:12px; color:rgba(255,255,255,0.42); line-height:1.5; }
+
+  .pm__field select, .pm__field input {
+    padding:11px 13px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12);
+    border-radius:9px; color:#fff; font-size:14px; width:100%; box-sizing:border-box;
+    color-scheme: dark;
+  }
+  .pm__field select:focus, .pm__field input:focus {
+    outline:none; border-color:#3D72FC; background:rgba(255,255,255,0.07);
+  }
+
+  .pm__toggle { display:inline-flex; border:1px solid rgba(255,255,255,0.12); border-radius:9px; overflow:hidden; width:fit-content; }
+  .pm__toggle-btn { padding:9px 20px; background:rgba(255,255,255,0.03); border:none; color:rgba(255,255,255,0.55); font-size:13px; font-weight:600; cursor:pointer; }
+  .pm__toggle-btn + .pm__toggle-btn { border-left:1px solid rgba(255,255,255,0.12); }
+  .pm__toggle-btn--active-false { background:rgba(250,86,116,0.16); color:#FCA5A5; }
+  .pm__toggle-btn--active-true { background:rgba(34,197,94,0.16); color:#86efac; }
+
+  .pm__multiselect { display:flex; flex-wrap:wrap; gap:8px; }
+  .pm__chip { display:flex; align-items:center; gap:6px; padding:9px 15px; border-radius:20px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.65); font-size:13px; cursor:pointer; transition:all 0.15s; }
+  button.pm__chip { font:inherit; }
+  .pm__chip input { accent-color:#3D72FC; cursor:pointer; }
+  .pm__chip:hover { background:rgba(255,255,255,0.08); }
+  .pm__chip--active { background:rgba(61,114,252,0.18); border-color:#3D72FC; color:#fff; }
+
+  .pm__addform-actions { display:flex; gap:10px; margin-top:30px; padding-top:24px; border-top:1px solid rgba(255,255,255,0.08); }
+
+  @media (max-width:760px) {
+    .pm__addform-body { flex-direction:column; }
+    .pm__addform-tabs { flex-direction:row; overflow-x:auto; width:100%; gap:8px; padding-bottom:6px; }
+    .pm__tab { flex-direction:row; align-items:center; gap:8px; white-space:nowrap; border-left:none; border-bottom:3px solid transparent; border-radius:10px 10px 0 0; }
+    .pm__tab--active { border-left-color:transparent; border-bottom-color:#3D72FC; }
+    .pm__addform-content { border-left:none; padding-left:0; padding-top:22px; border-top:1px solid rgba(255,255,255,0.08); }
+    .pm__addform-fields { max-width:none; }
+  }
+
+  .pm__tablewrap { overflow:auto; border-radius:16px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); }
+  .pm__table { width:100%; border-collapse:collapse; font-size:13px; }
+  .pm__table thead { background:rgba(255,255,255,0.05); position:sticky; top:0; z-index:2; }
+  .pm__table th { padding:14px 14px; text-align:left; font-size:11px; font-weight:700; color:rgba(255,255,255,0.55); text-transform:uppercase; letter-spacing:0.6px; border-bottom:1px solid rgba(255,255,255,0.08); white-space:nowrap; }
+  .pm__table td { padding:12px 14px; color:rgba(255,255,255,0.85); border-bottom:1px solid rgba(255,255,255,0.04); vertical-align:middle; }
+  .pm__table tbody tr:hover { background:rgba(255,255,255,0.025); }
+  .pm__tr--editing { background:rgba(61,114,252,0.08); }
+  .pm__td input, .pm__td select {
+    width:100%; padding:7px 10px; background:rgba(255,255,255,0.06);
+    border:1px solid rgba(61,114,252,0.4); border-radius:6px;
+    color:#fff; font-size:13px; min-width:90px; box-sizing:border-box;
+    color-scheme: dark;
+  }
+  .pm__td input:focus, .pm__td select:focus { outline:none; border-color:#5CB0E9; }
+
+  .pm__rowact { display:flex; gap:6px; }
+  .pm__icobtn { width:34px; height:30px; border:none; border-radius:8px; background:rgba(255,255,255,0.06); color:#fff; font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .pm__icobtn:hover { background:rgba(255,255,255,0.12); }
+  .pm__icobtn--save { background:#22c55e; color:#fff; }
+  .pm__icobtn--save:hover { background:#16a34a; }
+  .pm__icobtn--cancel { background:rgba(255,255,255,0.1); }
+  .pm__icobtn--del { background:rgba(250,86,116,0.18); color:#FCA5A5; }
+  .pm__icobtn--del:hover { background:rgba(250,86,116,0.35); }
+
+  .pm__count { text-align:center; color:rgba(255,255,255,0.4); font-size:13px; margin-top:18px; }
+
+  .pm__modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .pm__modal { background:#1a1f35; border:1px solid rgba(255,255,255,0.12); border-radius:18px; padding:28px; max-width:440px; width:100%; }
+  .pm__modal h3 { font-size:20px; color:#fff; margin:0 0 12px; }
+  .pm__modal p { color:rgba(255,255,255,0.7); margin:0 0 22px; font-size:14px; line-height:1.6; }
+  .pm__modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+  .pm__modal-btn { padding:11px 22px; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; }
+  .pm__modal-btn--del { background:linear-gradient(135deg,#FA5674,#e63950); color:#fff; }
+  .pm__modal-btn:not(.pm__modal-btn--del) { background:rgba(255,255,255,0.08); color:#fff; }
+  .pm__modal-btn:hover { background:rgba(255,255,255,0.14); }
+
   .pm__td select option,
+  .pm__filter select option,
   .pm__field select option {
     background-color: #1a1f35 !important;
     color: #ffffff !important;
     padding: 10px 14px;
     font-weight: 500;
   }
-  .pm__filter select option:checked,
   .pm__td select option:checked,
+  .pm__filter select option:checked,
   .pm__field select option:checked {
     background: #3D72FC !important;
     color: #ffffff !important;
   }
-  .pm__filter select option:hover,
   .pm__td select option:hover,
+  .pm__filter select option:hover,
   .pm__field select option:hover {
     background-color: #2a3050 !important;
   }
@@ -226,11 +414,12 @@ const GLOBAL_DROPDOWN_CSS = `
     -webkit-box-shadow: 0 0 0px 1000px #1a1f35 inset !important;
     caret-color: #ffffff;
   }
-`;
 
-function prettifyLabel(col) {
-  return col.replaceAll("_", " ");
-}
+  @media(max-width:768px) {
+    .pm { padding:28px 12px; }
+    .pm__hdr h1 { font-size:22px; }
+  }
+`;
 
 export default function ProductManagerPage() {
   const [products, setProducts] = useState([]);
@@ -461,7 +650,7 @@ export default function ProductManagerPage() {
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: GLOBAL_DROPDOWN_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
 
       <div className="pm">
         <div className="pm__blob1" />
@@ -742,155 +931,6 @@ export default function ProductManagerPage() {
             </div>
           </div>
         )}
-
-        <style jsx>{`
-          .pm { position:relative; min-height:100vh; background:#070c14; padding:48px 18px; overflow:hidden; }
-          .pm__blob1 { position:absolute; width:800px; height:800px; border-radius:50%; right:-250px; top:-180px; background:radial-gradient(circle,rgba(22,14,255,0.11) 0%,transparent 70%); pointer-events:none; z-index:0; }
-          .pm__blob2 { position:absolute; width:500px; height:500px; border-radius:50%; left:-150px; bottom:-140px; background:radial-gradient(circle,rgba(102,105,216,0.14) 0%,transparent 65%); pointer-events:none; z-index:0; }
-          .pm__inner { position:relative; z-index:1; max-width:1500px; margin:0 auto; }
-
-          .pm__hdr { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:32px; }
-          .pm__hdr h1 { font-size:30px; font-weight:700; color:#fff; margin:0 0 6px; }
-          .pm__hdr p { font-size:14px; color:rgba(255,255,255,0.5); margin:0; }
-          .pm__hdr-actions { display:flex; gap:10px; flex-wrap:wrap; }
-
-          .btn-tpl,.btn-up,.btn-add,.btn-sec { padding:11px 20px; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s; }
-          .btn-tpl { background:rgba(255,152,0,0.15); border:1px solid rgba(255,152,0,0.4); color:#FF9800; }
-          .btn-tpl:hover { background:rgba(255,152,0,0.25); }
-          .btn-up { background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.4); color:#22c55e; }
-          .btn-up:hover { background:rgba(34,197,94,0.25); }
-          .btn-add { background:linear-gradient(135deg,#3D72FC,#5CB0E9); color:#fff; }
-          .btn-add:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(61,114,252,0.4); }
-          .btn-sec { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.8); }
-          .btn-sec:hover { background:rgba(255,255,255,0.1); }
-
-          .pm__banner { padding:14px 22px; border-radius:12px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; font-weight:500; }
-          .pm__banner--ok { background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.35); color:#86efac; }
-          .pm__banner--err { background:rgba(250,86,116,0.12); border:1px solid rgba(250,86,116,0.35); color:#FCA5A5; }
-          .pm__banner-close { background:none; border:none; color:inherit; font-size:18px; cursor:pointer; padding:0 8px; }
-
-          .pm__filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:18px; border-radius:16px; margin-bottom:24px; }
-          .pm__filter { display:flex; flex-direction:column; gap:6px; }
-          .pm__filter label { font-size:11px; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:0.6px; font-weight:600; }
-          .pm__filter select, .pm__filter input, .pm__filter-search input {
-            padding:9px 12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12);
-            border-radius:8px; color:#fff; font-size:13px;
-            color-scheme: dark;
-          }
-          .pm__filter select:focus, .pm__filter input:focus, .pm__filter-search input:focus {
-            outline:none; border-color:#3D72FC;
-          }
-          .pm__filter-search { grid-column:1 / -1; }
-          .pm__range { display:flex; align-items:center; gap:6px; }
-          .pm__range input { width:100%; min-width:0; }
-          .pm__range span { color:rgba(255,255,255,0.4); }
-          .pm__filter-clear { align-self:end; padding:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.7); border-radius:8px; cursor:pointer; font-size:13px; }
-          .pm__filter-clear:hover { background:rgba(255,255,255,0.1); }
-
-          /* ---- Add Product panel ---- */
-          .pm__addform { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:28px; margin-bottom:24px; }
-          .pm__addform-top { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
-          .pm__addform-top h3 { margin:0 0 4px; color:#fff; font-size:19px; font-weight:700; }
-          .pm__addform-sub { margin:0; font-size:13px; color:rgba(255,255,255,0.5); }
-
-          .pm__addform-body { display:flex; gap:28px; align-items:flex-start; }
-
-          .pm__addform-tabs { display:flex; flex-direction:column; gap:4px; width:200px; flex-shrink:0; }
-          .pm__tab { display:flex; flex-direction:column; align-items:flex-start; gap:3px; padding:10px 14px; border-radius:10px; border:none; border-left:3px solid transparent; background:transparent; text-align:left; cursor:pointer; }
-          .pm__tab:hover { background:rgba(255,255,255,0.04); }
-          .pm__tab--active { background:rgba(61,114,252,0.12); border-left-color:#3D72FC; }
-          .pm__tab-label { font-size:13px; font-weight:600; color:rgba(255,255,255,0.85); }
-          .pm__tab--active .pm__tab-label { color:#fff; }
-          .pm__tab-meta { font-size:11px; color:rgba(255,255,255,0.4); display:flex; align-items:center; gap:6px; }
-          .pm__tab-dot { width:6px; height:6px; border-radius:50%; background:#FA5674; display:inline-block; }
-
-          .pm__addform-content { flex:1; min-width:0; border-left:1px solid rgba(255,255,255,0.08); padding-left:28px; }
-          .pm__addform-content-hdr { margin-bottom:20px; }
-          .pm__addform-content-hdr h4 { margin:0 0 4px; font-size:15px; font-weight:700; color:#fff; }
-          .pm__addform-content-hdr p { margin:0; font-size:12px; color:rgba(255,255,255,0.45); }
-
-          .pm__addform-fields { display:flex; flex-direction:column; gap:20px; max-width:480px; }
-
-          .pm__field { display:flex; flex-direction:column; gap:6px; }
-          .pm__field-label { font-size:12px; color:rgba(255,255,255,0.75); font-weight:600; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-          .pm__field-req { color:#FA5674; font-weight:700; }
-          .pm__field-unit { font-size:10px; color:#5CB0E9; background:rgba(92,176,233,0.12); border:1px solid rgba(92,176,233,0.3); padding:1px 6px; border-radius:6px; font-weight:600; }
-          .pm__field-hint { font-size:11.5px; color:rgba(255,255,255,0.4); line-height:1.45; }
-
-          .pm__field select, .pm__field input {
-            padding:10px 12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12);
-            border-radius:9px; color:#fff; font-size:13.5px; width:100%;
-            color-scheme: dark;
-          }
-          .pm__field select:focus, .pm__field input:focus {
-            outline:none; border-color:#3D72FC; background:rgba(255,255,255,0.07);
-          }
-
-          .pm__toggle { display:inline-flex; border:1px solid rgba(255,255,255,0.12); border-radius:9px; overflow:hidden; width:fit-content; }
-          .pm__toggle-btn { padding:8px 18px; background:rgba(255,255,255,0.03); border:none; color:rgba(255,255,255,0.55); font-size:13px; font-weight:600; cursor:pointer; }
-          .pm__toggle-btn + .pm__toggle-btn { border-left:1px solid rgba(255,255,255,0.12); }
-          .pm__toggle-btn--active-false { background:rgba(250,86,116,0.16); color:#FCA5A5; }
-          .pm__toggle-btn--active-true { background:rgba(34,197,94,0.16); color:#86efac; }
-
-          .pm__multiselect { display:flex; flex-wrap:wrap; gap:8px; }
-          .pm__chip { display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:20px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.65); font-size:12.5px; cursor:pointer; transition:all 0.15s; }
-          button.pm__chip { font:inherit; }
-          .pm__chip input { accent-color:#3D72FC; cursor:pointer; }
-          .pm__chip:hover { background:rgba(255,255,255,0.08); }
-          .pm__chip--active { background:rgba(61,114,252,0.18); border-color:#3D72FC; color:#fff; }
-
-          .pm__addform-actions { display:flex; gap:10px; margin-top:26px; padding-top:22px; border-top:1px solid rgba(255,255,255,0.08); }
-
-          @media (max-width:760px) {
-            .pm__addform-body { flex-direction:column; }
-            .pm__addform-tabs { flex-direction:row; overflow-x:auto; width:100%; gap:8px; padding-bottom:6px; }
-            .pm__tab { flex-direction:row; align-items:center; gap:8px; white-space:nowrap; border-left:none; border-bottom:3px solid transparent; border-radius:10px 10px 0 0; }
-            .pm__tab--active { border-left-color:transparent; border-bottom-color:#3D72FC; }
-            .pm__addform-content { border-left:none; padding-left:0; padding-top:20px; border-top:1px solid rgba(255,255,255,0.08); }
-            .pm__addform-fields { max-width:none; }
-          }
-
-          .pm__tablewrap { overflow:auto; border-radius:16px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); }
-          .pm__table { width:100%; border-collapse:collapse; font-size:13px; }
-          .pm__table thead { background:rgba(255,255,255,0.05); position:sticky; top:0; z-index:2; }
-          .pm__table th { padding:14px 14px; text-align:left; font-size:11px; font-weight:700; color:rgba(255,255,255,0.55); text-transform:uppercase; letter-spacing:0.6px; border-bottom:1px solid rgba(255,255,255,0.08); white-space:nowrap; }
-          .pm__table td { padding:12px 14px; color:rgba(255,255,255,0.85); border-bottom:1px solid rgba(255,255,255,0.04); vertical-align:middle; }
-          .pm__table tbody tr:hover { background:rgba(255,255,255,0.025); }
-          .pm__tr--editing { background:rgba(61,114,252,0.08); }
-          .pm__td input, .pm__td select {
-            width:100%; padding:7px 10px; background:rgba(255,255,255,0.06);
-            border:1px solid rgba(61,114,252,0.4); border-radius:6px;
-            color:#fff; font-size:13px; min-width:90px;
-            color-scheme: dark;
-          }
-          .pm__td input:focus, .pm__td select:focus { outline:none; border-color:#5CB0E9; }
-
-          .pm__rowact { display:flex; gap:6px; }
-          .pm__icobtn { width:34px; height:30px; border:none; border-radius:8px; background:rgba(255,255,255,0.06); color:#fff; font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; }
-          .pm__icobtn:hover { background:rgba(255,255,255,0.12); }
-          .pm__icobtn--save { background:#22c55e; color:#fff; }
-          .pm__icobtn--save:hover { background:#16a34a; }
-          .pm__icobtn--cancel { background:rgba(255,255,255,0.1); }
-          .pm__icobtn--del { background:rgba(250,86,116,0.18); color:#FCA5A5; }
-          .pm__icobtn--del:hover { background:rgba(250,86,116,0.35); }
-
-          .pm__count { text-align:center; color:rgba(255,255,255,0.4); font-size:13px; margin-top:18px; }
-
-          .pm__modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px; }
-          .pm__modal { background:#1a1f35; border:1px solid rgba(255,255,255,0.12); border-radius:18px; padding:28px; max-width:440px; width:100%; }
-          .pm__modal h3 { font-size:20px; color:#fff; margin:0 0 12px; }
-          .pm__modal p { color:rgba(255,255,255,0.7); margin:0 0 22px; font-size:14px; line-height:1.6; }
-          .pm__modal-actions { display:flex; gap:10px; justify-content:flex-end; }
-          .pm__modal-btn { padding:11px 22px; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; }
-          .pm__modal-btn--del { background:linear-gradient(135deg,#FA5674,#e63950); color:#fff; }
-          .pm__modal-btn:not(.pm__modal-btn--del) { background:rgba(255,255,255,0.08); color:#fff; }
-          .pm__modal-btn:hover { background:rgba(255,255,255,0.14); }
-
-          @media(max-width:768px) {
-            .pm { padding:28px 12px; }
-            .pm__hdr h1 { font-size:22px; }
-          }
-        `}</style>
       </div>
     </>
   );
