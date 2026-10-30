@@ -102,15 +102,12 @@ const FIELD_HINTS = {
 
 // Dropdown option sets, taken directly from the Stargrid field-definitions sheet.
 const CATEGORY_DROPDOWNS = {
-  Product_Category: ["Airtime", "Hardware", "Maritime", "Fix", "Cell", "Sat", "Router"],
+  Product_Category: ["Airtime", "Hardware", "Modem", "Router"],
+    Connected_Product_Category: ["Airtime", "Hardware", "Modem", "Router"],
   Connectivity_Technology: [
     "Cellular",
     "Satellite",
-    "4G",
-    "5G",
-    "LTE",
-    "Satellite Narrowband",
-    "Sat Broadband",
+    "Fixed",
     "Other",
   ],
   Supported_Role: ["Primary", "Secondary", "Enterprise"],
@@ -164,7 +161,7 @@ const RAW_FIELD_CATEGORIES = [
   {
     title: "Product",
     description: "Who provides it, what it's called, and what kind of connection it is.",
-    fields: ["Provider", "Product_Name", "Product_Category", "Connectivity_Technology", "Region"],
+    fields: ["Provider", "Product_Name", "Product_Category", "Connected_Product_Category", "Connectivity_Technology", "Region"],
   },
   {
     title: "Costs",

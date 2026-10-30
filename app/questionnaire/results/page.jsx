@@ -77,7 +77,7 @@ export default function DynamicResultsPage() {
 
 // Managed service tier table
 const MS_TIERS = [
-  { max: 10,   assist: 0.08, care: 0.20 },
+  { max: 9,   assist: 0.08, care: 0.20 },
   { max: 50,   assist: 0.07, care: 0.16 },
   { max: 100,  assist: 0.06, care: 0.14 },
   { max: 500,  assist: 0.05, care: 0.12 },
@@ -320,7 +320,7 @@ const msRate = (() => {
       <thead>
         <tr>
           <th className="pt__th pt__th--left">Fee items</th>
-          <th className="pt__th">Stargrid &amp; connectivity</th>
+          <th className="pt__th">Stargrid/connectivity</th>
           <th className="pt__th">Stargrid only</th>
         </tr>
       </thead>
@@ -350,19 +350,16 @@ const msRate = (() => {
   </div>
 </div>
 
-            <div className="pdf-wrap">
-              <button className="btn-pdf" onClick={() => router.push("/questionnaire/results/pdf")}>
-                <span className="btn-pdf__icon">📄</span>
-                <span className="btn-pdf__label">View<br/>Offer PDF</span>
-              </button>
-            </div>
+          
           </div>
         </div>
       </div>
 
+
       <div className="rp__actions">
         <button onClick={() => router.push("/")} className="btn-sec">← Back to Home</button>
         <div className="rp__actions-r">
+        <button onClick={() => router.push("/questionnaire/results/pdf")} className="btn-pdf">View Offer PDF</button>
           <button onClick={() => window.open("https://calendly.com/esthieuk/stargrid","_blank")} className="btn-meet">📅 Book a Meeting</button>
           <button onClick={() => router.push("/")} className="btn-pri">New Configuration →</button>
         </div>
