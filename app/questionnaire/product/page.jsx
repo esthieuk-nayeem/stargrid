@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import * as XLSX from "xlsx";
+import { buildProductTemplateBlob, parseProductTemplate, formatTemplateErrors } from "@/lib/productTemplate";
 import { saveAs } from "file-saver";
 import {
   fetchAllProducts,
@@ -224,6 +225,18 @@ const ADD_FORM_CATEGORIES = [
     ? [{ title: "Additional Info", description: "Other fields that don't fall into a category above.", fields: OTHER_COLUMNS }]
     : []),
 ];
+
+const TEMPLATE_CONFIG = {
+  columns: PRODUCT_COLUMNS,
+ // groups: ADD_FORM_CATEGORIES,
+ // numericCols: NUMERIC_COLS,
+ // booleanCols: BOOLEAN_COLS,
+ // required: REQUIRED_FIELDS,
+ // hints: FIELD_HINTS,
+ // units: FIELD_UNITS,
+ // dropdowns: CATEGORY_DROPDOWNS,
+ // multiselect: MULTISELECT_FIELDS,
+};
 
 function isEmptyValue(v) {
   return v === "" || v === null || v === undefined;
@@ -567,63 +580,47 @@ export default function ProductManagerPage() {
     }
   }
 
-  function downloadTemplate() {
-    const sample = PRODUCT_COLUMNS.reduce((acc, c) => {
-      if (NUMERIC_COLS.has(c)) acc[c] = 0;
-      else if (BOOLEAN_COLS.has(c)) acc[c] = false;
-      else acc[c] = "";
-      return acc;
-    }, {});
-
-    const ws = XLSX.utils.json_to_sheet([sample], { header: PRODUCT_COLUMNS });
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Products");
-
-    const instr = XLSX.utils.aoa_to_sheet([
-      ["Stargrid Product Import Template"],
-      [""],
-      ["Instructions:"],
-      ["- Leave id blank to insert a new row; fill id to update an existing row."],
-      ["- Boolean fields accept: true / false / yes / no / 1 / 0."],
-      ["- Numeric fields can be left blank."],
-    ]);
-    XLSX.utils.book_append_sheet(wb, instr, "Instructions");
-
-    const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    saveAs(new Blob([buf], { type: "application/octet-stream" }), "stargrid_products_template.xlsx");
+async function downloadTemplate() {
+  try {
+    const blob = await buildProductTemplateBlob(TEMPLATE_CONFIG);
+    saveAs(blob, "stargrid_products_template.xlsx");
+  } catch (err) {
+    console.error(err);
+    alert("Could not create the template: " + err.message);
   }
+}
 
-  async function handleFileUpload(e) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
+async function handleFileUpload(e) {
+  const file = e.target.files?.[0];
+  e.target.value = "";
+  if (!file) return;
 
-    try {
-      setSaving(true);
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { type: "array" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+  try {
+    setSaving(true);
+    setBulkResult(null);
+    const buf = await file.arrayBuffer();
+    const { rows, errors } = parseProductTemplate(buf, TEMPLATE_CONFIG);
 
-      const cleaned = rows.map((r) => {
-        const out = { ...r };
-        if ("id" in out && out.id !== "" && out.id !== null) {
-          const n = Number(out.id);
-          if (Number.isFinite(n)) out.id = n;
-        }
-        return out;
-      });
-
-      const count = await bulkUpsertProducts(cleaned);
-      await load();
-      setBulkResult({ ok: true, count });
-    } catch (err) {
-      console.error(err);
-      setBulkResult({ ok: false, message: err.message });
-    } finally {
-      setSaving(false);
+    if (errors.length) {
+      console.warn("Template import problems:", errors);
+      setBulkResult({ ok: false, message: formatTemplateErrors(errors) });
+      return;
     }
+    if (rows.length === 0) {
+      setBulkResult({ ok: false, message: "No product rows found. Fill in at least one row on the Products sheet." });
+      return;
+    }
+
+    const count = await bulkUpsertProducts(rows);
+    await load();
+    setBulkResult({ ok: true, count });
+  } catch (err) {
+    console.error(err);
+    setBulkResult({ ok: false, message: err.message });
+  } finally {
+    setSaving(false);
   }
+}
 
   if (loading)
     return (
