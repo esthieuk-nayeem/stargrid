@@ -23,7 +23,7 @@ const NUMERIC_COLS = new Set([
   "Upload_Mbit_s",
   "Network_Setup_Fee",
   "Network_Monthly_Fee",
-  "Teliphonica_Charge_per_MB",
+  "Charge_per_MB",
   "Monthly_%_Fee",
   "Number_of_Lines",
   "Downtime_Monthly_s",
@@ -78,7 +78,7 @@ const FIELD_HINTS = {
   Upload_Mbit_s: "Upload speed in Mbit/s",
   Network_Setup_Fee: "One-time setup fee in EUR",
   Network_Monthly_Fee: "Recurring monthly fee in EUR",
-  Teliphonica_Charge_per_MB: "Per-MB charge if applicable (blank if N/A)",
+  Charge_per_MB: "Per-MB charge if applicable (blank if N/A)",
   Site_Fixed: "True if supported at a fixed/building site",
   Site_Moving: "True if supported on a moving vehicle/vessel",
   Site_Portable: "True if supported as a portable/mobile kit",
@@ -130,7 +130,7 @@ const FIELD_UNITS = {
   Upload_Mbit_s: "Mbit/s",
   Network_Setup_Fee: "EUR",
   Network_Monthly_Fee: "EUR / mo",
-  Teliphonica_Charge_per_MB: "EUR / MB",
+  Charge_per_MB: "EUR / MB",
   "Monthly_%_Fee": "%",
   Number_of_Lines: "lines",
   Downtime_Monthly_s: "sec",
@@ -170,7 +170,7 @@ const RAW_FIELD_CATEGORIES = [
     fields: [
       "Network_Setup_Fee",
       "Network_Monthly_Fee",
-      "Teliphonica_Charge_per_MB",
+      "Charge_per_MB",
       "Monthly_%_Fee",
       "Incremental_Monthly_Fee",
     ],
@@ -1042,6 +1042,7 @@ function MultiSelectChips({ options, value, onChange }) {
     </div>
   );
 }
+
 
 // Combines Site_Fixed / Site_Moving / Site_Portable into a single "which
 // deployment sites apply" control instead of three separate True/False rows.
